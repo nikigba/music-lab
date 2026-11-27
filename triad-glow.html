@@ -577,7 +577,8 @@ function noteTriad(pc, a, k){
   const lab = f.tri.map(p => DEG[p]).join(' ');
   if (lab !== triLab || now > triUntil) { triLab = lab; triQ = f.q; }
   triUntil = now + Math.max(1800, curSpb()*4000);
-  f.notes.forEach(r => { if (r.a) { r.a.hold = Math.max(r.a.hold || 0, .5); r.a.tri = true; } else if (r.k != null) homeMem[r.k] = Math.min(1, homeMem[r.k] + .3); });
+  const keep = (triUntil - now)/1000 - 1;   // stay lit while the name shows, then fade over ~1s
+  f.notes.forEach(r => { if (r.a) { const c = r.a; c.hold = Math.max(c.hold || 0, keep); c.tri = true; c.life = Math.max(c.life, .85); if (!aways.includes(c)) aways.push(c); } else if (r.k != null) homeMem[r.k] = Math.min(1, homeMem[r.k] + .3); });
 }
 function hit(m, d){
   const pc = ((m%12)+12)%12, [ten,col] = infoFor(pc, mode), lab = DEG[pc];
