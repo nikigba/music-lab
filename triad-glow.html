@@ -344,8 +344,8 @@ async function play(){
   const pos = PH[+$('sel').value] || 0, ph = pos % 1, bb = Math.floor(pos) % 4;
   if (listening) {
     if (!groove) {
-      // starting: put the beat where the lick's first note sounds right now
-      t0 = actx.currentTime + .1 - ph*spb;
+      // starting: the first click lands on the beat just before the lick's first note (never in the past, where it would be skipped)
+      t0 = actx.currentTime + .1;
       grooveOn(bb, t0);
     } else {
       // running: come in on the very next beat (never wait a whole bar), and count that beat as the lick's place in the bar
@@ -375,7 +375,7 @@ async function play(){
       const len = Math.max(...l.n.map(x => x[0]+x[1])) + .5;
       l.ch.forEach(([ct, r, q, dom], k) => {
         const ce = k+1 < l.ch.length ? l.ch[k+1][0] : len;
-        for (let b = ct; b < ce - .01; b += 2) {
+        for (let b = k === 0 ? -ph : ct; b < ce - .01; b += 2) {   // the first chord is struck on the beat, with the first click
           const tt = t0 + (b+ph)*spb, dd = Math.min(2, ce-b)*spb, rr = ((r+sh)%12+12)%12;
           piano(36+rr, tt, dd, .5, droneBus);
           [q==='m'?3:4, 7, dom||q==='m'?10:11].forEach((x, i) => { let m = 48+rr+x; while (m > 62) m -= 12; while (m < 51) m += 12; piano(m, tt+.012*(i+1), dd, .3, droneBus); });
