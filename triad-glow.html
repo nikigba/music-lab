@@ -364,7 +364,18 @@ async function play(){
   if (bg === 'drone') droneOn(curKey);
   else {
     droneOff();
-    if (bg === 'chord') {
+    if (bg === 'chord' && l.ch && l.ch.length) {
+      // a phrase from Solo Ear: its own chords, each struck at its change and again every two beats
+      const len = Math.max(...l.n.map(x => x[0]+x[1])) + .5;
+      l.ch.forEach(([ct, r, q, dom], k) => {
+        const ce = k+1 < l.ch.length ? l.ch[k+1][0] : len;
+        for (let b = ct; b < ce - .01; b += 2) {
+          const tt = t0 + (b+ph)*spb, dd = Math.min(2, ce-b)*spb, rr = ((r+sh)%12+12)%12;
+          piano(36+rr, tt, dd, .5, droneBus);
+          [q==='m'?3:4, 7, dom||q==='m'?10:11].forEach((x, i) => { let m = 48+rr+x; while (m > 62) m -= 12; while (m < 51) m += 12; piano(m, tt+.012*(i+1), dd, .3, droneBus); });
+        }
+      });
+    } else if (bg === 'chord') {
       // the home chord, soft, struck again every two beats under the whole lick (7th chord when the original was a dominant)
       const len = Math.max(...l.n.map(x => x[0]+x[1])) + 1;
       const up = l.h === 'm' ? [51,55,60] : /7$/.test(l.c) ? [52,55,58] : [52,55,60];
@@ -375,10 +386,15 @@ async function play(){
       }
     }
   }
-  l.n.forEach(([t,d,m]) => {
+  l.n.forEach(([t,d,m,cr,cq]) => {
     end = Math.max(end, t+d);
     piano(m+sh, t0 + (t+ph)*spb, d*spb);
-    timers.push(setTimeout(() => { if (my===token) hit(m, d*spb); }, (lead + (t+ph)*spb)*1000));
+    if (cr == null) timers.push(setTimeout(() => { if (my===token) hit(m, d*spb); }, (lead + (t+ph)*spb)*1000));
+    else {
+      // phrase from Solo Ear: the column becomes the chord under this note, so 1 3 5 are the chord's own
+      const crr = cr > 6 ? cr - 12 : cr;
+      timers.push(setTimeout(() => { if (my!==token) return; setHome(cq); chordLab = chordWord(cr, cq, l, t); hit(m - crr, d*spb); }, (lead + (t+ph)*spb)*1000));
+    }
   });
   timers.push(setTimeout(() => {
     if (my!==token) return;
@@ -516,6 +532,9 @@ function warp(m){
   return o*P[3] + P[i] + (P[i+1] - P[i])*(pc - A[i])/(A[i+1] - A[i]);
 }
 const y = m => { const lo = warp(51), hi = warp(77); return H-30*S-(Math.max(lo-.3, Math.min(hi+.3, warp(m)))-lo)/(hi-lo)*(H-60*S); }, cx = () => W/2;
+let chordLab = '';
+const DGT = ['1','b2','2','b3','3','4','#4','5','b6','6','b7','7'];
+function chordWord(cr, cq, l, t){ let dom = 0; if (l.ch) l.ch.forEach(c => { if (c[0] <= t + 1e-6) dom = c[3]; }); return DGT[cr] + (cq === 'm' ? 'm' : '') + (dom ? '⁷' : ''); }
 function hit(m, d){
   const pc = ((m%12)+12)%12, [ten,col] = infoFor(pc, mode), lab = DEG[pc];
   if (ten===0){
@@ -566,6 +585,7 @@ function frame(now){
     voice(cx(), y(m), r, '#FAC775', a, .05+homeB[i]*.12, 1.2+homeB[i]*6, i*2.3, DEG[m%12], '#633806', .18+homeB[i]*.4);
   });
   aways = aways.filter(a => { a.t += dt; if (a.t>a.dur) a.life -= dt*5; if (a.life<=0) return false; voice(a.x,a.y,13*S,a.c,a.life,.07+a.ten*.045,4+a.ten*4,a.seed,a.lab,a.dk,a.life*.6); return true; });
+  if (phraseIdx != null && chordLab) { ctx.fillStyle = 'rgba(250,199,117,.75)'; ctx.font = `600 ${Math.round(15*Math.sqrt(S))}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(chordLab, W/2, 10); }
   if (performance.now() < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Tap: exit · ← → licks · ↑ ↓ speed · F full screen · S ☆ save', W/2, H-16); }
   if (performance.now() < flashUntil) { const a = Math.min(1, (flashUntil - performance.now())/400); ctx.fillStyle = `rgba(243,236,228,${.6*a})`; ctx.font = '15px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(flashTxt, W/2, 18); }
   if (inFocus()) { ctx.font = '28px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = favOn ? 'rgba(233,185,110,.85)' : 'rgba(243,236,228,.28)'; ctx.fillText(favOn ? '★' : '☆', W - 38, 38); }
@@ -598,10 +618,10 @@ if (/^#phrase/.test(location.hash)) {
   try {
     PHRASE = JSON.parse(localStorage.getItem('glow:phrase') || 'null');
     if (PHRASE && PHRASE.n && PHRASE.n.length) {
-      LICKS.push({h: PHRASE.h, c: PHRASE.c, p: PHRASE.p, t: PHRASE.t + ' · ' + PHRASE.label, b: PHRASE.b, g: ['from Solo Ear'], n: PHRASE.n});
+      LICKS.push({h: PHRASE.h, c: PHRASE.c, p: PHRASE.p, t: PHRASE.t + ' · ' + PHRASE.label, b: PHRASE.b, g: ['from Solo Ear'], n: PHRASE.n, ch: PHRASE.ch});
       phraseIdx = LICKS.length - 1; PH[phraseIdx] = PHRASE.ph;
       $('phr').style.display = 'block';
-      $('phrT').innerHTML = `<b>${esc(PHRASE.t)}</b> · ${esc(PHRASE.p)} · ${esc(PHRASE.label)} <span style="color:var(--mute)">· chords ${esc(PHRASE.c)} · moved so the tune's home is C</span>`;
+      $('phrT').innerHTML = `<b>${esc(PHRASE.t)}</b> · ${esc(PHRASE.p)} · ${esc(PHRASE.label)} <span style="color:var(--mute)">· chords ${esc(PHRASE.c)} · each note shown against the chord under it</span>`;
     }
   } catch(e){}
 }
