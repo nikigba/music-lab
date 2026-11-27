@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Home & Away · ii–V–I</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #000; --fg: #f2f2f2; --muted: #a3a3a8; --dim: #6e6e73; --line: #2c2c2e; --card-line: #3a3a3c;
+  --ink: #1c1c1e; --panel: #111113; --gold: #EED27A;
+  --home: #EED27A; --key: #7DA7D0; --spice: #CB8DB1;
+  --l0: #EED27A; --l1: #D2D879; --l2: #7DC0AF; --l3: #7DA7D0; --l4: #958FD2;
+  --focus: hsl(205 60% 70%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-top: 6px; display: flex; flex-direction: column; gap: 18px; }
+h1 { padding-right: 52px; font-size: clamp(26px, 4.4vw, 36px); font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+h2 { font-size: 18px; font-weight: 600; margin: 0; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+p { margin: 0; }
+.sub, .text { color: var(--muted); font-size: 14px; line-height: 1.55; max-width: 74ch; }
+.text b, .sub b { color: var(--fg); font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.h { color: var(--home); } .k { color: var(--key); } .s { color: var(--spice); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); background: #1e1e20; border: 1px solid var(--card-line);
+  border-radius: 999px; padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; touch-action: manipulation; }
+.btn:hover { background: #26262a; }
+.btn[aria-pressed="true"], .btn.primary { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.btn[aria-pressed="true"] .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
+.ctl { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctl input[type=range] { width: 90px; accent-color: var(--gold); }
+.ctl output { color: var(--fg); font-variant-numeric: tabular-nums; min-width: 3ch; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { accent-color: var(--gold); width: 15px; height: 15px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.tab { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: transparent; border: 1.5px solid var(--card-line);
+  border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--ink); background: var(--fg); border-color: var(--fg); }
+.tab .n { opacity: .55; margin-right: 6px; }
+.panel { display: none; flex-direction: column; gap: 16px; }
+.panel.on { display: flex; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid; }
+.meter { display: inline-flex; gap: 3px; vertical-align: middle; }
+.meter i { width: 9px; height: 9px; border-radius: 2px; background: #2a2a2d; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.steps { margin: 0; padding-left: 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.steps b { color: var(--fg); }
+
+/* ladder */
+.ladder { display: flex; flex-direction: column; gap: 8px; }
+.rung { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: start; }
+.rung .lv { font-size: 12px; color: var(--dim); padding-top: 14px; line-height: 1.3; }
+.rung .lv b { display: block; font-size: 13px; color: var(--fg); }
+.tri { display: flex; flex-wrap: wrap; gap: 8px; }
+.tcard { font: inherit; color: var(--fg); text-align: left; background: #0c0c0e; border: 1.5px solid var(--card-line); border-left: 6px solid var(--lc);
+  border-radius: 14px; padding: 10px 14px; cursor: pointer; min-width: 150px; display: flex; flex-direction: column; gap: 3px; touch-action: manipulation; transition: box-shadow .2s; }
+.tcard:hover { border-color: #5a5a5e; border-left-color: var(--lc); }
+.tcard .nm { font-size: 18px; font-weight: 700; }
+.tcard .ds { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.tcard .sm { font-size: 12px; color: var(--dim); }
+.tcard.lit { box-shadow: 0 0 0 3px #fff; }
+.info { font-size: 14px; color: var(--muted); line-height: 1.55; min-height: 3em; }
+.info b { color: var(--fg); }
+
+/* builder */
+.pickrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pickrow .lbl { font-size: 13px; color: var(--dim); min-width: 112px; }
+.chip { font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); background: #0c0c0e; border: 1.5px solid var(--card-line);
+  border-left: 5px solid var(--lc); border-radius: 10px; padding: 7px 11px; cursor: pointer; }
+.chip span { font-weight: 500; color: var(--dim); font-size: 12.5px; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: #26262a; border-color: #fff; border-left-color: var(--lc); }
+select.sel { font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); background: #1e1e20; border: 1.5px solid var(--card-line);
+  border-radius: 999px; height: 36px; padding: 0 12px; cursor: pointer; }
+
+/* phrase view */
+.stage { border: 1.5px solid var(--line); border-radius: 26px; padding: clamp(12px, 2.4vw, 22px); display: flex; flex-direction: column; gap: 12px; }
+.scroller { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+svg.phrase { display: block; height: auto; overflow: visible; }
+.zl { font: 600 15px var(--font); fill: var(--fg); }
+.zs { font: 500 12.5px var(--font); fill: var(--muted); }
+.bar { stroke: var(--line); stroke-width: 1.5; }
+.mline { fill: none; stroke-width: 3; stroke-linejoin: round; }
+.mlbl { font: 600 11px var(--font); fill: var(--dim); }
+.nt circle, .nt rect { stroke-width: 2.5; fill: #0c0c0e; }
+.nt text { font-weight: 700; font-family: var(--font); text-anchor: middle; dominant-baseline: central; fill: var(--fg); pointer-events: none; }
+.nt.home circle, .nt.home rect { stroke: var(--home); fill: rgba(238,210,122,.14); }
+.nt.key circle, .nt.key rect { stroke: var(--key); }
+.nt.spice circle, .nt.spice rect { stroke: var(--spice); stroke-dasharray: 5 4; }
+.nt.pass circle { stroke-opacity: .45; }
+.nt.on circle, .nt.on rect { fill: #34343a; stroke-width: 4; filter: url(#glow); }
+.lk { stroke: #3a3a3e; stroke-width: 2; fill: none; }
+.shape rect { stroke-width: 1.5; }
+.shape text { font-family: var(--font); pointer-events: none; }
+.shape { cursor: pointer; }
+.shape.on rect { stroke: #fff; stroke-width: 3; }
+.status { font-size: 14px; color: var(--muted); line-height: 1.6; min-height: 3em; }
+.status b { color: var(--fg); }
+@media (max-width: 560px) { .rung { grid-template-columns: 1fr; } .rung .lv { padding-top: 0; } .pickrow .lbl { min-width: 100%; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Home &amp; Away · ii–V–I</h1>
+  <p class="sub">Home is the C triad, <span class="num h">1 3 5</span>. Every other triad is somewhere away from it, and you can hear how far: <b>the fewer home notes a triad keeps, the farther away it sounds</b>. Notes from outside the key (<span class="s">spice</span>) push it farther still. A ii–V–I is a trip down this ladder and back: the ii bar steps a little away, the V bar goes far, then home. All numbers are measured from C.</p>
+
+  <div class="controls">
+    <button class="btn" id="droneBtn" aria-pressed="false"><span class="dot"></span><span id="droneLbl">C drone</span></button>
+    <label class="check"><input type="checkbox" id="autoDrone" checked> Drone starts with play</label>
+    <label class="ctl">Drone <input type="range" id="droneVol" min="0" max="100" value="20"></label>
+    <label class="ctl">Piano <input type="range" id="keysVol" min="0" max="100" value="70"></label>
+    <label class="ctl">Tempo <input type="range" id="tempo" min="50" max="200" value="96"><output id="tempoOut">96</output></label>
+    <label class="check"><input type="checkbox" id="swing" checked> Swing</label>
+    <button class="btn" id="stopBtn">Stop</button>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Steps">
+    <button class="tab" role="tab" data-tab="ladder" aria-selected="true"><span class="n">1</span>The ladder</button>
+    <button class="tab" role="tab" data-tab="build" aria-selected="false"><span class="n">2</span>Build a trip</button>
+    <button class="tab" role="tab" data-tab="stitt" aria-selected="false"><span class="n">3</span>Stitt's trips</button>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="border-color:var(--home);background:rgba(238,210,122,.14)"></i>Home note (1 3 5)</span>
+    <span><i class="sw" style="border-color:var(--key)"></i>In the key, not home</span>
+    <span><i class="sw" style="border-color:var(--spice);border-style:dashed"></i>Spice: outside the key</span>
+    <span>Away: <span class="meter" id="legendMeter"></span> home → farthest</span>
+  </div>
+
+  <!-- 1 LADDER -->
+  <section class="panel on" id="p-ladder" role="tabpanel">
+    <h2>The ladder: how far is each triad from home?</h2>
+    <p class="text">Tap a triad: you hear <b>home → that triad → home</b>, each on its own root, so the triad sounds like itself. Listen for how far it feels from home. Turn on <b>Smooth voicing</b> to keep the shared notes still and hear only the notes that <b>move away</b>. The drone stays off here unless you turn it on, because a C under everything makes every triad sound like a kind of C.</p>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="ladArp" checked> Arpeggiate, then hold</label>
+      <label class="check"><input type="checkbox" id="ladBass" checked> Each triad's root in the bass</label>
+      <label class="check"><input type="checkbox" id="ladSmooth"> Smooth voicing (keep shared notes still)</label>
+    </div>
+    <div class="ladder" id="ladder"></div>
+    <div class="info" id="ladInfo">Tap a triad.</div>
+    <div class="box">
+      <h3>What to listen for</h3>
+      <ol class="steps">
+        <li>Go down the ladder one rung at a time. Each rung keeps fewer home notes, and the tension grows.</li>
+        <li><b>F</b> and <b>G</b> keep one home note each (1 or 5): away, but you can still hear home. <b>Dm</b> and <b>B°</b> keep none.</li>
+        <li><b>B°</b> holds 7 and 4, the two notes that most want to go home. The spice triads (<b>Fm, A♭, F°, D♭</b>) add notes from outside the key: darker and farther.</li>
+        <li>Sing the note that moves. Then close your eyes, tap a triad, and guess its rung.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 2 BUILD -->
+  <section class="panel" id="p-build" role="tabpanel">
+    <h2>Build a trip</h2>
+    <p class="text">Pick a triad for the ii bar (a small step away) and one for the V bar (far away). The app plays each triad as a line, in the shape you choose, and lands home. This is how the licks are built: <b>choose how far to go in each bar, then draw the triad as a line</b>. Each change also tells you which notes stay and which ones move.</p>
+    <div class="box">
+      <div class="pickrow" id="pickII"><span class="lbl">ii bar (Dm7)</span></div>
+      <div class="pickrow" id="pickV"><span class="lbl">V bar (G7)</span></div>
+      <div class="pickrow"><span class="lbl">Shapes</span>
+        <label class="ctl">ii <select class="sel" id="shapeII"></select></label>
+        <label class="ctl">V <select class="sel" id="shapeV"></select></label>
+        <button class="btn" id="newShapes">New shapes</button>
+      </div>
+      <div class="pickrow"><span class="lbl">Try a trip</span><span id="presets" class="row"></span></div>
+    </div>
+    <div id="ph-build"></div>
+  </section>
+
+  <!-- 3 STITT -->
+  <section class="panel" id="p-stitt" role="tabpanel">
+    <h2>Stitt's trips</h2>
+    <p class="text">Each lick drawn as a trip: the colored blocks under the line are the triads and shapes he uses (from the Stitt app's analysis), colored by how far from home they are, and the line across the top shows <b>away</b> rising and falling. Tap a block to hear just that shape. Most of set 1 follows the same plan: <b>a little away on Dm7, as far as possible on G7, then home.</b></p>
+    <div id="ph-stitt"></div>
+  </section>
+</div>
+
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+const DRONE_LOOP = 24.2548125;
+const STITT = [{"name":"Stitt 251 · set 1","licks":[{"notes":[[74,0],[77,1],[81,2],[84,3],[83,4],[80,5],[79,6],[77,7],[76,8],[72,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7","use":[0,1,2,3],"passing":[],"deg":"2–4–6–1","stack":"1–3–5–7 of Dm7, up"},{"name":"F°","use":[4,5,6,7],"passing":[6],"deg":"4–♭6–7","stack":"1–♭3–♭5 of F°"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"3 then 1 of C"}]},{"notes":[[77,0],[76,1],[74,2],[72,3],[71,4],[80,5],[79,6],[77,7],[76,8],[72,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"4–3–2–1","stack":"scale down from its ♭3"},{"name":"F°","use":[4,5,6,7],"passing":[6],"deg":"4–♭6–7","stack":"1–♭3–♭5 of F°"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"3 then 1 of C"}]},{"notes":[[81,0],[77,1],[74,2],[72,3],[71,4],[74,5],[77,6],[80,7],[79,8],[76,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7","use":[0,1,2,3],"passing":[],"deg":"6–4–2–1","stack":"5–3–1–7 of Dm7, down"},{"name":"B°7","use":[4,5,6,7],"passing":[],"deg":"7–2–4–♭6","stack":"1–♭3–♭5–°7 of B°7"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"5 then 3 of C"}]},{"notes":[[84,0],[81,1],[77,2],[74,3],[83,4],[80,5],[79,6],[77,7],[76,8,2],[67,10],[72,11,3]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7","use":[0,1,2,3],"passing":[],"deg":"1–6–4–2","stack":"7–5–3–1 of Dm7, down"},{"name":"F°","use":[4,5,6,7],"passing":[6],"deg":"4–♭6–7","stack":"1–♭3–♭5 of F°"},{"name":"C","use":[8,9,10],"passing":[],"deg":"1–3–5","stack":"3–5–1 of C"}]},{"notes":[[74,0],[76,1],[77,2],[79,3],[80,4],[82,5],[79,6],[77,7],[76,8,2],[72,10],[67,11,3]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"2–3–4–5","stack":"scale up from its root"},{"name":"G7alt","use":[4,5,6,7],"passing":[],"deg":"♭6–♭7–5–4","stack":"♭9–♯9–1–♭7 of G7"},{"name":"C","use":[8,9,10],"passing":[],"deg":"1–3–5","stack":"3–1–5 of C"}]},{"notes":[[77,0],[76,1],[74,2],[76,3],[77,4],[79,5],[80,6],[82,7],[79,8],[76,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"4–3–2–3","stack":"around the root: ♭3–2–1–2"},{"name":"G7alt","use":[4,5,6,7],"passing":[],"deg":"4–5–♭6–♭7","stack":"♭7–1–♭9–♯9 of G7"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"5 then 3 of C"}]},{"notes":[[69,0],[72,1],[77,2],[81,3],[82,4],[80,5],[79,6],[77,7],[76,8],[79,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"F","use":[0,1,2,3],"passing":[],"deg":"6–1–4–6","stack":"3–5–1–3 of F (3–5–7 of Dm7)"},{"name":"G7alt","use":[4,5,6,7],"passing":[],"deg":"♭7–♭6–5–4","stack":"♯9–♭9–1–♭7 of G7, down"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"3 then 5 of C"}]},{"notes":[[84,0],[81,1],[77,2],[74,3],[82,4],[80,5],[79,6],[77,7],[76,8],[72,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7","use":[0,1,2,3],"passing":[],"deg":"1–6–4–2","stack":"7–5–3–1 of Dm7, down"},{"name":"G7alt","use":[4,5,6,7],"passing":[],"deg":"♭7–♭6–5–4","stack":"♯9–♭9–1–♭7 of G7, down"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"3 then 1 of C"}]},{"notes":[[74,0],[76,1],[77,2],[79,3],[81,4],[84,5],[83,6],[81,7],[79,8],[76,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"2–3–4–5","stack":"scale up from its root"},{"name":"G7","use":[4,5,6,7],"passing":[],"deg":"6–1–7–6","stack":"9–11–3–9 around the 3rd"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"5 then 3 of C"}]},{"notes":[[74,0],[72,1],[71,2],[74,3],[77,4],[81,5],[79,6],[77,7],[76,8],[72,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"2–1–7–2","stack":"around the root: 1–♭7–6–1"},{"name":"G7","use":[4,5,6,7],"passing":[],"deg":"4–6–5–4","stack":"♭7–9–1–♭7 around the root"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"3 then 1 of C"}]},{"notes":[[77,0],[79,1],[81,2],[84,3],[83,4],[81,5],[79,6],[77,7],[76,8,2],[72,10],[67,11,3]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"F","use":[0,1,2,3],"passing":[1],"deg":"4–5–6–1","stack":"1–3–5 of F, with its 2"},{"name":"G7","use":[4,5,6,7],"passing":[],"deg":"7–6–5–4","stack":"3–9–1–♭7 of G7, down"},{"name":"C","use":[8,9,10],"passing":[],"deg":"1–3–5","stack":"3–1–5 of C"}]},{"notes":[[77,0],[76,1],[74,2],[72,3],[71,4],[74,5],[77,6],[81,7],[79,8],[76,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"4–3–2–1","stack":"scale down from its ♭3"},{"name":"Bø7","use":[4,5,6,7],"passing":[],"deg":"7–2–4–6","stack":"1–♭3–♭5–♭7 of Bø7"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"5 then 3 of C"}]},{"notes":[[69,0],[72,1],[77,2],[81,3],[79,4],[77,5],[76,6],[71,7],[74,8,2],[72,10],[67,11,3]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"F","use":[0,1,2,3],"passing":[],"deg":"6–1–4–6","stack":"3–5–1–3 of F (3–5–7 of Dm7)"},{"name":"Em","use":[4,5,6,7],"passing":[5],"deg":"5–4–3–7","stack":"♭3–(♭2)–1–5 of Em"},{"name":"C","use":[8,9,10],"passing":[],"deg":"1–3–5","stack":"9–1–5 of C"}]},{"notes":[[81,0],[77,1],[74,2],[72,3],[71,4],[74,5],[77,6],[81,7],[79,8],[76,9,5]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7","use":[0,1,2,3],"passing":[],"deg":"6–4–2–1","stack":"5–3–1–7 of Dm7, down"},{"name":"Bø7","use":[4,5,6,7],"passing":[],"deg":"7–2–4–6","stack":"1–♭3–♭5–♭7 of Bø7"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"5 then 3 of C"}]},{"notes":[[84,0],[81,1],[77,2],[74,3],[83,4],[84,5],[83,6],[81,7],[79,8,3],[76,11,3]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7","use":[0,1,2,3],"passing":[],"deg":"1–6–4–2","stack":"7–5–3–1 of Dm7, down"},{"name":"G7","use":[4,5,6,7],"passing":[],"deg":"7–1–7–6","stack":"3–11–3–9 around the 3rd"},{"name":"C","use":[8,9],"passing":[],"deg":"1–3–5","stack":"5 then 3 of C"}]},{"notes":[[72,0],[74,1],[77,2],[81,3],[79,4],[77,5],[74,6],[71,7],[72,8,2],[67,10],[64,11,3]],"chords":[{"slot":0,"name":"Dm7","root":2,"q":"m7"},{"slot":4,"name":"G7","root":7,"q":"7"},{"slot":8,"name":"C","root":0,"q":"maj"}],"spb":2,"length":14,"names":null,"num":null,"cards":[{"name":"Dm7","use":[0,1,2,3],"passing":[],"deg":"1–2–4–6","stack":"7–1–3–5 of Dm7, up"},{"name":"G7","use":[4,5,6,7],"passing":[],"deg":"5–4–2–7","stack":"1–♭7–5–3 of G7, down"},{"name":"C","use":[8,9,10],"passing":[],"deg":"1–3–5","stack":"1–5–3 of C, down"}]}]},{"name":"Stitt 251 · set 2","licks":[{"notes":[[81,0,1],[84,1,1],[81,2,1],[77,3,1],[74,4,1],[76,5,1],[77,6,1],[78,7,1],[79,8,1],[78,9,1],[77,10,1],[79,11,1],[76,12,2],[67,14,1],[72,15,4],[76,19,1]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":15,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":22,"names":["A","C","A","F","D","E","F","F♯","G","F♯","F","G","E","G","C","E"],"num":null,"cards":[{"name":"F","use":[0,1,2,3],"passing":[],"deg":"4–6–1","stack":"3–5–3–1 of F"},{"name":"Dm7 scale","use":[4,5,6,7],"passing":[7],"deg":"2–3–4","stack":"1–2–♭3–3 of Dm7, up"},{"name":"G7","use":[8,9,10,11],"passing":[9],"deg":"5–4–5","stack":"1–7–♭7–1 of G7"},{"name":"G7","use":[12,13],"passing":[],"deg":"3–5","stack":"13–1 of G7"},{"name":"C","use":[14,15],"passing":[],"deg":"1–3–5","stack":"1–3 of C"}]},{"notes":[[77,0,2],[79,2,2],[77,4,2],[73,6,3],[76,9,3],[74,12,3],[76,15,3],[77,18,3],[79,21,3],[75,24,3],[76,27,3],[72,30,3],[69,33,3],[72,36,3],[74,39,3],[72,45,15],[76,60,6]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":72,"names":["F","G","F","C♯","E","D","E","F","G","D♯","E","C","A","C","D","C","E"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3,4],"passing":[],"deg":"4–5–4–♭2–3","stack":"♭3–4–♭3–7–2 of Dm7, down"},{"name":"Dm7 scale","use":[5,6,7,8],"passing":[],"deg":"2–3–4–5","stack":"1–2–♭3–4 of Dm7, up"},{"name":"Am","use":[9,10,11,12],"passing":[9],"deg":"6–1–3","stack":"♭5–5–♭3–1 of Am"},{"name":"G7","use":[13,14,15],"passing":[],"deg":"1–2–1","stack":"11–5–11 of G7"},{"name":"C","use":[16],"passing":[],"deg":"1–3–5","stack":"3 of C"}]},{"notes":[[76,0,3],[73,3,3],[74,6,3],[76,9,3],[77,12,2],[79,14,2],[77,16,2],[73,18,3],[76,21,3],[74,24,3],[76,27,3],[77,30,3],[79,33,3],[76,36,6],[67,42,3],[72,45,15],[69,60,6]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":45,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":72,"names":["E","C♯","D","E","F","G","F","C♯","E","D","E","F","G","E","G","C","A"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[1],"deg":"3–2–3","stack":"2–7–1–2 of Dm7, around"},{"name":"Dm7 scale","use":[4,5,6,7,8],"passing":[],"deg":"4–5–4–♭2–3","stack":"♭3–4–♭3–7–2 of Dm7, down"},{"name":"G7","use":[9,10,11,12],"passing":[],"deg":"2–3–4–5","stack":"5–13–♭7–1 of G7"},{"name":"G7","use":[13,14],"passing":[],"deg":"3–5","stack":"13–1 of G7"},{"name":"C","use":[15,16],"passing":[],"deg":"1–3–5","stack":"1–13 of C"}]},{"notes":[[62,0,3],[64,3,3],[65,6,3],[67,9,3],[69,12,3],[71,15,3],[72,18,3],[74,21,3],[76,24,2],[77,26,2],[78,28,2],[79,30,2],[78,32,2],[77,34,2],[76,36,3],[72,39,3],[69,42,3],[67,45,3],[72,48,3],[72,51,9]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":66,"names":["D","E","F","G","A","B","C","D","E","F","F♯","G","F♯","F","E","C","A","G","C","C"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"2–3–4–5","stack":"1–2–♭3–4 of Dm7, up"},{"name":"Dm7 scale","use":[4,5,6,7],"passing":[],"deg":"6–7–1–2","stack":"5–6–♭7–1 of Dm7, up"},{"name":"G7","use":[8,9,10,11,12,13],"passing":[10,12],"deg":"3–4–5–4","stack":"13–♭7–7–1–7–♭7 of G7"},{"name":"Am7","use":[14,15,16,17],"passing":[],"deg":"6–1–3–5","stack":"5–♭3–1–♭7 of Am7, down"},{"name":"C","use":[18,19],"passing":[],"deg":"1–3–5","stack":"1–1 of C"}]},{"notes":[[81,-6,3],[84,-3,3],[83,0,3],[83,3,3],[79,6,3],[83,9,3],[81,12,3],[81,15,3],[77,18,3],[81,21,3],[79,24,3],[79,27,3],[76,30,3],[79,33,3],[77,36,2],[79,38,2],[77,40,2],[75,42,3],[76,45,9],[72,54,3],[67,57,3]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":66,"names":["A","C","B","B","G","B","A","A","F","A","G","G","E","G","F","G","F","D♯","E","C","G"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3,4,5],"passing":[],"deg":"6–1–7–7–5–7","stack":"5–♭7–6–6–4–6 of Dm7, up"},{"name":"Dm7 scale","use":[6,7,8,9],"passing":[],"deg":"6–6–4–6","stack":"5–5–♭3–5 of Dm7, around"},{"name":"G7","use":[10,11,12,13],"passing":[],"deg":"5–5–3–5","stack":"1–1–13–1 of G7"},{"name":"G7","use":[14,15,16,17,18],"passing":[],"deg":"4–5–4–♭3–3","stack":"♭7–1–♭7–♭13–13 of G7"},{"name":"C","use":[19,20],"passing":[],"deg":"1–3–5","stack":"1–5 of C"}]},{"notes":[[62,-2,1],[64,-1,1],[65,0,1],[67,1,1],[69,2,1],[71,3,1],[72,4,1],[74,5,1],[76,6,1],[77,7,1],[74,8,1],[76,9,1],[77,10,1],[79,11,1],[76,12,2],[67,14,1],[72,15,5],[69,20,2]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":16,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":24,"names":["D","E","F","G","A","B","C","D","E","F","D","E","F","G","E","G","C","A"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3,4,5],"passing":[],"deg":"2–3–4–5–6–7","stack":"1–2–♭3–4–5–6 of Dm7, up"},{"name":"Dm7 scale","use":[6,7,8,9],"passing":[],"deg":"1–2–3–4","stack":"♭7–1–2–♭3 of Dm7, up"},{"name":"G7","use":[10,11,12,13],"passing":[],"deg":"2–3–4–5","stack":"5–13–♭7–1 of G7"},{"name":"C","use":[14,15,16],"passing":[],"deg":"1–3–5","stack":"3–5–1 of C"},{"name":"C","use":[17],"passing":[],"deg":"1–3–5","stack":"13 of C"}]},{"notes":[[67,0,1],[69,1,1],[71,2,1],[72,3,1],[74,4,1],[71,5,1],[72,6,1],[74,7,1],[75,8,1],[76,9,1],[77,10,1],[78,11,1],[79,12,1],[74,13,1],[77,14,1],[79,15,1],[81,16,1],[76,17,1],[74,18,1],[72,19,1],[71,20,1],[74,21,1],[77,22,1],[81,23,1],[79,24,1],[75,25,1],[71,26,1],[67,27,1],[72,28,8]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":12,"root":7,"q":"7","name":"G7"},{"slot":28,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":40,"names":["G","A","B","C","D","B","C","D","D♯","E","F","F♯","G","D","F","G","A","E","D","C","B","D","F","A","G","E♭","B","G","C"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"5–6–7–1","stack":"4–5–6–♭7 of Dm7, up"},{"name":"Dm7 scale","use":[4,5,6,7],"passing":[],"deg":"2–7–1–2","stack":"1–6–♭7–1 of Dm7, around"},{"name":"Dm7 scale","use":[8,9,10,11],"passing":[8,11],"deg":"3–4","stack":"♭9–2–♭3–3 of Dm7, up"},{"name":"G7","use":[12,13,14,15],"passing":[],"deg":"5–2–4–5","stack":"1–5–♭7–1 of G7"},{"name":"Am","use":[16,17,18,19],"passing":[18],"deg":"6–1–3","stack":"1–5–4–♭3 of Am"},{"name":"Bø7","use":[20,21,22,23],"passing":[],"deg":"7–2–4–6","stack":"1–♭3–♭5–♭7 of Bø7, up"},{"name":"G+","use":[24,25,26,27],"passing":[],"deg":"5–7–♭3","stack":"1–♭6–3–1 of G+"},{"name":"C","use":[28],"passing":[],"deg":"1–3–5","stack":"1 of C"}]},{"notes":[[84,0,1],[81,1,1],[83,2,1],[79,3,1],[80,4,1],[81,5,1],[76,6,1],[74,7,1],[79,8,1],[78,9,1],[77,10,1],[76,11,1],[74,12,1],[72,13,1],[71,14,1],[69,15,1],[67,16,1],[72,17,1],[76,18,1],[74,19,1],[69,20,1],[72,21,1],[71,22,1],[67,23,1],[69,24,1],[67,25,1],[66,26,1],[65,27,1],[64,28,1],[67,29,1],[69,30,1],[71,31,1],[72,32,8]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":16,"root":7,"q":"7","name":"G7"},{"slot":32,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":44,"names":["C","A","B","G","G♯","A","E","D","G","F♯","F","E","D","C","B","A","G","C","E","D","A","C","B","G","A","G","F♯","F","E","G","A","B","C"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"1–6–7–5","stack":"♭7–5–6–4 of Dm7, down"},{"name":"Dm7 scale","use":[4,5,6,7],"passing":[4],"deg":"6–3–2","stack":"♭5–5–2–1 of Dm7, down"},{"name":"Dm7 scale","use":[8,9,10,11],"passing":[9],"deg":"5–4–3","stack":"4–3–♭3–2 of Dm7, down"},{"name":"Dm7 scale","use":[12,13,14,15],"passing":[],"deg":"2–1–7–6","stack":"1–♭7–6–5 of Dm7, down"},{"name":"G7","use":[16,17,18,19],"passing":[],"deg":"5–1–3–2","stack":"1–11–13–5 of G7"},{"name":"G7","use":[20,21,22,23],"passing":[],"deg":"6–1–7–5","stack":"9–11–3–1 of G7"},{"name":"G7","use":[24,25,26,27],"passing":[26],"deg":"6–5–4","stack":"9–1–7–♭7 of G7"},{"name":"Em","use":[28,29,30,31],"passing":[30],"deg":"3–5–7","stack":"1–♭3–4–5 of Em"},{"name":"C","use":[32],"passing":[],"deg":"1–3–5","stack":"1 of C"}]},{"notes":[[81,0,2],[75,2,2],[76,4,2],[79,6,2],[77,8,1],[69,9,1],[76,10,1],[74,11,1],[69,16,2],[72,18,2],[71,20,2],[67,22,2],[69,24,2],[65,26,2],[64,28,2],[62,30,2],[67,32,2],[72,34,4]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":16,"root":7,"q":"7","name":"G7"},{"slot":32,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":44,"names":["A","D♯","E","G","F","A","E","D","A","C","B","G","A","F","E","D","G","C"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1],"passing":[1],"deg":"6","stack":"5–♭9 of Dm7, down"},{"name":"Dm7 scale","use":[2,3],"passing":[],"deg":"3–5","stack":"2–4 of Dm7, up"},{"name":"Dm","use":[4,5,6,7],"passing":[6],"deg":"2–4–6","stack":"♭3–5–2–1 of Dm"},{"name":"G7","use":[8,9],"passing":[],"deg":"6–1","stack":"9–11 of G7"},{"name":"G7","use":[10,11],"passing":[],"deg":"7–5","stack":"3–1 of G7"},{"name":"G7","use":[12,13],"passing":[],"deg":"6–4","stack":"9–♭7 of G7"},{"name":"G7","use":[14,15],"passing":[],"deg":"3–2","stack":"13–5 of G7"},{"name":"C","use":[16,17],"passing":[],"deg":"1–3–5","stack":"5–1 of C"}]},{"notes":[[74,0,1],[76,1,1],[77,2,1],[79,3,1],[81,4,1],[80,5,1],[79,6,1],[78,7,1],[77,8,1],[84,9,1],[81,10,1],[77,11,1],[76,12,1],[67,13,1],[71,14,1],[72,15,5]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":16,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":22,"names":["D","E","F","G","A","A♭","G","F♯","F","C","A","F","E","G","B","C"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"2–3–4–5","stack":"1–2–♭3–4 of Dm7, up"},{"name":"Dm7 scale","use":[4,5,6,7],"passing":[5,7],"deg":"6–5","stack":"5–♭5–4–3 of Dm7, down"},{"name":"F","use":[8,9,10,11],"passing":[],"deg":"4–6–1","stack":"1–5–3–1 of F"},{"name":"Cmaj7","use":[12,13,14,15],"passing":[],"deg":"1–3–5–7","stack":"3–5–7–1 of Cmaj7, down"}]},{"notes":[[84,0,1],[83,1,1],[81,2,1],[79,3,1],[77,4,2],[76,6,2],[74,8,2],[72,10,2],[71,12,2],[69,14,2],[68,16,2],[69,18,2],[76,20,4],[67,24,2],[72,26,6],[69,32,4]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":12,"root":7,"q":"7","name":"G7"},{"slot":26,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":40,"names":["C","B","A","G","F","E","D","C","B","A","G♯","A","E","G","C","A"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3],"passing":[],"deg":"1–7–6–5","stack":"♭7–6–5–4 of Dm7, down"},{"name":"Dm7 scale","use":[4,5],"passing":[],"deg":"4–3","stack":"♭3–2 of Dm7, down"},{"name":"Dm7 scale","use":[6,7],"passing":[],"deg":"2–1","stack":"1–♭7 of Dm7, down"},{"name":"G7","use":[8,9],"passing":[],"deg":"7–6","stack":"3–9 of G7"},{"name":"G7alt","use":[10,11],"passing":[],"deg":"♭6–6","stack":"♭9–9 of G7"},{"name":"G7","use":[12],"passing":[],"deg":"3","stack":"13 of G7"},{"name":"G7","use":[13],"passing":[],"deg":"5","stack":"1 of G7"},{"name":"C","use":[14,15],"passing":[],"deg":"1–3–5","stack":"1–13 of C"}]},{"notes":[[77,0,3],[69,3,3],[74,6,3],[77,9,3],[76,12,3],[74,15,3],[73,18,3],[69,21,3],[72,24,3],[70,27,3],[71,30,2],[74,32,2],[77,34,2],[80,36,2],[82,38,2],[80,40,2],[79,42,3],[77,45,3],[76,48,6]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":60,"names":["F","A","D","F","E","D","C♯","A","C","A♯","B","D","F","A♭","B♭","A♭","G","F","E"],"num":null,"cards":[{"name":"Dm","use":[0,1,2,3],"passing":[],"deg":"2–4–6","stack":"♭3–5–1–♭3 of Dm"},{"name":"A","use":[4,5,6,7],"passing":[5],"deg":"6–♭2–3","stack":"5–4–3–1 of A"},{"name":"G7alt","use":[8,9,10,11,12],"passing":[],"deg":"1–♭7–7–2–4","stack":"11–♯9–3–5–♭7 of G7"},{"name":"G7alt","use":[13,14,15,16,17],"passing":[],"deg":"♭6–♭7–♭6–5–4","stack":"♭9–♯9–♭9–1–♭7 of G7"},{"name":"C","use":[18],"passing":[],"deg":"1–3–5","stack":"3 of C"}]},{"notes":[[71,3,3],[72,6,2],[76,8,2],[79,10,2],[83,12,3],[81,15,3],[80,18,3],[81,21,3],[74,24,3],[76,27,3],[77,30,3],[81,33,3],[79,36,3],[75,39,3],[71,42,6],[72,48,6]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":60,"names":["B","C","E","G","B","A","G♯","A","D","E","F","A","G","E♭","B","C"],"num":null,"cards":[{"name":"Cmaj7","use":[0,1,2,3],"passing":[],"deg":"1–3–5–7","stack":"7–1–3–5 of Cmaj7, up"},{"name":"Dm7 scale","use":[4,5,6,7],"passing":[6],"deg":"7–6–6","stack":"6–5–♭5–5 of Dm7, down"},{"name":"Dm","use":[8,9,10,11],"passing":[9],"deg":"2–4–6","stack":"1–2–♭3–5 of Dm"},{"name":"G+","use":[12,13,14],"passing":[],"deg":"5–7–♭3","stack":"1–♭6–3 of G+"},{"name":"C","use":[15],"passing":[],"deg":"1–3–5","stack":"1 of C"}]}]},{"name":"Stitt 251 licks - 1 & 3","licks":[{"notes":[[69,0,12],[64,15,3],[65,18,2],[69,20,2],[72,22,2],[76,24,3],[71,27,3],[75,30,2],[76,32,2],[75,34,2],[71,36,3],[69,39,3],[67,42,3],[65,45,3],[64,48,3],[67,51,3],[69,54,3],[67,57,3],[72,60,6],[64,66,3],[68,69,3],[71,72,3],[69,75,3],[68,78,2],[71,80,2],[74,82,2],[77,84,3],[76,87,3],[74,90,3],[71,93,3]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":96,"names":["A","E","F","A","C","E","B","D♯","E","D♯","B","A","G","F","E","G","A","G","C","E","G♯","B","A","G♯","B","D","F","E","D","B"],"num":null,"cards":[{"name":"Fmaj7","use":[0,1,2,3,4],"passing":[],"deg":"4–6–1–3","stack":"3–7–1–3–5 of Fmaj7"},{"name":"G7","use":[5,6],"passing":[],"deg":"7–3","stack":"13–3 of G7"},{"name":"G+","use":[7,8,9,10],"passing":[8],"deg":"7–♯2","stack":"♯5–♯5–3 of G+"},{"name":"G7","use":[11,12,13],"passing":[],"deg":"5–6–4","stack":"9–1–♭7 of G7"},{"name":"C","use":[14,15,16,17,18],"passing":[],"deg":"1–3–5–6","stack":"3–5–6–5–1 of C"},{"name":"E7","use":[19,20,21,22,23,24,25,26,27,28,29],"passing":[22],"deg":"3–4–♯5–7–2","stack":"1–3–5–3–5–♭7–♭9–1–♭7–5 of E7"}]},{"notes":[[75,2,2],[76,4,2],[79,6,2],[77,8,2],[69,10,2],[76,12,2],[73,14,2],[74,16,2],[76,18,2],[77,20,2],[69,22,2],[76,24,2],[69,26,2],[75,28,1],[77,29,1],[75,30,1],[72,31,1],[68,32,2],[65,34,2],[64,36,4]],"chords":[{"slot":4,"root":2,"q":"m7","name":"Dm7"},{"slot":20,"root":7,"q":"7","name":"G7"},{"slot":36,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":44,"names":["D♯","E","G","F","A","E","C♯","D","E","F","A","E","A","E♭","F","E♭","C","A♭","F","E"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3,4],"passing":[0],"deg":"3–4–5–6","stack":"9–11–♭3–5 of Dm7"},{"name":"Dm7 scale","use":[5,6,7,8],"passing":[6],"deg":"2–3","stack":"9–1–9 of Dm7"},{"name":"G7","use":[9,10,11,12],"passing":[],"deg":"6–3–4","stack":"♭7–9–13–9 of G7"},{"name":"Fm7","use":[13,14,15,16,17,18],"passing":[],"deg":"4–♭6–1–♭3","stack":"♭7–1–♭7–5–♭3–1 of Fm7"},{"name":"C","use":[19],"passing":[],"deg":"3","stack":"3 of C"}]},{"notes":[[77,0,1],[69,1,1],[72,2,1],[69,3,1],[76,4,1],[74,5,1],[72,6,1],[69,7,1],[71,8,1],[85,9,1],[83,10,1],[75,11,1],[82,12,1],[80,13,1],[75,14,1],[77,15,1],[79,16,1],[72,17,2],[76,19,1]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":16,"root":0,"q":"maj","name":"C"}],"spb":2,"length":22,"names":["F","A","C","A","E","D","C","A","B","C♯","B","D♯","A♯","G♯","D♯","F","G","C","E"],"num":null,"cards":[{"name":"F","use":[0,1,2,3],"passing":[],"deg":"4–6–1","stack":"1–3–5–3 of F"},{"name":"Dm7 scale","use":[4,5,6,7],"passing":[],"deg":"2–3–6–1","stack":"9–1–♭7–5 of Dm7"},{"name":"G7alt","use":[8,9,10,11,12,13,14,15],"passing":[],"deg":"♯5–♯6–7–♯1–♯2–4","stack":"3–♯11–3–♯5–♯9–♭9–♯5–♭7 of G7alt"},{"name":"C","use":[16,17,18],"passing":[],"deg":"1–3–5","stack":"5–1–3 of C"}]},{"notes":[[76,0,3],[77,3,3],[74,6,3],[69,9,3],[72,12,2],[74,14,2],[72,16,2],[71,18,3],[69,21,3],[67,24,6],[69,30,3],[65,33,3],[64,36,3],[62,39,3],[67,42,3],[63,45,3],[64,48,2],[67,50,2],[71,52,2],[74,54,3],[72,57,3],[71,60,3],[69,63,3],[68,66,3],[76,69,9]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":18,"root":7,"q":"7","name":"G7"},{"slot":42,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":84,"names":["E","F","D","A","C","D","C","B","A","G","A","F","E","D","G","D♯","E","G","B","D","C","B","A","A♭","E"],"num":null,"cards":[{"name":"Dm7 scale","use":[0,1,2,3,4,5,6],"passing":[],"deg":"2–3–4–6–1","stack":"9–♭3–1–5–♭7–1–♭7 of Dm7"},{"name":"G7","use":[7,8,9],"passing":[],"deg":"5–6–7","stack":"3–9–1 of G7"},{"name":"Dm","use":[10,11,12,13],"passing":[12],"deg":"2–4–6","stack":"5–♭3–1 of Dm"},{"name":"Em7","use":[14,15,16,17,18,19],"passing":[15],"deg":"3–5–7–2","stack":"♭3–1–♭3–5–♭7 of Em7"},{"name":"C","use":[20,21,22,23,24],"passing":[23],"deg":"1–3–6–7","stack":"1–7–6–3 of C"}]},{"notes":[[81,0,2],[84,2,2],[81,4,1],[77,5,1],[74,6,1],[77,7,1],[81,8,1],[84,9,1],[83,10,3],[81,13,1],[79,14,1],[77,15,1],[76,16,1],[74,17,1],[72,18,2],[79,20,2],[84,22,4]],"chords":[{"slot":0,"root":9,"q":"7","name":"A7","sub":"V/ii"},{"slot":2,"root":2,"q":"m7","name":"Dm7"},{"slot":10,"root":7,"q":"7","name":"G7"},{"slot":18,"root":0,"q":"maj","name":"C"}],"spb":2,"length":26,"names":["A","C","A","F","D","F","A","C","B","A","G","F","E","D","C","G","C"],"num":null,"cards":[{"name":"A7","use":[0],"passing":[],"deg":"6","stack":"1 of A7"},{"name":"Dm7","use":[1,2,3,4,5,6,7],"passing":[],"deg":"2–4–6–1","stack":"♭7–5–♭3–1–♭3–5–♭7 of Dm7, down and back up"},{"name":"G7","use":[8,9,10,11,12,13],"passing":[],"deg":"7–6–5–4–3–2","stack":"3–9–1–♭7–13–5 of G7"},{"name":"C","use":[14,15,16],"passing":[],"deg":"1–5","stack":"1–5–1 of C"}]},{"notes":[[83,0,3],[81,3,3],[80,6,3],[81,9,3],[84,12,6],[81,18,3],[77,21,3],[74,24,3],[77,27,3],[81,30,3],[84,33,3],[81,36,3],[82,39,3],[83,42,3],[81,45,3],[79,48,3],[77,51,3],[76,54,3],[74,57,3],[72,60,3],[71,63,3],[72,66,3],[79,69,3],[78,72,4],[79,76,4],[84,80,4]],"chords":[{"slot":0,"root":9,"q":"7","name":"A7","sub":"V/ii"},{"slot":12,"root":2,"q":"m7","name":"Dm7"},{"slot":36,"root":7,"q":"7","name":"G7"},{"slot":60,"root":0,"q":"maj","name":"C"}],"spb":6,"length":84,"names":["B","A","G♯","A","C","A","F","D","F","A","C","A","B♭","B","A","G","F","E","D","C","B","C","G","F♯","G","C"],"num":null,"cards":[{"name":"A7","use":[0,1,2,3],"passing":[2],"deg":"7–6–♯5","stack":"9–1–7–1 around A"},{"name":"Dm7","use":[4,5,6,7,8,9,10],"passing":[],"deg":"2–4–6–1","stack":"♭7–5–♭3–1–♭3–5–♭7 of Dm7, down and back up"},{"name":"G7","use":[11,12,13,14,15,16,17,18],"passing":[12],"deg":"6–♭7–7–6–5–4–3–2","stack":"9–♯9–3–9–1–♭7–13–5 of G7"},{"name":"C","use":[19,20,21,22,23,24,25],"passing":[20,23],"deg":"1–7–♯4–5","stack":"1–7–1–5, then ♯11–5–1 of C"}]},{"notes":[[81,1,1],[77,2,1],[74,3,1],[75,4,1],[83,5,1],[81,7,1],[79,8,2],[84,10,2],[88,12,1],[89,13,1],[88,15,1]],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":4,"root":7,"q":"7","name":"G7"},{"slot":8,"root":0,"q":"maj","name":"C"}],"spb":2,"length":16,"names":["A","F","D","D♯","B","A","G","C","E","F","E"],"num":null,"cards":[{"name":"Dm","use":[0,1,2],"passing":[],"deg":"2–4–6","stack":"5–♭3–1 of Dm"},{"name":"G+","use":[3,4,5],"passing":[5],"deg":"♯2–7","stack":"♯5–3, then 2 of G+"},{"name":"C","use":[6,7,8,9,10],"passing":[9],"deg":"1–3–5","stack":"5–1–3, then 4–3 of C"}]}]}];
+</script>
+<script>
+/* ---------- Audio ---------- */
+let live = [], ctx, master;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  loadPiano(); loadDrone(); return ctx;
+}
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+function b64ToBuf(url) { const bin = atob(url.slice(url.indexOf(',') + 1)); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b.buffer; }
+let drone = null, droneBuf = null, droneStart = 0, droneLoad = null;
+const droneVol = document.getElementById('droneVol');
+const droneLevel = () => (droneVol.value / 100) * 0.9;
+function loadDrone() {
+  if (droneLoad) return droneLoad;
+  droneLoad = new Promise(res => ctx.decodeAudioData(b64ToBuf(DRONE_URL), b => {
+    droneBuf = b; const d = b.getChannelData(0); let i = 0; while (i < d.length && Math.abs(d[i]) < 0.002) i++;
+    droneStart = i / b.sampleRate; res(); }, () => res()));
+  return droneLoad;
+}
+async function startDrone() {
+  if (drone) return; audio();
+  const g = ctx.createGain(); g.gain.setValueAtTime(0, ctx.currentTime);
+  drone = { g, oscs: [] }; setDroneUI(true);
+  await loadDrone(); if (!drone || drone.g !== g || !droneBuf) return;
+  const src = ctx.createBufferSource(); src.buffer = droneBuf; src.loop = true; src.loopStart = droneStart; src.loopEnd = droneStart + DRONE_LOOP;
+  src.connect(g); g.connect(master); src.start(ctx.currentTime, droneStart);
+  g.gain.linearRampToValueAtTime(droneLevel(), ctx.currentTime + 1.0); drone.oscs.push(src);
+}
+function stopDrone() {
+  if (!drone) return; const { g, oscs } = drone, t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.4);
+  oscs.forEach(o => o.stop(t + 0.45)); drone = null; setDroneUI(false);
+}
+droneVol.addEventListener('input', () => { if (drone) drone.g.gain.setTargetAtTime(droneLevel(), ctx.currentTime, 0.05); });
+const droneBtn = document.getElementById('droneBtn');
+function setDroneUI(on) { droneBtn.setAttribute('aria-pressed', on); document.getElementById('droneLbl').textContent = on ? 'C drone on' : 'C drone'; }
+droneBtn.addEventListener('click', () => drone ? stopDrone() : startDrone());
+const buffers = {}; let pianoLoad = null;
+function loadPiano() {
+  if (pianoLoad) return pianoLoad;
+  pianoLoad = Promise.all(Object.entries(PIANO).map(([m, url]) => new Promise(res => ctx.decodeAudioData(b64ToBuf(url), b => { buffers[m] = b; res(); }, () => res()))));
+  return pianoLoad;
+}
+const keysVol = document.getElementById('keysVol');
+function piano(m, t, dur, scale = 1) {
+  const buf = buffers[m]; if (!buf) return synth(m, t, dur, scale);
+  const src = ctx.createBufferSource(); src.buffer = buf; const g = ctx.createGain();
+  const end = Math.min(t + dur, t + buf.duration), v = keysVol.value / 100 * scale;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.004);
+  g.gain.setValueAtTime(v, Math.max(t + 0.005, end - 0.12)); g.gain.linearRampToValueAtTime(0.0001, end);
+  src.connect(g); g.connect(master); src.start(t); src.stop(end + 0.02); live.push({ srcs: [src], g });
+}
+function synth(m, t, dur, scale = 1) {
+  const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(); o1.type = 'triangle'; o2.type = 'sine';
+  o1.frequency.value = hz(m); o2.frequency.value = hz(m) * 2;
+  const g2 = ctx.createGain(); g2.gain.value = 0.18; const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3 * scale, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05); live.push({ srcs: [o1, o2], g });
+}
+function hold(m, t, dur, scale = 1) {
+  const buf = buffers[m], max = buf ? buf.duration - 0.4 : 99;
+  if (dur <= max) return piano(m, t, dur, scale);
+  let x = 0; while (x < dur - 0.05) { const d = Math.min(max, dur - x); piano(m, t + x, d + 0.05, x ? scale * 0.6 : scale); x += max; }
+}
+let timers = [], onStop = [];
+const at = (when, fn) => timers.push(setTimeout(fn, Math.max(0, (when - ctx.currentTime) * 1000)));
+function stopAll() {
+  timers.forEach(clearTimeout); timers = [];
+  if (ctx) { const now = ctx.currentTime; live.forEach(({ srcs, g }) => { try { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now);
+    g.gain.linearRampToValueAtTime(0, now + 0.03); srcs.forEach(o => o.stop(now + 0.04)); } catch (e) {} }); }
+  live = []; onStop.forEach(f => f());
+}
+document.getElementById('stopBtn').addEventListener('click', stopAll);
+const tempo = document.getElementById('tempo'), swingBox = document.getElementById('swing');
+tempo.addEventListener('input', () => document.getElementById('tempoOut').textContent = tempo.value);
+async function begin(o) {
+  audio(); stopAll();
+  if (!(o && o.drone === false) && document.getElementById('autoDrone').checked && !drone) startDrone();
+  if (Object.keys(buffers).length < Object.keys(PIANO).length) await loadPiano();
+  return 60 / tempo.value;
+}
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (ctx && ctx.state === 'suspended') ctx.resume(); }, { capture: true }));
+
+/* ---------- Distance from home ---------- */
+const DEG = ['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
+const DEG_SHARP = ['1','♯1','2','♯2','3','4','♯4','5','♯5','6','♯6','7'];
+const HOME = [0, 4, 7], MAJOR = [0, 2, 4, 5, 7, 9, 11];
+const pcOf = m => ((m % 12) + 12) % 12;
+const kindOf = m => HOME.includes(pcOf(m)) ? 'home' : MAJOR.includes(pcOf(m)) ? 'key' : 'spice';
+// away level 0–4: how much of the shape is not home, plus one for any note outside the key
+function awayLevel(pcs) {
+  const u = [...new Set(pcs.map(pcOf))]; if (!u.length) return 0;
+  const home = u.filter(p => HOME.includes(p)).length, spice = u.some(p => !MAJOR.includes(p));
+  return Math.min(4, Math.round((1 - home / u.length) * 3) + (spice ? 1 : 0));
+}
+const LV = ['home', 'very close', 'a step away', 'far', 'farthest'];
+const lvColor = l => `var(--l${l})`;
+const meterHTML = l => '<span class="meter">' + [0, 1, 2, 3].map(i => `<i style="background:${i < l ? lvColor(l) : '#2a2a2d'}"></i>`).join('') + '</span>';
+document.getElementById('legendMeter').innerHTML = [0, 1, 2, 3, 4].map(l => `<i style="background:${lvColor(l)}"></i>`).join('');
+const degHTML = (pcs, sep = ' ') => pcs.map(p => `<span class="${HOME.includes(p) ? 'h' : MAJOR.includes(p) ? 'k' : 's'}">${DEG[p]}</span>`).join(sep);
+
+const TRIADS = [
+  { n: 'C', pcs: [0, 4, 7] }, { n: 'Am', pcs: [9, 0, 4] }, { n: 'Em', pcs: [4, 7, 11] },
+  { n: 'F', pcs: [5, 9, 0] }, { n: 'G', pcs: [7, 11, 2] }, { n: 'Dm', pcs: [2, 5, 9] }, { n: 'B°', pcs: [11, 2, 5] },
+  { n: 'Fm', pcs: [5, 8, 0] }, { n: 'A♭', pcs: [8, 0, 3] }, { n: 'F°', pcs: [5, 8, 11] }, { n: 'D♭', pcs: [1, 5, 8] },
+];
+TRIADS.forEach(t => t.lv = awayLevel(t.pcs));
+const T = n => TRIADS.find(t => t.n === n);
+// voice-lead one 3-note chord to a triad: each voice to the nearest note, choosing the assignment that moves least
+function voiceLead(from, pcs) {
+  const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+  const nearest = (v, p) => { let m = v - pcOf(v) + p; if (m - v > 6) m -= 12; if (v - m > 6) m += 12; return m; };
+  let best = null;
+  perms.forEach(pr => { const to = from.map((v, i) => nearest(v, pcs[pr[i]])); const c = to.reduce((s, m, i) => s + Math.abs(m - from[i]), 0); if (!best || c < best.c) best = { to, c }; });
+  return best.to;
+}
+// which notes stay and which move, in words
+function movesText(fromPcs, toPcs) {
+  const from = fromPcs.map(p => 60 + p), to = voiceLead(from, toPcs);
+  const stay = [], move = [];
+  from.forEach((m, i) => { if (pcOf(m) === pcOf(to[i])) stay.push(DEG[pcOf(m)]); else move.push(`${DEG[pcOf(m)]} → ${DEG[pcOf(to[i])]}`); });
+  return { stay, move, to };
+}
+
+/* ---------- 1 · ladder ---------- */
+const ladderEl = document.getElementById('ladder'), ladInfo = document.getElementById('ladInfo');
+const tcardEls = {};
+[0, 1, 2, 3, 4].forEach(l => {
+  const ts = TRIADS.filter(t => t.lv === l); if (!ts.length) return;
+  const r = document.createElement('div'); r.className = 'rung';
+  const home = l === 0 ? 3 : null;
+  r.innerHTML = `<div class="lv"><b>${LV[l][0].toUpperCase() + LV[l].slice(1)}</b>${meterHTML(l)}</div><div class="tri"></div>`;
+  ts.forEach(t => {
+    const b = document.createElement('button'); b.className = 'tcard'; b.style.setProperty('--lc', lvColor(l));
+    const h = t.pcs.filter(p => HOME.includes(p)).length, sp = t.pcs.filter(p => !MAJOR.includes(p)).length;
+    b.innerHTML = `<span class="nm">${t.n}</span><span class="ds">${degHTML(t.pcs)}</span><span class="sm">${t.n === 'C' ? 'home' : `${h} home note${h === 1 ? '' : 's'}${sp ? ` · ${sp} spice` : ''}`}</span>`;
+    b.setAttribute('aria-label', `${t.n} triad, ${t.pcs.map(p => DEG[p]).join(' ')}, ${LV[l]}`);
+    b.addEventListener('click', () => playLadder(t));
+    r.querySelector('.tri').appendChild(b); tcardEls[t.n] = b;
+  });
+  ladderEl.appendChild(r);
+});
+onStop.push(() => Object.values(tcardEls).forEach(e => e.classList.remove('lit')));
+// root position around middle C: the triad's own root at the bottom
+const rootPos = pcs => { let r = 48 + pcs[0]; while (r < 55) r += 12; const iv = [0, pcOf(pcs[1] - pcs[0]), pcOf(pcs[2] - pcs[0])]; return iv.map(x => r + x); };
+async function playLadder(t) {
+  const B = await begin({ drone: false }), t0 = ctx.currentTime + 0.05, arp = document.getElementById('ladArp').checked, bass = document.getElementById('ladBass').checked;
+  const smooth = document.getElementById('ladSmooth').checked;
+  const homeV = smooth ? [60, 64, 67] : rootPos(HOME), mv = movesText(HOME, t.pcs), tv = smooth ? mv.to : rootPos(t.pcs);
+  const chord = (notes, at0, len) => { if (arp) { notes.forEach((m, i) => hold(m, at0 + i * B * 0.5, len - i * B * 0.5, 0.8)); } else notes.forEach(m => hold(m, at0, len, 0.7)); };
+  const L = 3 * B;
+  const rootBass = pcs => { let m = 36 + pcs[0]; if (m < 43) m += 12; return m; };   // piano samples start at G2
+  if (bass) { hold(rootBass(HOME), t0, L, 0.75); hold(rootBass(t.pcs), t0 + L, L, 0.75); hold(rootBass(HOME), t0 + 2 * L, L + B, 0.75); }
+  chord(homeV, t0, L); chord(tv, t0 + L, L); chord(homeV, t0 + 2 * L, L + B);
+  at(t0 + L, () => tcardEls[t.n].classList.add('lit')); at(t0 + 2 * L, () => tcardEls[t.n].classList.remove('lit'));
+  ladInfo.innerHTML = t.n === 'C' ? '<b>C (1 3 5)</b>: home. Nothing moves.' :
+    `<b>${t.n} (${t.pcs.map(p => DEG[p]).join(' ')})</b>: ${LV[t.lv]}. ` +
+    (mv.stay.length ? `Keeps <b>${mv.stay.join(' and ')}</b> from home` : 'Keeps <b>no</b> home notes') +
+    (mv.move.length ? `; ${mv.stay.length ? 'moves' : 'every note moves'}: <b>${mv.move.join(', ')}</b>.` : '.') +
+    (t.pcs.includes(11) && t.pcs.includes(5) ? ' It holds <b>7 and 4</b>, the two notes that most want to go home.' : '') +
+    (t.pcs.some(p => !MAJOR.includes(p)) ? ' The spice notes come from outside the key.' : '');
+}
+
+/* ---------- Phrase view: line, zones, shape lanes and the away line ---------- */
+// P: { notes:[{m,s,len}], spb, length, zones:[{from,to,name,sub,bass,chord}], shapes:[{from,to,name,deg,lv,use:[i], passing:[i]}], homeFrom, names }
+function shell(root, q) {
+  const t = q === 'm7' ? [3, 7, 10] : q === '7' ? [4, 7, 10] : [4, 7, 11];
+  return t.map(x => { let m = 48 + (root + x) % 12; while (m < 52) m += 12; while (m > 63) m -= 12; return m; }).sort((a, b) => a - b);
+}
+function makeView(host, opts) {
+  host.innerHTML = `
+    <div class="stage">
+      <div class="row">
+        <button class="btn primary v-play">Play</button>
+        ${opts.picker ? '<select class="sel v-set" aria-label="Lick set"></select><select class="sel v-lick" aria-label="Lick"></select><button class="btn v-next">Next lick</button>' : ''}
+        <label class="check"><input type="checkbox" class="v-loop"> Loop</label>
+        <label class="check"><input type="checkbox" class="v-bass" checked> Bass</label>
+        <label class="check"><input type="checkbox" class="v-chords"> Chords</label>
+      </div>
+      <div class="scroller"><svg class="phrase" role="img" aria-label="The line with its triads and how far from home each one is"></svg></div>
+      <div class="status v-status"></div>
+    </div>`;
+  const q = s => host.querySelector(s), svg = q('svg'), status = q('.v-status');
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, a, p = svg) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; };
+  let P = null, els = [], shapeEls = [], SW = 40, W = 700, R = 18, playingNow = false, base = null;
+  const H = 390, TOP = 100, LANE = 52;   // zone labels + away line on top, shape lane at the bottom
+  const xOf = s => s * SW + SW / 2;
+  let yOf = m => m;
+  function draw() {
+    svg.innerHTML = '';
+    mk('defs', {}).innerHTML = '<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+    const end = Math.max(P.length, ...P.notes.map(n => n.s + n.len));
+    let gap = Infinity; P.notes.forEach((n, i) => { if (i) gap = Math.min(gap, n.s - P.notes[i - 1].s); });
+    gap = Math.max(gap === Infinity ? 1 : gap, 1);
+    const avail = Math.max(280, q('.scroller').clientWidth || 700);
+    SW = Math.max(avail / end, 36 / gap); W = Math.max(avail, end * SW);
+    R = Math.max(13, Math.min(20, SW * gap * 0.45));
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = `${W}px`;
+    // chord zones
+    P.zones.forEach((z, i) => {
+      const x0 = i ? z.from * SW : 0;
+      if (i) mk('line', { class: 'bar', x1: x0, x2: x0, y1: 0, y2: H });
+      mk('text', { class: 'zl', x: x0 + 8, y: 18 }).textContent = z.name;
+      if (z.sub) mk('text', { class: 'zs', x: x0 + 8, y: 35 }).textContent = z.sub;
+    });
+    // away line: a step graph of each shape's level, home before and after
+    const lvY = l => TOP - 10 - l * 10;
+    const segs = P.shapes.map(sh => ({ x0: sh.from * SW, x1: sh.to * SW, l: sh.lv }));
+    mk('text', { class: 'mlbl', x: W - 4, y: lvY(4) - 4, 'text-anchor': 'end' }).textContent = 'away ↑';
+    segs.forEach((sg, i) => {
+      mk('line', { x1: sg.x0 + 2, x2: sg.x1 - 2, y1: lvY(sg.l), y2: lvY(sg.l), stroke: lvColor(sg.l), 'stroke-width': 5, 'stroke-linecap': 'round' });
+      const nx = segs[i + 1]; if (nx && Math.abs(nx.x0 - sg.x1) < 2) mk('line', { x1: sg.x1 - 2, x2: nx.x0 + 2, y1: lvY(sg.l), y2: lvY(nx.l), stroke: '#555', 'stroke-width': 1.5, 'stroke-dasharray': '2 3' });
+    });
+    // notes
+    const lo = Math.min(...P.notes.map(n => n.m)), hi = Math.max(...P.notes.map(n => n.m));
+    const top = TOP + R + 10, bot = H - LANE - R - 10, step = (bot - top) / Math.max(hi - lo, 12);
+    yOf = m => bot - (m - lo) * step;
+    P.notes.forEach((n, i) => { if (i) { const p = P.notes[i - 1]; mk('line', { class: 'lk', x1: xOf(p.s), y1: yOf(p.m), x2: xOf(n.s), y2: yOf(n.m) }); } });
+    const passing = new Set(P.shapes.flatMap(sh => sh.passing || []));
+    els = P.notes.map((n, i) => {
+      const sharp = P.names && P.names[i] && P.names[i].includes('♯');
+      const g = mk('g', { class: `nt ${kindOf(n.m)}${passing.has(i) ? ' pass' : ''}` });
+      const extra = n.len > 1 ? Math.min(n.len - 1, 5) * SW : 0;
+      if (extra > 0.5) mk('rect', { x: xOf(n.s) - R, y: yOf(n.m) - R, width: extra + 2 * R, height: 2 * R, rx: R }, g);
+      else mk('circle', { cx: xOf(n.s), cy: yOf(n.m), r: R }, g);
+      mk('text', { x: xOf(n.s), y: yOf(n.m) + 1, 'font-size': Math.round(R * 0.95) }, g).textContent = (sharp ? DEG_SHARP : DEG)[pcOf(n.m)];
+      g.style.cursor = 'pointer'; g.addEventListener('click', () => tapNote(i));
+      return g;
+    });
+    // shape lane
+    shapeEls = P.shapes.map((sh, k) => {
+      const g = mk('g', { class: 'shape' });
+      const x0 = sh.from * SW + 2, w = Math.max(10, (sh.to - sh.from) * SW - 4);
+      mk('rect', { x: x0, y: H - LANE + 4, width: w, height: LANE - 8, rx: 10, fill: '#0c0c0e', stroke: lvColor(sh.lv) }, g);
+      mk('rect', { x: x0, y: H - LANE + 4, width: 6, height: LANE - 8, rx: 3, fill: lvColor(sh.lv), stroke: 'none' }, g);
+      const t1 = mk('text', { x: x0 + 14, y: H - LANE + 22, 'font-size': 14, 'font-weight': 700, fill: '#f2f2f2' }, g); t1.textContent = sh.name;
+      const t2 = mk('text', { x: x0 + 14, y: H - LANE + 39, 'font-size': 12, fill: '#a3a3a8' }, g); t2.textContent = `${sh.deg} · ${LV[sh.lv]}`;
+      // clip long labels
+      const cp = mk('clipPath', { id: `c${host.id}${k}` }); mk('rect', { x: x0, y: H - LANE, width: w - 4, height: LANE }, cp);
+      t1.setAttribute('clip-path', `url(#c${host.id}${k})`); t2.setAttribute('clip-path', `url(#c${host.id}${k})`);
+      g.addEventListener('click', () => tapShape(k));
+      return g;
+    });
+  }
+  const zoneAt = s => { let z = P.zones[0]; P.zones.forEach(x => { if (x.from <= s) z = x; }); return z; };
+  async function tapNote(i) {
+    const n = P.notes[i], B = await begin(), t = ctx.currentTime + 0.02, z = zoneAt(n.s);
+    if (q('.v-bass').checked && z.bass) piano(z.bass, t, 1.6, 0.75);
+    hold(n.m, t, 1.4); at(t, () => els[i].classList.add('on')); at(t + 1.2, () => els[i].classList.remove('on'));
+    const k = kindOf(n.m);
+    status.innerHTML = `<b>${DEG[pcOf(n.m)]}</b> from C: ${k === 'home' ? 'a <b>home</b> note' : k === 'key' ? 'in the key, <b>not home</b>' : '<b>spice</b>, outside the key'}.`;
+  }
+  async function tapShape(k) {
+    const sh = P.shapes[k], B = await begin(), t0 = ctx.currentTime + 0.03, z = zoneAt(sh.from);
+    const play = sh.use.filter(i => !(sh.passing || []).includes(i)), st = B * 0.6;
+    if (q('.v-bass').checked && z.bass) hold(z.bass, t0, st * (play.length + 2), 0.75);
+    play.forEach((i, j) => { hold(P.notes[i].m, t0 + j * st, st * 1.5 + 0.2); at(t0 + j * st, () => els[i].classList.add('on')); at(t0 + (j + 1) * st, () => els[i].classList.remove('on')); });
+    const pcs = [...new Set(play.map(i => pcOf(P.notes[i].m)))];
+    at(t0, () => shapeEls[k].classList.add('on')); at(t0 + st * (play.length + 1), () => shapeEls[k].classList.remove('on'));
+    const h = pcs.filter(p => HOME.includes(p)).map(p => DEG[p]);
+    status.innerHTML = `<b>${sh.name}</b> (${sh.deg}) over ${z.name}: <b>${LV[sh.lv]}</b>. ${h.length ? `Home notes in it: <b>${h.join(', ')}</b>.` : 'No home notes in it.'}${pcs.some(p => !MAJOR.includes(p)) ? ' Has spice: ' + pcs.filter(p => !MAJOR.includes(p)).map(p => `<b>${DEG[p]}</b>`).join(', ') + '.' : ''}`;
+  }
+  const beatOf = s => P.spb === 2 ? Math.floor(s / 2) + ((((s % 2) + 2) % 2) ? (swingBox.checked ? 2 / 3 : 0.5) : 0) : s / P.spb;
+  const totalBeats = () => Math.ceil((Math.max(P.length, ...P.notes.map(n => n.s + n.len))) / P.spb / 4 - 1e-9) * 4;
+  function schedule(t0, B) {
+    const endBeat = totalBeats();
+    P.zones.forEach((z, i) => {
+      const b0 = beatOf(Math.ceil(z.from / P.spb) * P.spb), b1 = i + 1 < P.zones.length ? beatOf(Math.ceil(P.zones[i + 1].from / P.spb) * P.spb) : endBeat - 0.25;
+      if (q('.v-bass').checked && z.bass) hold(z.bass, t0 + b0 * B, (b1 - b0) * B, 0.75);
+      if (q('.v-chords').checked && z.chord) shell(z.chord.root, z.chord.q).forEach(m => hold(m, t0 + b0 * B, (b1 - b0) * B, 0.3));
+    });
+    P.notes.forEach((n, i) => {
+      const s = t0 + beatOf(n.s) * B, e = t0 + beatOf(n.s + n.len) * B;
+      hold(n.m, s, e - s + 0.12);
+      at(s, () => { els[i].classList.add('on'); follow(i); }); at(e, () => els[i].classList.remove('on'));
+    });
+    P.shapes.forEach((sh, k) => {
+      const s = t0 + beatOf(sh.from) * B, e = t0 + beatOf(sh.to) * B;
+      at(s, () => shapeEls[k].classList.add('on')); at(e, () => shapeEls[k].classList.remove('on'));
+    });
+    return t0 + endBeat * B;
+  }
+  function follow(i) {
+    const sc = q('.scroller'); if (sc.scrollWidth <= sc.clientWidth + 1) return;
+    sc.scrollTo({ left: Math.max(0, xOf(P.notes[i].s) - sc.clientWidth * 0.35), behavior: 'smooth' });
+  }
+  const playBtn = q('.v-play');
+  const setPlaying = on => { playingNow = on; playBtn.textContent = on ? 'Stop' : 'Play'; };
+  onStop.push(() => { setPlaying(false); els.forEach(e => e.classList.remove('on')); shapeEls.forEach(e => e.classList.remove('on')); });
+  async function play() {
+    const B = await begin(); setPlaying(true);
+    let t0 = ctx.currentTime + 0.08;
+    const go = () => { const end = schedule(t0, B); at(end - 0.05, () => { if (q('.v-loop').checked && playingNow) { t0 = end; go(); } else setPlaying(false); }); };
+    go();
+  }
+  playBtn.addEventListener('click', () => playingNow ? stopAll() : play());
+  function set(p) { stopAll(); P = p; draw(); status.innerHTML = p.describe || ''; }
+  if (opts.picker) {
+    const setSel = q('.v-set'), lickSel = q('.v-lick'), sets = opts.picker.sets;
+    sets.forEach((st, i) => { const o = document.createElement('option'); o.value = i; o.textContent = st.name; setSel.appendChild(o); });
+    const fill = () => { lickSel.innerHTML = ''; sets[+setSel.value].licks.forEach((l, k) => { const o = document.createElement('option'); o.value = k; o.textContent = `Lick ${l.num || k + 1}`; lickSel.appendChild(o); }); };
+    const load = () => { set(sets[+setSel.value].licks[+lickSel.value].phrase); try { localStorage.setItem('ha2-stitt', JSON.stringify([+setSel.value, +lickSel.value])); } catch (e) {} };
+    setSel.addEventListener('change', () => { fill(); load(); }); lickSel.addEventListener('change', load);
+    q('.v-next').addEventListener('click', () => { const n = sets[+setSel.value].licks.length;
+      if (+lickSel.value + 1 < n) lickSel.value = +lickSel.value + 1; else { setSel.value = (+setSel.value + 1) % sets.length; fill(); lickSel.value = 0; } load(); });
+    let pos = [0, 0]; try { const v = JSON.parse(localStorage.getItem('ha2-stitt') || 'null'); if (v && sets[v[0]] && sets[v[0]].licks[v[1]]) pos = v; } catch (e) {}
+    setSel.value = pos[0]; fill(); lickSel.value = pos[1]; load();
+  }
+  window.addEventListener('resize', () => { if (P && !playingNow) draw(); });
+  return { set, redraw: () => P && draw() };
+}
+
+/* ---------- 2 · build a trip ---------- */
+const II_OPTS = ['F', 'Dm', 'Am', 'Fm'], V_OPTS = ['G', 'B°', 'Dm', 'F°', 'Fm', 'A♭'];
+const II_SAY = { F: '3–5–7 of Dm7', Dm: 'Dm7\'s own triad', Am: '5–7–9 of Dm7', Fm: 'Dm7♭5 color' };
+const V_SAY = { G: 'G7\'s own triad', 'B°': '3–5–7 of G7', Dm: '5–7–9 of G7', 'F°': 'G7♭9 without root', Fm: '♭7–♭9–11 of G7', 'A♭': '♭9–11–♯9 of G7' };
+// shapes over a triad, as steps up the triad: 0 = root, 1 = 3rd, 2 = 5th, 3 = root an octave up…
+const SHAPES = {
+  'Up': [0, 1, 2, 3, 4, 5, 4, 3], 'Down': [5, 4, 3, 2, 1, 0, 1, 2], 'Up, then down': [0, 1, 2, 3, 2, 1, 0, 1],
+  'Down, then up': [3, 2, 1, 0, 1, 2, 3, 4], 'From the 3rd': [1, 2, 3, 4, 3, 2, 1, 0], 'From the 5th': [2, 3, 4, 5, 4, 3, 2, 1],
+  'Turn': [0, 1, 2, 1, 0, 1, 2, 3], 'Down from the top': [4, 3, 2, 1, 2, 3, 4, 2],
+};
+const SHAPE_NAMES = Object.keys(SHAPES);
+let trip = { ii: 'F', v: 'B°', sII: 'Up', sV: 'Down' };
+function chipRow(el, list, key, say) {
+  list.forEach(n => {
+    const t = T(n), b = document.createElement('button'); b.className = 'chip'; b.style.setProperty('--lc', lvColor(t.lv));
+    b.innerHTML = `${n}<span>${t.pcs.map(p => DEG[p]).join(' ')}</span>`; b.title = `${say[n]} · ${LV[t.lv]}`;
+    b.dataset.n = n; b.addEventListener('click', () => { trip[key] = n; syncChips(); rebuild(); });
+    el.appendChild(b);
+  });
+}
+chipRow(document.getElementById('pickII'), II_OPTS, 'ii', II_SAY);
+chipRow(document.getElementById('pickV'), V_OPTS, 'v', V_SAY);
+const shapeII = document.getElementById('shapeII'), shapeV = document.getElementById('shapeV');
+[shapeII, shapeV].forEach(s => SHAPE_NAMES.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; s.appendChild(o); }));
+shapeII.addEventListener('change', () => { trip.sII = shapeII.value; rebuild(); });
+shapeV.addEventListener('change', () => { trip.sV = shapeV.value; rebuild(); });
+document.getElementById('newShapes').addEventListener('click', () => {
+  let a, b; do { a = SHAPE_NAMES[Math.floor(Math.random() * SHAPE_NAMES.length)]; b = SHAPE_NAMES[Math.floor(Math.random() * SHAPE_NAMES.length)]; } while (a === trip.sII && b === trip.sV);
+  trip.sII = a; trip.sV = b; syncChips(); rebuild();
+});
+const PRESETS = [['F', 'B°', 'Stitt lick 1 sound'], ['Dm', 'F°', 'dark'], ['F', 'G', 'plain'], ['Am', 'B°', 'smooth'], ['F', 'Fm', 'slide into ♭6'], ['Dm', 'A♭', 'altered']];
+PRESETS.forEach(([a, b, say]) => { const x = document.createElement('button'); x.className = 'btn'; x.innerHTML = `${a} → ${b} → C <span style="opacity:.6;font-weight:500">${say}</span>`;
+  x.addEventListener('click', () => { trip.ii = a; trip.v = b; syncChips(); rebuild(); }); document.getElementById('presets').appendChild(x); });
+function syncChips() {
+  document.querySelectorAll('#pickII .chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.n === trip.ii));
+  document.querySelectorAll('#pickV .chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.n === trip.v));
+  shapeII.value = trip.sII; shapeV.value = trip.sV;
+  try { localStorage.setItem('ha2-trip', JSON.stringify(trip)); } catch (e) {}
+}
+// draw a triad as a bar of eighths in a shape, starting near the previous note
+function triadBar(pcs, shape, near) {
+  const root = pcs[0], iv = [0, pcOf(pcs[1] - root), pcOf(pcs[2] - root)];
+  const rel = SHAPES[shape].map(k => iv[k % 3] + 12 * Math.floor(k / 3));
+  let best = null;
+  for (let o = 36; o <= 84; o += 12) {
+    const ms = rel.map(r => o + root + r);
+    if (Math.min(...ms) < 55 || Math.max(...ms) > 84) continue;
+    const c = Math.abs(ms[0] - near); if (!best || c < best.c) best = { ms, c };
+  }
+  if (!best) { const o = 60 + root; best = { ms: rel.map(r => o + r) }; while (Math.max(...best.ms) > 84) best.ms = best.ms.map(m => m - 12); }
+  return best.ms;
+}
+function buildTrip() {
+  const tii = T(trip.ii), tv = T(trip.v);
+  const a = triadBar(tii.pcs, trip.sII, 69), b = triadBar(tv.pcs, trip.sV, a[7]);
+  // land on the nearest home note, then settle down the home triad
+  const last = b[7]; let land = null;
+  for (let m = last - 6; m <= last + 6; m++) if (HOME.includes(pcOf(m)) && (land === null || Math.abs(m - last) < Math.abs(land - last) || (Math.abs(m - last) === Math.abs(land - last) && m < land))) land = m;
+  // settle down the home triad, or up if that would go too low
+  const dir = land - 9 < 55 ? 1 : -1;
+  const homeLine = [land]; let m = land;
+  while (homeLine.length < 3) { m += dir; if (HOME.includes(pcOf(m))) homeLine.push(m); }
+  const notes = [...a, ...b].map((m, i) => ({ m, s: i, len: 1 }));
+  notes.push({ m: homeLine[0], s: 16, len: 2 }, { m: homeLine[1], s: 18, len: 2 }, { m: homeLine[2], s: 20, len: 4 });
+  const m1 = movesText(HOME, tii.pcs), m2 = movesText(tii.pcs, tv.pcs), m3 = movesText(tv.pcs, HOME);
+  const say = (mv) => (mv.stay.length ? `<b>${mv.stay.join(', ')}</b> stay${mv.stay.length === 1 ? 's' : ''}` : 'nothing stays') + (mv.move.length ? `, <b>${mv.move.join(', ')}</b>` : '');
+  const describe = `<b>Home → ${tii.n}</b> (${LV[tii.lv]}): ${say(m1)}. <b>${tii.n} → ${tv.n}</b> (${LV[tv.lv]}): ${say(m2)}. <b>${tv.n} → home</b>: ${say(m3)}.<br>` +
+    `The line lands on <b>${DEG[pcOf(land)]}</b>, ${Math.abs(land - last) <= 2 ? `a ${Math.abs(land - last) === 1 ? 'half' : 'whole'} step from ${DEG[pcOf(last)]}` : `from ${DEG[pcOf(last)]}`}.`;
+  return { notes, spb: 2, length: 24, homeFrom: 16, describe, zones: [
+      { from: 0, to: 8, name: `Dm7 · ${tii.n}`, sub: II_SAY[tii.n], bass: 50, chord: { root: 2, q: 'm7' } },
+      { from: 8, to: 16, name: `G7 · ${tv.n}`, sub: V_SAY[tv.n], bass: 43, chord: { root: 7, q: '7' } },
+      { from: 16, to: 24, name: 'C · home', sub: 'C triad', bass: 48, chord: { root: 0, q: 'maj' } }],
+    shapes: [
+      { from: 0, to: 8, name: `${tii.n} triad`, deg: tii.pcs.map(p => DEG[p]).join(' '), lv: tii.lv, use: [0, 1, 2, 3, 4, 5, 6, 7] },
+      { from: 8, to: 16, name: `${tv.n} triad`, deg: tv.pcs.map(p => DEG[p]).join(' '), lv: tv.lv, use: [8, 9, 10, 11, 12, 13, 14, 15] },
+      { from: 16, to: 24, name: 'C triad', deg: '1 3 5', lv: 0, use: [16, 17, 18] }] };
+}
+try { const v = JSON.parse(localStorage.getItem('ha2-trip') || 'null'); if (v && T(v.ii) && T(v.v) && SHAPES[v.sII] && SHAPES[v.sV]) trip = v; } catch (e) {}
+const views = {};
+views.build = makeView(document.getElementById('ph-build'), {});
+function rebuild() { views.build.set(buildTrip()); }
+syncChips(); rebuild();
+
+/* ---------- 3 · Stitt licks as trips ---------- */
+const degPcs = d => d.split(/[–\- ]+/).filter(Boolean).map(x => { const i = DEG.indexOf(x); if (i >= 0) return i; const j = DEG_SHARP.indexOf(x); return j >= 0 ? j : null; }).filter(x => x !== null);
+STITT.forEach(st => {
+  st.name = st.name.replace('Stitt 251 · ', 'Stitt ').replace('Stitt 251 licks - ', 'Stitt ');
+  st.licks.forEach(l => {
+    const chords = l.chords.slice().sort((a, b) => a.slot - b.slot);
+    const end = Math.max(l.length, ...l.notes.map(n => n[1] + (n[2] || 1)));
+    const notes = l.notes.map(([m, s, len]) => ({ m, s, len: len || 1 }));
+    const homeC = chords.find(c => c.q === 'maj');
+    const shapes = (l.cards || []).map(c => {
+      const from = Math.min(...c.use.map(i => notes[i].s)), last = Math.max(...c.use.map(i => notes[i].s + Math.min(notes[i].len, 2)));
+      const own = c.use.filter(i => !c.passing.includes(i)).map(i => notes[i].m);
+      return { from, to: last, name: c.name, deg: c.deg.replace(/–/g, ' '), lv: awayLevel(own.length ? own : degPcs(c.deg)), use: c.use, passing: c.passing };
+    }).sort((a, b) => a.from - b.from);
+    // path in words
+    const path = shapes.map(s => `<b>${s.name}</b> <span style="color:${lvColor(s.lv)}">(${LV[s.lv]})</span>`).join(' → ');
+    const awayShapes = shapes.filter(s => !homeC || s.from < homeC.slot), peak = awayShapes.reduce((a, s) => s.lv > (a ? a.lv : -1) ? s : a, null);
+    const describe = `${path}.` + (peak ? `<br>Farthest point: <b>${peak.name}</b> (${peak.deg}).` : '') + (homeC && !notes.some(n => n.s >= homeC.slot) ? ' The line ends before the home chord.' : '');
+    l.phrase = { notes, spb: l.spb, length: end, names: l.names, homeFrom: homeC ? homeC.slot : end, shapes, describe,
+      zones: chords.map(c => ({ from: c.slot, name: c.name, sub: c.q === 'maj' ? 'home' : 'away', bass: 43 + ((c.root - 7 + 12) % 12), chord: { root: c.root, q: c.q } })) };
+  });
+});
+views.stitt = makeView(document.getElementById('ph-stitt'), { picker: { sets: STITT } });
+
+/* ---------- Tabs ---------- */
+const tabs = document.querySelectorAll('.tab');
+function showTab(name) {
+  tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + name));
+  try { localStorage.setItem('ha2-tab', name); } catch (e) {}
+  if (views[name]) views[name].redraw();
+}
+tabs.forEach(t => t.addEventListener('click', () => { stopAll(); showTab(t.dataset.tab); }));
+try { const v = localStorage.getItem('ha2-tab'); if (v && document.getElementById('p-' + v)) showTab(v); } catch (e) {}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') stopAll();
+  if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) { e.preventDefault(); const p = document.querySelector('.panel.on .v-play'); if (p) p.click(); }
+});
+</script>
+<script src="lab.js"></script>
+</body></html>

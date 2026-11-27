@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tune Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#14110f; --panel:#1d1916; --line:#2e2824; --ink:#f3ece4; --mute:#a3978b; --dim:#6d635a; --home:#e9b96e; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  button,select,input{font:inherit;color:inherit}
+  .wrap{max-width:680px;margin:0 auto;padding:22px 16px 90px}
+  h1{font-family:Fraunces,serif;font-weight:700;font-size:28px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--mute);font-size:14px;margin:6px 0 16px;line-height:1.45}
+  .bar{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px;margin-bottom:14px}
+  .row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:13.5px;color:var(--mute)}
+  .row label{display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+  input[type=range]{flex:1;min-width:120px;accent-color:var(--home)}
+  input[type=checkbox]{accent-color:var(--home);width:15px;height:15px}
+  .btn{border:1px solid var(--line);background:#181512;color:var(--ink);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:14px}
+  .btn.primary{background:var(--home);border-color:var(--home);color:#1a140c;font-weight:600}
+  .chip{border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .chip[aria-pressed="true"]{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .tnum{font-variant-numeric:tabular-nums;color:var(--ink);min-width:4.5em;display:inline-block}
+  #cv{width:100%;height:470px;border-radius:16px 16px 0 0;display:block;border:1px solid var(--line);border-bottom:0}
+  #strip{width:100%;height:84px;border-radius:0 0 16px 16px;display:block;border:1px solid var(--line);cursor:pointer;touch-action:none}
+  .now{display:flex;justify-content:space-between;font-size:14px;margin:0 2px 8px;color:var(--mute)}
+  .now b{color:var(--ink);font-weight:600}
+  .sw{display:inline-flex;align-items:center;gap:9px;cursor:pointer;color:var(--ink);font-size:14px}
+  .sw input{appearance:none;-webkit-appearance:none;width:40px;height:22px;border-radius:999px;background:#2e2824;border:1px solid var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}
+  .sw input::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--mute);transition:transform .15s,background .15s}
+  .sw input:checked{background:#3a2f22;border-color:var(--home)}
+  .sw input:checked::after{transform:translateX(18px);background:var(--home)}
+  body.focus{overflow:hidden}
+  body.focus > :not(.wrap){display:none!important}
+  body.focus #stage{position:fixed;inset:0;z-index:2147483647;background:#0b0907}
+  body.focus #cv{height:calc(100vh - 90px);height:calc(100dvh - 90px);border:0;border-radius:0;touch-action:none}
+  body.focus #strip{height:90px;border:0;border-radius:0}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mute);margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tune Journey</h1>
+  <div class="sub">A whole solo as a trip away from home. The faint sun in the middle is the key's home triad. The bright column is the chord of the moment: chords that belong to the key stay close, chords with notes from outside the key travel further away. When the soloist plays 1, 3 or 5 of home, the sun lights up, even while the chords are away. Notes glow around the chord, colored by how they sit on it. Every tune is shown in C.</div>
+
+  <div class="bar">
+    <div class="row">
+      <input type="search" id="q" placeholder="Search tune or player" style="flex:1;min-width:140px;background:#181512;border:1px solid var(--line);border-radius:10px;padding:8px 10px">
+      <select id="tune" style="flex:2;min-width:200px;background:#181512;border:1px solid var(--line);border-radius:10px;padding:8px"></select>
+    </div>
+    <div class="row">
+      <span>Home</span>
+      <select id="home" style="background:#181512;border:1px solid var(--line);border-radius:10px;padding:6px 8px"></select>
+      <button class="chip" id="hm" aria-pressed="false">Minor home</button>
+      <span id="tinfo" style="font-size:12.5px"></span>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="pl">▶ Play</button>
+      <button class="btn" id="back">⏮ 8 bars</button>
+      <button class="btn" id="fwd">8 bars ⏭</button>
+      <label class="sw"><input type="checkbox" id="loop" role="switch"> Loop these 8 bars</label>
+      <button class="btn" id="fs">⛶ Full screen</button>
+    </div>
+    <div class="row">
+      <span>Tempo</span><input type="range" id="tp" min="40" max="320" step="1" value="160"><span class="tnum" id="tpo">160 bpm</span>
+    </div>
+    <div class="row">
+      <span>Under the solo</span>
+      <button class="chip" data-bg="chord" aria-pressed="true">Chords</button>
+      <button class="chip" data-bg="drone" aria-pressed="false">Home drone</button>
+      <button class="chip" data-bg="both" aria-pressed="false">Both</button>
+      <button class="chip" data-bg="none" aria-pressed="false">Silence</button>
+    </div>
+    <div class="row">
+      <span>Background volume</span><input type="range" id="dv" min="0" max="150" step="1" value="70">
+    </div>
+    <div class="row">
+      <label class="sw"><input type="checkbox" id="met" role="switch"> Metronome</label>
+      <label><input type="checkbox" id="trip" checked> Triplets</label>
+      <input type="range" id="mv" min="0" max="150" step="1" value="80" aria-label="Metronome volume">
+    </div>
+    <div class="row">
+      <span>Slow down</span>
+      <button class="chip" data-sl="1" aria-pressed="true">Normal</button>
+      <button class="chip" data-sl="2" aria-pressed="false">Half speed</button>
+      <button class="chip" data-sl="4" aria-pressed="false">Super slow ¼</button>
+    </div>
+    <div class="row">
+      <span>Numbers</span>
+      <button class="chip" data-num="chord" aria-pressed="true">From the chord</button>
+      <button class="chip" data-num="key" aria-pressed="false">From home</button>
+      <button class="chip" data-num="off" aria-pressed="false">Off</button>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="thr" checked> Thread to home</label>
+      <label><input type="checkbox" id="wx" checked> Darker far from home</label>
+    </div>
+  </div>
+
+  <div class="now"><span>Bar <b id="barN">1</b><span id="chW"> · chorus <b id="chN">1</b></span></span><span>Chord <b id="chord">C</b> · <span id="dist">home</span></span></div>
+  <div id="stage"><canvas id="cv"></canvas><canvas id="strip"></canvas></div>
+  <div class="legend">
+    <span>Column colour = how foreign the chord is:</span>
+    <span><span style="color:#FAC775">●</span> home chord</span>
+    <span><span style="color:#9FE1CB">●</span> in the key</span>
+    <span><span style="color:#5DCAA5">●</span> 1 note outside</span>
+    <span><span style="color:#378ADD">●</span> 2 outside</span>
+    <span><span style="color:#AFA9EC">●</span> 3+ outside, far away</span>
+  </div>
+  <div class="legend">
+    <span>Notes off the chord:</span>
+    <span><span style="color:#5DCAA5">●</span> 9</span><span><span style="color:#F0997B">●</span> 11</span><span><span style="color:#EF9F27">●</span> 13</span>
+    <span><span style="color:#ED93B1">●</span> b7</span><span><span style="color:#E24B4A">●</span> 7</span><span><span style="color:#D4537E">●</span> chromatic</span>
+  </div>
+  <div class="legend">The strip at the bottom is the whole solo: the higher, the more foreign the chord. Tap it to jump. Left of the sun = flat side (IV, ♭VII…), right = sharp side (V, II, VI…). Home key is guessed for each tune; if it looks wrong (lots of travel where the tune feels at home), fix it with Home. Some transcriptions have odd chord symbols, so check against the record.</div>
+</div>
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const NAMES = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+const QD = {maj:'', min:'m', dom:'⁷', hdim:'ø', dim:'°', aug:'+', sus:'sus'};
+const chordNum = c => DEGK[c[1]] + QD[c[2]];
+const QN = {maj:'', min:'m', dom:'7', hdim:'ø', dim:'°', aug:'+', sus:'sus'};
+const TRI = {maj:[0,4,7], dom:[0,4,7], min:[0,3,7], hdim:[0,3,6], dim:[0,3,6], aug:[0,4,8], sus:[0,5,7]};
+const DEGC = ['1','b9','9','#9','3','11','#11','5','b13','13','b7','7'];
+const DEGK = ['1','b2','2','b3','3','4','#4','5','b6','6','b7','7'];
+const FARCOL = ['#FAC775','#9FE1CB','#5DCAA5','#85B7EB','#378ADD','#AFA9EC','#7F77DD'];
+const DK = {'#FAC775':'#633806','#9FE1CB':'#04342C','#5DCAA5':'#04342C','#85B7EB':'#042C53','#378ADD':'#042C53','#AFA9EC':'#26215C','#7F77DD':'#26215C',
+  '#F0997B':'#4A1B0C','#EF9F27':'#412402','#ED93B1':'#4B1528','#E24B4A':'#501313','#D4537E':'#4B1528'};
+// distance round the cycle of fifths from C: + = sharp side (G, D, A…), − = flat side (F, B♭, E♭…)
+const fifths = r => { const f = (r*7) % 12; return f > 6 ? f - 12 : f; };
+// How far a chord is from home = how many of its notes are outside the key.
+// The home chord sits on the sun; other chords of the key sit just beside it; each foreign note pushes it further.
+const CT = {maj:[0,4,7], dom:[0,4,7,10], min:[0,3,7,10], hdim:[0,3,6,10], dim:[0,3,6,9], aug:[0,4,8], sus:[0,5,7,10]};
+const keySet = () => MINOR ? [0,2,3,5,7,8,10,11] : [0,2,4,5,7,9,11];
+function away(c){
+  const r = c[1], q = c[2], ks = keySet();
+  const out = (CT[q] || CT.maj).filter(x => !ks.includes((r + x) % 12)).length;
+  const home = r === 0 && (MINOR ? q === 'min' : q === 'maj' || q === 'dom' && out === 0);
+  if (home) return {d: 0, out: 0, side: 0};
+  const f = fifths(r), side = f > 0 && f < 6 ? 1 : -1;
+  return {d: Math.min(6, 1 + out*1.4), out, side};
+}
+let NOTES = [], CH = [[0,0,'maj']], END = 4, CLEN = null, MINOR = false, LO = 52, HI = 82;   // LO–HI: the pitch window, fitted to each solo   // filled by the tune picker
+
+const chordAt = b => { let c = CH[0]; for (const x of CH) { if (x[0] <= b + 1e-6) c = x; else break; } return c; };
+
+/* ---------- audio (Music Lab piano + home drone + woodblock) ---------- */
+let actx, master, droneBus, live = [], loadP = null, droneLoad = null, droneBuf = null, drone = null;
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number).sort((a,b)=>a-b), buffers = {};
+const b64 = url => { const bin = atob(url.slice(url.indexOf(',')+1)), u8 = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); return u8.buffer; };
+const store = (k,v) => { try{ localStorage.setItem('tj:'+k, v); }catch(e){} };
+const load = k => { try{ return localStorage.getItem('tj:'+k); }catch(e){ return null; } };
+function audio(){
+  if (!actx){
+    actx = new (window.AudioContext||window.webkitAudioContext)({latencyHint:'playback'});
+    const comp = actx.createDynamicsCompressor(); comp.threshold.value=-8; comp.knee.value=6; comp.ratio.value=12; comp.attack.value=.003; comp.release.value=.25;
+    master = actx.createGain(); master.gain.value=.9; master.connect(comp); comp.connect(actx.destination);
+    droneBus = actx.createGain(); droneBus.gain.value = +$('dv').value/100; droneBus.connect(master);
+  }
+  if (actx.state==='suspended') actx.resume();
+  if (!loadP) loadP = Promise.all(Object.entries(PIANO).map(([m,url]) => new Promise(res => actx.decodeAudioData(b64(url), b => { buffers[m]=b; res(); }, () => res()))));
+  if (!droneLoad) droneLoad = new Promise(res => actx.decodeAudioData(b64(DRONE_URL), b => { droneBuf = seamless(b); res(); }, () => res()));
+  return Promise.all([loadP, droneLoad]);
+}
+function seamless(b){
+  const sr = b.sampleRate, skip = Math.floor(sr*.03), X = Math.floor(sr*.4), L = b.length-skip-X;
+  const out = actx.createBuffer(b.numberOfChannels, L, sr);
+  for (let c=0;c<b.numberOfChannels;c++){
+    const src = b.getChannelData(c), dst = out.getChannelData(c);
+    for (let i=0;i<L;i++) dst[i] = src[skip+i];
+    for (let i=0;i<X;i++){ const f = i/X; dst[i] = src[skip+i]*Math.sin(f*Math.PI/2) + src[skip+L+i]*Math.cos(f*Math.PI/2); }
+  }
+  return out;
+}
+// the drone stays on HOME (C) the whole time, so you hear the tonic against every chord
+function droneOn(){
+  if (!droneBuf || drone) return;
+  const t = actx.currentTime, g = actx.createGain(), src = actx.createBufferSource();
+  src.buffer = droneBuf; src.loop = true; src.connect(g); g.connect(droneBus);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t+1.2);
+  src.start(t, Math.random()*droneBuf.duration*.8); drone = {g, src};
+}
+function droneOff(){
+  if (!drone) return; const t = actx.currentTime, {g, src} = drone; drone = null;
+  try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t+1); src.stop(t+1.1); } catch(e){}
+}
+function piano(m, t, dur, vel=.9, bus=null){
+  const s = SAMPLE_KEYS.reduce((b,k)=>Math.abs(k-m)<Math.abs(b-m)?k:b, SAMPLE_KEYS[0]), buf = buffers[s]; if (!buf) return;
+  const src = actx.createBufferSource(); src.buffer = buf; const rate = Math.pow(2,(m-s)/12); src.playbackRate.value = rate;
+  const g = actx.createGain(), end = Math.min(t+dur*1.05+.08, t+buf.duration/rate);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vel,t+.004);
+  g.gain.setValueAtTime(vel,Math.max(t+.01,end-.12)); g.gain.linearRampToValueAtTime(.0001,end);
+  src.connect(g); g.connect(bus || master); src.start(t); src.stop(end+.02);
+  live.push({src,g}); src.onended = () => { live = live.filter(x=>x.src!==src); };
+}
+let noiseBuf = null;
+function wood(t, accent){
+  if (!noiseBuf) { noiseBuf = actx.createBuffer(1, Math.floor(actx.sampleRate*.05), actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, 4); }
+  const vol = +$('mv').value/100 * (accent ? 1 : .7) + .0001, base = accent ? 1050 : 820;
+  const out = actx.createGain(); out.gain.value = vol; out.connect(actx.destination);
+  const n = actx.createBufferSource(); n.buffer = noiseBuf;
+  [[base, 14, .9], [base*2.7, 10, .35]].forEach(([f, q, a]) => { const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; const g = actx.createGain(); g.gain.value = a*2.2; n.connect(bp); bp.connect(g); g.connect(out); });
+  const o = actx.createOscillator(), og = actx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(base*1.08, t); o.frequency.exponentialRampToValueAtTime(base, t + .02);
+  og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.32, t + .001); og.gain.exponentialRampToValueAtTime(.0001, t + .05);
+  o.connect(og); og.connect(out); n.start(t); o.start(t); o.stop(t + .07);
+  live.push({src:o, g:out}); live.push({src:n, g:out});
+}
+function tickSub(t){
+  const o = actx.createOscillator(), g = actx.createGain(), v = +$('mv').value/100*.12 + .0001;
+  o.type = 'sine'; o.frequency.value = 2200;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .001); g.gain.exponentialRampToValueAtTime(.0001, t + .03);
+  o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + .05); live.push({src:o, g});
+}
+function hush(){ if (!actx) return; const now = actx.currentTime; live.forEach(({src,g})=>{ try{ g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value,now); g.gain.linearRampToValueAtTime(0,now+.03); src.stop(now+.04);}catch(e){} }); live = []; }
+
+/* ---------- settings ---------- */
+let bg = load('bg') || 'chord', slow = +load('slow') || 1, numMode = load('num') || 'chord';
+const chips = (attr, val, set) => document.querySelectorAll(`.chip[data-${attr}]`).forEach(b => {
+  b.setAttribute('aria-pressed', b.dataset[attr] == val);
+  b.onclick = () => { document.querySelectorAll(`.chip[data-${attr}]`).forEach(x => x.setAttribute('aria-pressed', x === b)); set(b.dataset[attr]); };
+});
+const wantChords = () => bg === 'chord' || bg === 'both', wantDrone = () => bg === 'drone' || bg === 'both';
+chips('bg', bg, v => { bg = v; store('bg', v); if (playing) { wantDrone() ? droneOn() : droneOff(); } });
+chips('sl', slow, v => { slow = +v; store('slow', v); retempo(); });
+chips('num', numMode, v => { numMode = v; store('num', v); });
+[['dv','dv'],['mv','mv'],['tp','tp']].forEach(([id,k]) => { const v = load(k); if (v) $(id).value = v; });
+['met','trip','loop','thr','wx'].forEach(id => { const v = load(id); if (v !== null) $(id).checked = v === '1'; $(id).addEventListener('change', () => store(id, $(id).checked ? '1' : '0')); });
+$('tpo').textContent = $('tp').value + ' bpm';
+$('dv').oninput = () => { if (droneBus) droneBus.gain.setTargetAtTime(+$('dv').value/100, actx.currentTime, .05); store('dv', $('dv').value); };
+$('mv').oninput = () => store('mv', $('mv').value);
+
+/* ---------- transport ----------
+   Two clocks: the scheduler runs ~0.3 s ahead of what you hear; the picture follows what you hear.
+   They only differ for a moment when a loop jumps back. */
+let playing = false, pos = 0, iv = null, nextNote = 0, nextChord = 0, nextBeat = 0, timers = [];
+let sA = {t:0, b:0}, dA = {t:0, b:0}, loopA = 0, loopB = 0;
+const spb = () => 60/(+$('tp').value)*slow;
+const beatNow = () => playing ? dA.b + (actx.currentTime - dA.t)/spb() : pos;
+const timeOf = b => sA.t + (b - sA.b)*spb();
+function seekIdx(b){
+  nextNote = NOTES.findIndex(n => n[0] >= b - 1e-6); if (nextNote < 0) nextNote = NOTES.length;
+  nextChord = CH.findIndex(c => c[0] >= b - 1e-6); if (nextChord < 0) nextChord = CH.length;
+  nextBeat = Math.ceil(b - 1e-6);
+}
+function compChord(c, t, lenB){
+  const r = c[1], tri = TRI[c[2]] || TRI.maj, d = Math.min(lenB, 8)*spb();
+  piano(36 + r, t, d, .5, droneBus);
+  const up = tri.slice(1).concat(c[2]==='maj' ? [11] : [10]);
+  up.forEach((x,i) => { let m = 48 + r + x; while (m > 60) m -= 12; while (m < 50) m += 12; piano(m, t + .012*(i+1), d, .3, droneBus); });
+}
+async function start(){
+  await audio(); playing = true; $('pl').textContent = '❚❚ Pause';
+  loopA = Math.floor(pos/32)*32; loopB = Math.min(END, loopA + 32);
+  sA = {t: actx.currentTime + .1, b: pos}; dA = {...sA}; seekIdx(pos);
+  if (wantDrone()) droneOn();
+  if (wantChords()) { const c = chordAt(pos); if (c && c[0] < pos - 1e-6) compChord(c, sA.t, (nextChord < CH.length ? CH[nextChord][0] : END) - pos); }
+  iv = setInterval(tick, 25); tick();
+}
+function stop(){
+  if (playing) pos = Math.max(0, beatNow());
+  playing = false; clearInterval(iv); timers.forEach(clearTimeout); timers = []; hush(); droneOff(); $('pl').textContent = '▶ Play';
+}
+function retempo(){
+  if (!playing) return;
+  const now = actx.currentTime, b = beatNow();
+  // keep the scheduler's lead: re-anchor both clocks at "now"
+  sA = {t: now, b: b}; dA = {t: now, b: b};
+  timers.forEach(clearTimeout); timers = []; hush();
+  seekIdx(b);
+}
+function tick(){
+  const ahead = sA.b + (actx.currentTime + .3 - sA.t)/spb();
+  const limit = $('loop').checked ? loopB : Infinity;
+  const upto = Math.min(ahead, limit);
+  while (nextChord < CH.length && CH[nextChord][0] < upto) {
+    const c = CH[nextChord], nb = nextChord+1 < CH.length ? CH[nextChord+1][0] : END;
+    if (wantChords()) compChord(c, timeOf(c[0]), Math.min(nb, limit) - c[0]);
+    nextChord++;
+  }
+  while (nextNote < NOTES.length && NOTES[nextNote][0] < upto) {
+    const [t,d,m] = NOTES[nextNote], at = timeOf(t);
+    piano(m, at, d*spb());
+    timers.push(setTimeout(() => hit(m, t, d*spb()), Math.max(0, (at - actx.currentTime)*1000)));
+    nextNote++;
+  }
+  while (nextBeat < upto) {
+    if ($('met').checked) {
+      const at = timeOf(nextBeat); wood(at, nextBeat % 4 === 0);
+      if ($('trip').checked) { tickSub(at + spb()/3); tickSub(at + 2*spb()/3); }
+    }
+    nextBeat++;
+  }
+  if (ahead >= limit) {          // loop: jump the scheduler back; the picture follows when the sound does
+    const tJump = timeOf(loopB);
+    sA = {t: tJump, b: loopA}; seekIdx(loopA);
+    timers.push(setTimeout(() => { dA = {t: tJump, b: loopA}; }, Math.max(0, (tJump - actx.currentTime)*1000)));
+    return;
+  }
+  if (beatNow() > END + 2) { stop(); pos = 0; }
+}
+$('pl').onclick = () => playing ? stop() : start();
+const jump = d => {
+  const was = playing; stop(); pos = Math.max(0, Math.min(END - 4, Math.round((pos + d)/4)*4)); aways = [];
+  flash('Bar ' + (Math.floor(pos/4)+1)); if (was) start();
+};
+$('back').onclick = () => jump(-32); $('fwd').onclick = () => jump(32);
+$('loop').addEventListener('change', () => { if (playing) { loopA = Math.floor(beatNow()/32)*32; loopB = Math.min(END, loopA + 32); } });
+$('tp').oninput = () => { $('tpo').textContent = $('tp').value + ' bpm'; store('tp', $('tp').value); retempo(); };
+function speed(d){
+  const v = Math.max(40, Math.min(320, +$('tp').value + d));
+  $('tp').value = v; $('tp').oninput(); flash(v + ' bpm' + (slow > 1 ? ' · slowed ÷' + slow : ''));
+}
+
+/* ---------- full screen, swipes, keys ---------- */
+let flashTxt = '', flashUntil = 0, hintUntil = 0;
+function flash(t){ flashTxt = t; flashUntil = performance.now() + 1600; }
+const inFocus = () => document.body.classList.contains('focus');
+function setFocus(on){
+  if (on === inFocus()) return;
+  document.body.classList.toggle('focus', on); aways = [];
+  if (on) {
+    hintUntil = performance.now() + 2500;
+    const st = $('stage'), rq = st.requestFullscreen || st.webkitRequestFullscreen;
+    try { const p = rq && rq.call(st); if (p && p.catch) p.catch(() => {}); } catch(e){}
+  } else {
+    try { if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch(e){}
+  }
+  requestAnimationFrame(size); setTimeout(size, 300);
+}
+$('fs').onclick = () => setFocus(true);
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && inFocus()) setFocus(false); });
+addEventListener('keydown', e => {
+  const tg = e.target, busy = tg && (tg.tagName === 'SELECT' || tg.tagName === 'TEXTAREA' || (tg.tagName === 'INPUT' && tg.type !== 'checkbox'));
+  if (busy || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { if (inFocus()) setFocus(false); }
+  else if (e.code === 'Space') { e.preventDefault(); if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); $('pl').click(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); jump(32); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); jump(-32); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); speed(5); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); speed(-5); }
+  else if (e.key === 'l') { $('loop').click(); flash($('loop').checked ? 'Looping these 8 bars' : 'Loop off'); }
+});
+
+/* ---------- picture ---------- */
+const cv = $('cv'), ctx = cv.getContext('2d'), st = $('strip'), sx = st.getContext('2d');
+let W, H, SW, SH, dpr = window.devicePixelRatio||1, T = 0, S = 1;
+function size(){
+  W = cv.clientWidth; H = cv.clientHeight; cv.width = W*dpr; cv.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  fitScale();
+  SW = st.clientWidth; SH = st.clientHeight; st.width = SW*dpr; st.height = SH*dpr; sx.setTransform(dpr,0,0,dpr,0,0);
+}
+size(); addEventListener('resize', size);
+// circles grow with the space each semitone gets, but never wider than the screen allows
+function fitScale(){ if (!H) return; const pps = (H - 48)/(HI - LO); S = Math.max(.8, Math.min(pps/10.5, W/230, 2.8)); }
+const y = m => { const pad = 18*S; return H - pad - (Math.max(LO-1, Math.min(HI+1, m)) - LO)/(HI - LO)*(H - 2*pad); };
+const step = () => Math.min(26*S*1.4, (W/2 - 40*S)/6);
+let planetX = null, planetF = 0, aways = [], chordGlow = {}, sunGlow = {}, threadA = 0;
+const rgba = (h,a) => { const n = parseInt(h.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`; };
+function blobPath(x,yy,r,amp,speed,seed){
+  ctx.beginPath();
+  for (let i=0;i<=56;i++){ const th = i/56*Math.PI*2, t = T*speed;
+    const w = Math.sin(3*th+t+seed)*.5 + Math.sin(5*th-t*1.3+seed*2)*.3 + Math.sin(8*th+t*.7+seed*3)*.2;
+    const rr = r*(1+amp*w), px = x+Math.cos(th)*rr, py = yy+Math.sin(th)*rr; i ? ctx.lineTo(px,py) : ctx.moveTo(px,py); }
+  ctx.closePath();
+}
+function voice(x,yy,r,col,a,amp,speed,seed,lab,labA){
+  const h = ctx.createRadialGradient(x,yy,r*.6,x,yy,r*1.9); h.addColorStop(0,rgba(col,a*.22)); h.addColorStop(1,rgba(col,0));
+  ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x,yy,r*1.9,0,7); ctx.fill();
+  [[1.18,.18,1.4],[1.06,.32,1.1],[.94,.85,1]].forEach(([s,al,am],j)=>{ blobPath(x,yy,r*s,amp*am,speed*(1+j*.15),seed+j*1.7); ctx.fillStyle = rgba(col,a*al); ctx.fill(); });
+  if (lab && labA > .02){ ctx.font = `500 ${Math.round(r*.85)}px Inter, system-ui, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle = rgba(DK[col]||'#2c2c2a', labA); ctx.fillText(lab, x, yy+1); }
+}
+function offColor(rel, tri){
+  if (tri.includes(rel)) return null;
+  if (rel===2) return '#5DCAA5'; if (rel===5) return '#F0997B'; if (rel===9) return '#EF9F27'; if (rel===10) return '#ED93B1'; if (rel===11) return '#E24B4A'; return '#D4537E';
+}
+function hit(m, t, d){
+  const c = chordAt(t); if (!c) return;
+  const r = c[1], tri = TRI[c[2]] || TRI.maj, rel = ((m - r)%12+12)%12;
+  const lab = numMode === 'off' ? '' : numMode === 'key' ? DEGK[((m%12)+12)%12] : DEGC[rel];
+  const hp = ((m%12)+12)%12;
+  if ((MINOR ? [0,3,7] : [0,4,7]).includes(hp)) sunGlow[m] = {a: 1, lab: numMode === 'off' ? '' : DEGK[hp]};
+  if (tri.includes(rel)) { chordGlow[m] = {a:1, lab}; return; }
+  const col = offColor(rel, tri), x0 = planetX ?? W/2;
+  const near = [-2,-1,0,1,2].map(k => m+k).find(n => tri.includes(((n-r)%12+12)%12)) ?? m;
+  const side = near > m ? -1 : 1;
+  aways.push({x: x0 + side*30*S, y: y(m), c: col, lab, life: 1, dur: Math.max(.08, d), t: 0, seed: Math.random()*10, ten: rel===2||rel===9 ? 1 : rel===5||rel===10 ? 1.8 : 3});
+}
+function chordColumn(c){
+  const r = c[1], tri = TRI[c[2]] || TRI.maj, out = [];
+  for (let m = LO; m <= HI; m++) if (tri.includes(((m-r)%12+12)%12)) out.push(m);
+  return out;
+}
+let prev = performance.now();
+function frame(now){
+  const dt = Math.min(.05,(now-prev)/1000); prev = now; T += dt;
+  const b = beatNow(), c = chordAt(b) || [0,0,'maj'], A = away(c), f = A.side*A.d, af = Math.round(A.d);
+  planetF += (f - planetF) * Math.min(1, dt*4);
+  planetX = W/2 + planetF*step();
+  const far = Math.min(1, Math.abs(planetF)/6), dark = $('wx').checked ? far : 0;
+  ctx.fillStyle = `rgb(${Math.round(36-28*dark)},${Math.round(30-22*dark)},${Math.round(18-4*dark)})`; ctx.fillRect(0,0,W,H);
+  // the sun: home triad, always there, faint
+  const atHome = 1 - Math.min(1, Math.abs(planetF));
+  (MINOR ? [39,43,48,51,55,60,63,67,72,75,79,84,87,91] : [40,43,48,52,55,60,64,67,72,76,79,84,88,91]).forEach((m,i) => { if (m < LO || m > HI) return; const g = sunGlow[m], ga = g ? g.a : 0;
+    voice(W/2, y(m), (13 + ga*5)*S, '#FAC775', Math.min(1, .13 + .1*atHome + ga*.8), .04 + ga*.1, 1 + ga*5, i*1.9, g ? g.lab : '', g ? .2 + ga*.5 : 0); });
+  Object.keys(sunGlow).forEach(k => { sunGlow[k].a -= dt*2.2; if (sunGlow[k].a <= 0) delete sunGlow[k]; });
+  // thread from home to the chord
+  if ($('thr').checked && Math.abs(planetF) > .15) {
+    ctx.strokeStyle = rgba('#FAC775', .12 + .25*far); ctx.lineWidth = 1.5 + 2*far; ctx.setLineDash([3, 6]);
+    ctx.beginPath(); ctx.moveTo(W/2, H/2); ctx.quadraticCurveTo((W/2+planetX)/2, H/2 + 30*far, planetX, H/2); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // the chord of the moment: its triad as a glowing column
+  const col = FARCOL[Math.min(6, af)];
+  chordColumn(c).forEach((m,i) => {
+    const g = chordGlow[m]; const ga = g ? g.a : 0;
+    voice(planetX, y(m), (14 + ga*6)*S, col, Math.min(1, .3 + ga*.7), .05 + ga*.12, 1.3 + ga*6, i*2.1 + c[1], g ? g.lab : '', g ? .2 + ga*.5 : 0);
+  });
+  Object.keys(chordGlow).forEach(k => { chordGlow[k].a -= dt*2.2; if (chordGlow[k].a <= 0) delete chordGlow[k]; });
+  aways = aways.filter(a => { a.t += dt; if (a.t > a.dur) a.life -= dt*6; if (a.life <= 0) return false; voice(a.x, a.y, 12*S, a.c, a.life, .07+a.ten*.045, 4+a.ten*4, a.seed, a.lab, a.life*.6); return true; });
+  // chord name on the column
+  ctx.font = `600 ${Math.round(13*Math.sqrt(S))}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = rgba(col, .8);
+  ctx.fillText(chordNum(c), planetX, 6);
+  // readouts
+  const bar = Math.floor(b/4) + 1;
+  $('barN').textContent = bar; if (CLEN) $('chN').textContent = Math.floor((bar-1)/CLEN) + 1; $('chW').style.display = CLEN ? '' : 'none';
+  $('chord').textContent = chordNum(c);
+  $('dist').textContent = A.d === 0 ? 'home' : A.out === 0 ? 'in the key' : `${A.out} note${A.out>1?'s':''} outside the key`;
+  if (inFocus()) {   // in full screen, keep bar + chord readable on the picture
+    ctx.font = '14px Inter, system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(243,236,228,.45)';
+    ctx.fillText(`${TITLE} · bar ${bar}${CLEN ? ' · chorus ' + (Math.floor((bar-1)/CLEN)+1) : ''}${$('loop').checked ? ' · loop' : ''}`, 16, 14);
+  }
+  const pn = performance.now();
+  if (pn < flashUntil) { const a = Math.min(1, (flashUntil - pn)/400); ctx.fillStyle = `rgba(243,236,228,${.6*a})`; ctx.font = '15px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(flashTxt, W/2, 30*Math.sqrt(S)); }
+  if (pn < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Tap: exit · ← → 8 bars · ↑ ↓ speed · space play · L loop · strip: jump', W/2, H-16); }
+  drawStrip(b);
+  requestAnimationFrame(frame);
+}
+// the whole solo as a landscape: height = distance from home
+function drawStrip(b){
+  sx.fillStyle = '#100d0b'; sx.fillRect(0,0,SW,SH);
+  const X = t => t/END*SW, base = SH - 10, hpx = (SH - 20)/6;
+  for (let i = 0; i < CH.length; i++){
+    const c = CH[i], t1 = i+1 < CH.length ? CH[i+1][0] : END, f = Math.round(away(c).d);
+    sx.fillStyle = rgba(FARCOL[Math.min(6,f)], .75); sx.fillRect(X(c[0]), base - Math.max(2, f*hpx), Math.max(1, X(t1)-X(c[0])), Math.max(2, f*hpx));
+  }
+  sx.strokeStyle = 'rgba(243,236,228,.12)'; sx.lineWidth = 1;
+  if (CLEN) for (let t = CLEN*4; t < END; t += CLEN*4) { sx.beginPath(); sx.moveTo(X(t), 4); sx.lineTo(X(t), SH-4); sx.stroke(); }
+  sx.fillStyle = 'rgba(243,236,228,.9)'; sx.fillRect(X(b)-1, 2, 2, SH-4);
+}
+function seekFrom(e){ const r = st.getBoundingClientRect(), t = Math.max(0, Math.min(1, (e.clientX - r.left)/r.width))*END; const was = playing; stop(); pos = Math.round(t/4)*4; aways = []; if (was) start(); }
+st.addEventListener('pointerdown', seekFrom);
+// picture: in full screen, tap exits, swipe left/right = 8 bars, swipe up/down = tempo
+let px0 = 0, py0 = 0;
+cv.addEventListener('pointerdown', e => { px0 = e.clientX; py0 = e.clientY; });
+cv.addEventListener('pointerup', e => {
+  if (!inFocus()) return;
+  const dx = e.clientX - px0, dy = e.clientY - py0;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) { setFocus(false); return; }
+  if (Math.abs(dx) > Math.abs(dy)) jump(dx < 0 ? 32 : -32); else speed(dy < 0 ? 5 : -5);
+});
+requestAnimationFrame(frame);
+
+/* ---------- tune picker ---------- */
+let INDEX = [], TITLE = '', curMeta = null, curRaw = null;
+const SRCN = {builtin:'Built-in', omnibook:'Omnibook', wjd:'Weimar'}, packs = {};
+const getPack = s => packs[s] || (packs[s] = fetch('tj-' + s + '.json').then(r => r.json()));
+function fillList(){
+  const q = $('q').value.trim().toLowerCase(), sel = $('tune'), keep = sel.value || load('tune');
+  sel.innerHTML = '';
+  Object.keys(SRCN).forEach(src => {
+    const g = document.createElement('optgroup'); g.label = SRCN[src];
+    INDEX.filter(x => x.s === src && (!q || (x.t + ' ' + x.p).toLowerCase().includes(q))).forEach(x => {
+      const o = document.createElement('option'); o.value = x.id; o.textContent = x.t + ' — ' + x.p; g.appendChild(o);
+    });
+    if (g.children.length) sel.appendChild(g);
+  });
+  if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+}
+// shift = how many semitones the chosen home sits above the guessed one
+function applyTune(){
+  if (!curRaw) return;
+  const m = curMeta, sh = +(load('home:' + m.id) || 0);
+  MINOR = (load('minor:' + m.id) ?? String(m.m)) === '1';
+  $('hm').setAttribute('aria-pressed', MINOR);
+  const raw = curRaw.n.map(([t,d,p]) => [t/48, d/48, p - sh]), mean = raw.reduce((a,n) => a + n[2], 0)/raw.length, oct = 12*Math.round((67 - mean)/12);
+  NOTES = raw.map(([t,d,p]) => [t, d, p + oct]);
+  CH = curRaw.c.map(([t,r,q]) => [t/48, ((r - sh) % 12 + 12) % 12, q]);
+  END = Math.max(...NOTES.map(n => n[0] + n[1]));
+  // fit the window to where this solo actually lives (1%–99% of its notes), at least two octaves
+  const ps = NOTES.map(n => n[2]).sort((a,b) => a-b);
+  let lo = ps[Math.floor(ps.length*.01)] - 1, hi = ps[Math.floor(ps.length*.99)] + 1;
+  if (hi - lo < 24) { const mid = (hi + lo)/2; lo = Math.floor(mid - 12); hi = Math.ceil(mid + 12); }
+  LO = lo; HI = hi; fitScale();
+  CLEN = m.L; TITLE = m.t;
+  $('tinfo').textContent = `${m.b} bars${m.L ? ' · ' + m.L + '-bar chorus' : ''} · written in ${NAMES[(m.k + sh) % 12]}${MINOR ? ' minor' : ''}`;
+}
+async function pickTune(id){
+  const m = INDEX.find(x => x.id === id) || INDEX[0]; if (!m) return;
+  const was = playing; stop(); pos = 0; aways = [];
+  store('tune', m.id); curMeta = m;
+  const pack = await getPack(m.s); curRaw = pack.find(x => x.id === m.id);
+  // home choices, named in the tune's own written key
+  $('home').innerHTML = '';
+  for (let k = 0; k < 12; k++) { const o = document.createElement('option'); o.value = k; o.textContent = NAMES[(m.k + k) % 12] + (k === 0 ? ' (guess)' : ''); $('home').appendChild(o); }
+  $('home').value = load('home:' + m.id) || 0;
+  applyTune(); flash(m.t + ' — ' + m.p);
+  if (was) start();
+}
+$('tune').onchange = () => pickTune($('tune').value);
+$('q').oninput = () => fillList();
+$('home').onchange = () => { const was = playing; stop(); store('home:' + curMeta.id, $('home').value); applyTune(); if (was) start(); };
+$('hm').onclick = () => { store('minor:' + curMeta.id, MINOR ? '0' : '1'); applyTune(); };
+fetch('tj-index.json').then(r => r.json()).then(ix => { INDEX = ix; fillList(); pickTune(load('tune') || 'parker-cherokee'); });
+</script>
+<script src="lab.js"></script>
+</body>
+</html>

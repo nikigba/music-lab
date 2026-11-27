@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baby Solfege</title>
+<style>
+:root{--bg:#000;--fg:#f2f2f2;--muted:#a3a3a8;--dim:#6e6e73;--line:#2c2c2e;--card:#111113;--card2:#1e1e20;--gold:#EED27A;--good:#8FD19E;--bad:#EF8A80;--blue:#7DA7D0;--ink:#1c1c1e}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:980px;margin:0 auto;padding:46px 16px 32px}
+h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 18px;max-width:62ch}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.grp{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+select,button{font:inherit;color:var(--fg)}
+select{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px}
+button{cursor:pointer}
+.chip{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;min-height:38px;color:var(--muted)}
+.chip[aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:#241f10}
+.btn{background:var(--gold);color:var(--ink);border:0;border-radius:10px;padding:11px 18px;font-weight:700;font-size:14px;min-height:44px}
+.btn.ghost{background:var(--card2);color:var(--fg);border:1px solid var(--line);font-weight:600}
+.btn:focus-visible,.chip:focus-visible,select:focus-visible,.k:focus-visible,.lcard:focus-visible,.ans:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+#midiMsg{font-size:12.5px;color:var(--dim)}
+#midiMsg.ok{color:var(--good)}
+.tabs{display:flex;gap:6px;margin:6px 0 12px}
+.tab{background:none;border:1px solid var(--line);border-radius:10px;padding:10px 18px;font-weight:600;color:var(--muted);min-height:44px}
+.tab[aria-selected=true]{background:var(--card2);color:var(--fg);border-color:#48484a}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.read{display:flex;align-items:baseline;gap:14px;min-height:56px}
+.read .n{font-size:56px;font-weight:700;line-height:1;color:var(--gold);min-width:1.2em}
+.read .s{font-size:28px;color:var(--fg)}
+.read .hint{color:var(--dim);font-size:14px}
+/* keyboard */
+.kbwrap{overflow-x:auto;padding-bottom:6px;border-radius:12px;touch-action:pan-x;-webkit-overflow-scrolling:touch}
+.kb{position:relative;height:160px;user-select:none;-webkit-user-select:none}
+.k{position:absolute;top:0;border:1px solid #000;border-radius:0 0 8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:10px;gap:2px;cursor:pointer;touch-action:pan-x}
+.k.w{background:#efeae0;color:#1c1c1e;height:160px;z-index:1}
+.k.b{background:#1b1b1d;color:#f2f2f2;height:100px;z-index:2;border:1px solid #444;justify-content:flex-end;padding-bottom:8px}
+.k .num{font-weight:700;font-size:17px;line-height:1}
+.k .syl{font-size:12px;line-height:1;opacity:.85}
+.k.b .num{font-size:13px}.k.b .syl{font-size:10px}
+.k .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);margin-bottom:4px;visibility:hidden}
+.k.tonic .dot{visibility:visible}
+.k.on.w{background:#f3d98a}.k.on.b{background:#8a6d1e}
+.k.good.w{background:#9fdcae}.k.good.b{background:#2f7a45}
+.k.bad.w{background:#f1a79f}.k.bad.b{background:#8c342b}
+.kb.hide .k .num,.kb.hide .k .syl,.kb.hide .k .dot{visibility:hidden}
+.kb.hide .k.reveal .num,.kb.hide .k.reveal .syl,.kb.hide .k.reveal .dot{visibility:visible}
+.kb.nonum .num{display:none}.kb.nosyl .syl{display:none}
+.mut{color:var(--muted);font-size:13px;line-height:1.5}
+.mut.bad{color:var(--bad)}
+/* practice */
+.lessons{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.lcard{text-align:left;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;min-height:84px}
+.lcard b{font-size:14px}.lcard span{font-size:12.5px;color:var(--muted)}
+.lcard.next{border-color:var(--gold)}
+.lcard.pass b::after{content:" ✓";color:var(--good)}
+.lcard .m{font-size:12px;color:var(--dim)}
+h2{font-size:19px;margin:0 0 6px}
+.goal{color:var(--fg);font-size:15px;line-height:1.55;max-width:64ch;margin:0 0 10px}
+.steps{margin:0 0 12px;padding-left:18px;color:var(--muted);font-size:13.5px;line-height:1.6}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.prog{height:6px;background:var(--card2);border-radius:99px;overflow:hidden;margin:8px 0}
+.prog i{display:block;height:100%;background:var(--gold)}
+.fb{min-height:48px;font-size:16px;line-height:1.5;margin:8px 0}
+.fb.good{color:var(--good)}.fb.bad{color:var(--bad)}
+.q{margin:12px 0}
+.q p{margin:0 0 6px;font-size:14.5px}
+.ans{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:13.5px;min-height:40px;color:var(--muted)}
+.ans[aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:#241f10}
+.verdict{font-size:15px;line-height:1.55;border-left:3px solid var(--gold);padding:6px 12px;margin:12px 0;max-width:64ch}
+h3{font-size:15px;margin:16px 0 4px}
+.stage{border-top:1px solid var(--line);margin-top:14px;padding-top:4px}
+.ci{display:flex;gap:10px;align-items:flex-start;background:none;border:0;padding:6px 0;text-align:left;font-size:13.5px;color:var(--muted);min-height:36px}
+.ci i{flex:none;width:20px;height:20px;border:1.5px solid var(--dim);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;color:var(--ink)}
+.ci[aria-pressed=true]{color:var(--fg)}.ci[aria-pressed=true] i{background:var(--good);border-color:var(--good)}
+.seq{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.nt{min-width:46px;text-align:center;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 6px}
+.nt b{display:block;font-size:19px;color:var(--gold);line-height:1.1}.nt span{font-size:12px;color:var(--muted)}
+.nt.q{color:var(--dim);font-size:20px}.nt.q b{color:var(--dim)}
+.nt.got{border-color:var(--good)}.nt.got b{color:var(--good)}
+.nt.hl{background:#3a3115;border-color:var(--gold)}
+.nt small{display:block;font-size:11px;color:var(--blue);margin-top:2px}
+.nt.ch{min-width:84px}
+.seg{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-bottom:8px}
+.top h1{font-size:22px;margin:0 8px 0 0}
+details.set{margin-bottom:10px;color:var(--muted);font-size:13px}
+details.set summary,.how summary{cursor:pointer;padding:6px 0;color:var(--muted)}
+.how{margin:2px 0 8px}.how summary{font-size:13.5px}
+[hidden]{display:none!important}
+@media (max-width:560px){.read .n{font-size:44px}.read .s{font-size:22px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top"><h1>Baby Solfege</h1>
+    <label class="grp">Do is <select id="tonic" aria-label="Key: where Do is"></select></label>
+    <div class="grp"><button class="btn ghost" id="midiBtn">Connect piano</button><span id="midiMsg" role="status">Chrome or Edge, piano plugged in by USB.</span></div>
+    <div class="grp" id="pianoMsg" role="status" hidden></div>
+  </header>
+  <details class="set"><summary>Settings and tips</summary>
+    <div class="bar" style="margin:8px 0">
+      <div class="grp">Show
+        <button class="chip" id="tNums" aria-pressed="true">Numbers</button>
+        <button class="chip" id="tSyls" aria-pressed="true">Syllables</button>
+      </div>
+      <div class="grp">Chromatic names
+        <button class="chip" id="tLow" aria-pressed="false">Raised ♯ (Di Ri Fi Si Li)</button>
+      </div>
+      <div class="grp"><button class="chip" id="tApp" aria-pressed="false">Play app sound for my piano keys</button></div>
+    </div>
+    <p style="margin:0 0 6px;max-width:64ch;line-height:1.5">Your piano plays, the app shows each note as a number with its syllable underneath. In Practice, sing first and play second, one tiny step at a time. If your piano also makes its own sound, leave app sound off so you do not hear doubles. Tapping the on-screen keys always plays the app's piano.</p>
+  </details>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tabPlay" aria-selected="true">Play</button>
+    <button class="tab" role="tab" id="tabPractice" aria-selected="false">Practice</button>
+  </div>
+
+  <section id="playPanel" class="panel">
+    <div class="read" aria-live="polite"><span class="n" id="rN">·</span><span class="s" id="rS"></span><span class="hint" id="rH">Press a key on your piano or tap one below. The gold dot is Do.</span></div>
+  </section>
+
+  <section id="practicePanel" class="panel" hidden>
+    <div id="lessonList"></div>
+    <div id="lessonView" hidden></div>
+  </section>
+
+  <div class="kbwrap" id="kbwrap"><div class="kb" id="kb" role="group" aria-label="Piano keys"></div></div>
+</main>
+
+<script src="piano.js"></script>
+<script src="baby-tunes.js"></script>
+<script>
+/* ---------- names ---------- */
+const SYL_UP=['Do','Di','Re','Ri','Mi','Fa','Fi','Sol','Si','La','Li','Ti'];
+const SYL_DN=['Do','Ra','Re','Me','Mi','Fa','Se','Sol','Le','La','Te','Ti'];
+const NUM_UP=['1','♯1','2','♯2','3','4','♯4','5','♯5','6','♯6','7'];
+const NUM_DN=['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
+const NOTE=['C','C♯/D♭','D','D♯/E♭','E','F','F♯/G♭','G','G♯/A♭','A','A♯/B♭','B'];
+const $=s=>document.querySelector(s);
+const WHITE=[0,2,4,5,7,9,11];
+const LO=48,HI=84;
+
+/* ---------- state ---------- */
+const S={tonic:0,nums:true,syls:true,lowered:false,appSound:false,mode:'play',pmode:'gen',hplay:'shell'};
+try{const p=JSON.parse(localStorage.getItem('baby-solfege:prefs')||'null');if(p)Object.assign(S,p,{mode:'play'});}catch(e){}
+const savePrefs=()=>{try{localStorage.setItem('baby-solfege:prefs',JSON.stringify({tonic:S.tonic,nums:S.nums,syls:S.syls,lowered:S.lowered,appSound:S.appSound,pmode:S.pmode,hplay:S.hplay}));}catch(e){}};
+let prog={};try{prog=JSON.parse(localStorage.getItem('baby-solfege:progress')||'{}')||{};}catch(e){}
+const saveProg=()=>{try{localStorage.setItem('baby-solfege:progress',JSON.stringify(prog));}catch(e){}};
+
+const degOf=m=>(((m-S.tonic)%12)+12)%12;
+const numOf=(d,dir)=>((dir?dir==='down':S.lowered)?NUM_DN:NUM_UP)[d];
+const sylOf=(d,dir)=>((dir?dir==='down':S.lowered)?SYL_DN:SYL_UP)[d];
+
+/* ---------- audio (same piano sound as the other Lab apps) ---------- */
+let ctx=null,master=null,buffers={};
+const KEYS=Object.keys(PIANO).map(Number);
+function b64ToBuf(url){const bin=atob(url.slice(url.indexOf(',')+1)),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;}
+function audio(){
+  if(!ctx){
+    ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+    master=ctx.createGain();master.gain.value=0.9;
+    const comp=ctx.createDynamicsCompressor();comp.threshold.value=-8;comp.knee.value=6;comp.ratio.value=12;comp.attack.value=0.003;comp.release.value=0.25;
+    master.connect(comp);comp.connect(ctx.destination);
+    loadPiano();
+  }
+  if(ctx.state==='suspended')ctx.resume();
+  return ctx;
+}
+function decodeOne(m,url){return new Promise(res=>{try{
+  const r=ctx.decodeAudioData(b64ToBuf(url),b=>{buffers[m]=b;res(true);},()=>res(false));
+  if(r&&r.catch)r.catch(()=>{});}catch(e){res(false);}});}
+async function loadPiano(){
+  const ents=Object.entries(PIANO);let missing=ents.filter(([m])=>!buffers[m]);
+  pianoStatus('loading');
+  for(let pass=0;pass<3&&missing.length;pass++){
+    if(pass)await new Promise(r=>setTimeout(r,400*pass));
+    await Promise.all(missing.map(([m,url])=>decodeOne(m,url)));
+    missing=ents.filter(([m])=>!buffers[m]);
+  }
+  pianoStatus(missing.length?(Object.keys(buffers).length?'partial':'failed'):'ready');
+}
+function pianoStatus(st){
+  const e=document.getElementById('pianoMsg');if(!e)return;
+  e.hidden=st==='ready';e.className='mut'+(st==='failed'||st==='partial'?' bad':'');
+  e.textContent=st==='loading'?'Piano sound loading…':st==='ready'?'':'Piano sound did not load fully, so some notes use a basic beep. ';
+  if(st==='failed'||st==='partial'){const b=document.createElement('button');b.className='chip';b.textContent='Retry piano sound';b.onclick=()=>{loadPiano();};e.appendChild(b);}
+}
+const live=new Set();
+function stopAllAudio(){if(!ctx)return;live.forEach(k=>k());live.clear();}
+function nearest(m){const ks=KEYS.filter(k=>buffers[k]);const a=ks.length?ks:KEYS;return a.reduce((b,x)=>Math.abs(x-m)<Math.abs(b-m)?x:b,a[0]);}
+/* start a note at time t; dur=null holds until stop() is called. Returns stop(). */
+function voice(m,t,dur,vel){
+  audio();vel=vel==null?0.8:vel;
+  const k=nearest(m),buf=buffers[k],g=ctx.createGain();g.connect(master);
+  let src;
+  if(buf){src=ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=Math.pow(2,(m-k)/12);src.connect(g);}
+  else{ // fallback until samples have decoded
+    src=ctx.createOscillator();src.type='triangle';src.frequency.value=440*Math.pow(2,(m-69)/12);src.connect(g);
+  }
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vel,t+0.004);
+  src.start(t);
+  let ended=false;
+  const kill=()=>{ended=true;try{const n=ctx.currentTime;g.gain.cancelScheduledValues(0);g.gain.setValueAtTime(g.gain.value,n);g.gain.linearRampToValueAtTime(0,n+0.04);src.stop(n+0.05);}catch(e){}};
+  live.add(kill);src.onended=()=>live.delete(kill);
+  const stop=(at)=>{
+    if(ended)return;ended=true;at=Math.max(at==null?ctx.currentTime:at,t+0.01);
+    try{g.gain.cancelScheduledValues(at);g.gain.setValueAtTime(g.gain.value,at);g.gain.linearRampToValueAtTime(0.0001,at+0.28);src.stop(at+0.3);}catch(e){}
+  };
+  if(dur!=null)stop(t+dur);
+  return stop;
+}
+
+/* ---------- keyboard ---------- */
+const kb=$('#kb'),keyEl={};
+function buildKeyboard(){
+  const WW=42,BW=28;let wi=0;kb.innerHTML='';
+  for(let m=LO;m<=HI;m++){
+    const pc=m%12,white=WHITE.includes(pc),el=document.createElement('div');
+    el.className='k '+(white?'w':'b');el.dataset.m=m;el.tabIndex=-1;
+    el.innerHTML='<span class="dot"></span><span class="num"></span><span class="syl"></span>';
+    el.style.width=(white?WW:BW)+'px';
+    el.style.left=(white?wi*WW:wi*WW-BW/2)+'px';
+    if(white)wi++;
+    kb.appendChild(el);keyEl[m]=el;
+  }
+  kb.style.width=(wi*WW)+'px';
+  setTimeout(()=>{const w=$('#kbwrap');const c=keyEl[60];w.scrollLeft=Math.max(0,c.offsetLeft-w.clientWidth/2+20);},0);
+}
+function labelKeys(){
+  for(let m=LO;m<=HI;m++){
+    const el=keyEl[m],d=degOf(m);
+    el.querySelector('.num').textContent=numOf(d);
+    el.querySelector('.syl').textContent=sylOf(d);
+    el.classList.toggle('tonic',d===0);
+    el.setAttribute('aria-label',NOTE[m%12]+', '+numOf(d)+', '+sylOf(d));
+  }
+  kb.classList.toggle('nonum',!S.nums);kb.classList.toggle('nosyl',!S.syls);
+}
+function clearMarks(){for(const m in keyEl)keyEl[m].classList.remove('good','bad','reveal');}
+
+/* ---------- input: taps and MIDI both end up in press()/release() ---------- */
+const held={};
+function press(m,vel,source){
+  const el=keyEl[m];if(el)el.classList.add('on');
+  if(source!=='midi'||S.appSound){held[m]=voice(m,ctx?ctx.currentTime:audio().currentTime,null,vel);}
+  if(S.mode==='play'){
+    const d=degOf(m);$('#rN').textContent=numOf(d);$('#rS').textContent=sylOf(d);
+    $('#rH').textContent=NOTE[m%12]+(d===0?' · Do':'');
+  }else if(R&&R.phase==='ask')answer(m);
+  else if(TR&&TR.phase==='play')tuneKey(m);
+  else if(HR&&HR.phase==='play')harmKey(m,source);
+}
+function release(m){
+  const el=keyEl[m];if(el)el.classList.remove('on');
+  if(held[m]){held[m]();delete held[m];}
+}
+let down=null;
+kb.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.k');if(!el)return;e.preventDefault();
+  const m=+el.dataset.m;down=m;press(m,0.8,'tap');
+});
+['pointerup','pointercancel','pointerleave'].forEach(t=>kb.addEventListener(t,()=>{if(down!=null){release(down);down=null;}}));
+
+/* ---------- Web MIDI ---------- */
+let midiAccess=null;
+function midiStatus(t,ok){const e=$('#midiMsg');e.textContent=t;e.classList.toggle('ok',!!ok);}
+function onMidi(ev){
+  const [st,n,v]=ev.data,cmd=st&0xf0;
+  if(cmd===0x90&&v>0){if(n>=0)press(n,Math.max(0.2,v/127),'midi');}
+  else if(cmd===0x80||(cmd===0x90&&v===0))release(n);
+}
+function wireMidi(){
+  const ins=[...midiAccess.inputs.values()];
+  ins.forEach(i=>{i.onmidimessage=onMidi;});
+  midiStatus(ins.length?'Connected: '+ins.map(i=>i.name||'MIDI device').join(', '):'No piano found. Plug it in by USB, then press Connect again.',ins.length>0);
+}
+$('#midiBtn').onclick=async()=>{
+  audio();
+  if(!navigator.requestMIDIAccess){midiStatus('This browser has no MIDI. Use Chrome or Edge on your computer.');return;}
+  try{
+    midiAccess=await navigator.requestMIDIAccess();
+    midiAccess.onstatechange=wireMidi;wireMidi();
+  }catch(e){
+    const nm=(e&&e.name)||'error';
+    midiStatus(window.self!==window.top
+      ?'MIDI is not allowed inside this Claude page ('+nm+'). Open the downloaded copy of Baby Solfege in Chrome instead.'
+      :'MIDI was blocked ('+nm+'). Click the lock or MIDI icon in the address bar, allow it, then press Connect again.');
+  }
+};
+
+/* ---------- controls ---------- */
+const tsel=$('#tonic');
+NOTE.forEach((n,i)=>{const o=document.createElement('option');o.value=i;o.textContent=n.split('/')[0];tsel.appendChild(o);});
+function syncControls(){
+  tsel.value=S.tonic;
+  $('#tNums').setAttribute('aria-pressed',S.nums);$('#tSyls').setAttribute('aria-pressed',S.syls);
+  $('#tLow').setAttribute('aria-pressed',S.lowered);
+  $('#tLow').textContent=S.lowered?'Lowered ♭ (Ra Me Se Le Te)':'Raised ♯ (Di Ri Fi Si Li)';
+  $('#tApp').setAttribute('aria-pressed',S.appSound);
+  labelKeys();savePrefs();
+}
+tsel.onchange=()=>{S.tonic=+tsel.value;syncControls();if(R)endLesson();if(TR)endTune();if(HR)endHarm();};
+$('#tNums').onclick=()=>{S.nums=!S.nums;if(!S.nums&&!S.syls)S.syls=true;syncControls();};
+$('#tSyls').onclick=()=>{S.syls=!S.syls;if(!S.nums&&!S.syls)S.nums=true;syncControls();};
+$('#tLow').onclick=()=>{S.lowered=!S.lowered;syncControls();};
+$('#tApp').onclick=()=>{S.appSound=!S.appSound;syncControls();};
+
+function setMode(m){
+  S.mode=m;stopAllAudio();endLessonIfAny();
+  $('#tabPlay').setAttribute('aria-selected',m==='play');$('#tabPractice').setAttribute('aria-selected',m==='practice');
+  $('#playPanel').hidden=m!=='play';$('#practicePanel').hidden=m!=='practice';
+  kb.classList.toggle('hide',false);clearMarks();
+  if(m==='practice')showList();
+}
+$('#tabPlay').onclick=()=>setMode('play');$('#tabPractice').onclick=()=>setMode('practice');
+
+/* ---------- lessons: one tiny step each ---------- */
+const DIA=[0,2,4,5,7,9,11];
+const CHROMA=[ // degree, [raised name, number, resolves to], [lowered name, number, resolves to]
+  {d:6,up:['Fi','♯4','Sol'],down:['Se','♭5','Fa']},
+  {d:10,up:['Li','♯6','Ti'],down:['Te','♭7','La']},
+  {d:8,up:['Si','♯5','La'],down:['Le','♭6','Sol']},
+  {d:3,up:['Ri','♯2','Mi'],down:['Me','♭3','Re']},
+  {d:1,up:['Di','♯1','Re'],down:['Ra','♭2','Do']},
+];
+const LESSONS=[
+ {id:'L1',title:'Home and its strong neighbor',tag:'1 · 5  (Do · Sol)',degs:[0,7],
+  goal:'Learn two notes only. 1 (Do) is home, where everything settles. 5 (Sol) is strong and open, and it wants to fall back to 1.',
+  q3:'Did 5 feel like it wanted to fall back home to 1?'},
+ {id:'L2',title:'The home chord',tag:'1 · 3 · 5  (Do Mi Sol)',degs:[0,4,7],
+  goal:'Do, Mi and Sol together are the home chord. 1 is settled, 3 is the sweet middle, 5 is open. Learn each by its color before you name it.',
+  q3:'Can you hear 3 as the sweet middle note between 1 and 5?'},
+ {id:'L3',title:'Add 2 (Re)',tag:'1 2 3 5',degs:[0,2,4,7],
+  goal:'Re sits right above Do and leans down into it. It feels like almost home.',
+  q3:'Did 2 feel like it wanted to step down to 1?'},
+ {id:'L4',title:'Add 4 (Fa)',tag:'1 2 3 4 5',degs:[0,2,4,5,7],
+  goal:'Fa sits right above Mi and leans down into it. It is the heavy note that wants to sink.',
+  q3:'Did 4 feel like it wanted to sink down to 3?'},
+ {id:'L5',title:'Add 6 (La)',tag:'1 2 3 4 5 6',degs:[0,2,4,5,7,9],
+  goal:'La sits above Sol and leans down into it. It is bright, a little wistful.',
+  q3:'Did 6 feel like it wanted to settle down to 5?'},
+ {id:'L6',title:'Add 7 (Ti)',tag:'1 to 7, the whole major scale',degs:DIA,
+  goal:'Ti is one half step under Do, and it pulls up into it harder than any other note. Now you have all seven.',
+  q3:'Did 7 feel like it had to go up to 1?'},
+];
+CHROMA.forEach((c,i)=>{
+  const known=CHROMA.slice(0,i+1).map(x=>x.d);
+  LESSONS.push({id:'C'+(i+1),title:'Add '+c.up[0]+' / '+c.down[0]+'  ('+c.up[1]+' / '+c.down[1]+')',tag:c.up[0]+' leans up, '+c.down[0]+' leans down',
+    degs:DIA.concat(known).sort((a,b)=>a-b),focus:c,chroma:true,
+    goal:'One new pitch with two names. '+c.up[0]+' ('+c.up[1]+') is it heard leaning up to '+c.up[2]+'. '+c.down[0]+' ('+c.down[1]+') is the same pitch heard leaning down to '+c.down[2]+'. The name tells you where it is going. You will hear the resolution after each answer.',
+    q3:'Could you feel which way the new note was leaning?'});
+});
+
+
+/* ---------- harmony: hear chords from the bass up ---------- */
+const MAJ=[4,7],MIN=[3,7],M7=[4,7,11],D7=[4,7,10],m7=[3,7,10];
+const HARM=[
+ {id:'H1',harm:1,title:'The three chords: I IV V',tag:'C  F  G  C',tempo:76,
+  goal:'Most songs live on three chords. I is home. IV is away but soft. V is away and tense. Sing only the bass note of each chord, its root.',
+  ch:[{r:0,sym:'C',iv:MAJ,rn:'I'},{r:5,sym:'F',iv:MAJ,rn:'IV'},{r:7,sym:'G',iv:MAJ,rn:'V'},{r:0,sym:'C',iv:MAJ,rn:'I'}],
+  q3:'Could you hear V pulling back to I at the end?'},
+ {id:'H2',harm:1,title:'Pop four: I V vi IV',tag:'C  G  Am  F',tempo:76,
+  goal:'Add vi, the relative minor. It sounds like home with the lights dimmed. Follow the roots: 1, 5, 6, 4.',
+  ch:[{r:0,sym:'C',iv:MAJ,rn:'I'},{r:7,sym:'G',iv:MAJ,rn:'V'},{r:9,sym:'Am',iv:MIN,rn:'vi'},{r:5,sym:'F',iv:MAJ,rn:'IV'}],
+  q3:'Could you hear that vi is minor while the others are major?'},
+ {id:'H3',harm:1,title:'Same chords, new order: I vi IV V',tag:'C  Am  F  G',tempo:76,
+  goal:'Same four chords in another order. Do not hope for a familiar tune. Track the bass notes: 1, 6, 4, 5.',
+  ch:[{r:0,sym:'C',iv:MAJ,rn:'I'},{r:9,sym:'Am',iv:MIN,rn:'vi'},{r:5,sym:'F',iv:MAJ,rn:'IV'},{r:7,sym:'G',iv:MAJ,rn:'V'}],
+  q3:'Could you tell this order from the last one by the bass line?'},
+ {id:'H4',harm:1,title:'The jazz cadence: ii V I',tag:'Dm7  G7  Cmaj7',tempo:72,
+  goal:'The most important progression in jazz, and the engine of Pent-Up House and There Will Never. The roots fall by a fifth: 2, 5, 1.',
+  ch:[{r:2,sym:'Dm7',iv:m7,rn:'ii7'},{r:7,sym:'G7',iv:D7,rn:'V7'},{r:0,sym:'Cmaj7',iv:M7,rn:'Imaj7'}],
+  q3:'Could you hear the bass step down a fifth each time?'},
+ {id:'H5',harm:1,title:'Turnaround: I vi ii V',tag:'Cmaj7  Am7  Dm7  G7',tempo:72,
+  goal:'A loop that brings you back home. Roots: 1, 6, 2, 5. Each root falls a fifth to the next, except the first step.',
+  ch:[{r:0,sym:'Cmaj7',iv:M7,rn:'Imaj7'},{r:9,sym:'Am7',iv:m7,rn:'vi7'},{r:2,sym:'Dm7',iv:m7,rn:'ii7'},{r:7,sym:'G7',iv:D7,rn:'V7'}],
+  q3:'Could you feel the loop wanting to return to I?'},
+ {id:'H6',harm:1,title:'Longer chain: iii vi ii V I',tag:'Em7  Am7  Dm7  G7  Cmaj7',tempo:70,
+  goal:'Five chords, every root a fifth below the last. Roots: 3, 6, 2, 5, 1. Sing the chain before you play it.',
+  ch:[{r:4,sym:'Em7',iv:m7,rn:'iii7'},{r:9,sym:'Am7',iv:m7,rn:'vi7'},{r:2,sym:'Dm7',iv:m7,rn:'ii7'},{r:7,sym:'G7',iv:D7,rn:'V7'},{r:0,sym:'Cmaj7',iv:M7,rn:'Imaj7'}],
+  q3:'Could you hear every root fall a fifth to the next?'},
+ {id:'H7',harm:1,title:'First secondary dominant: I VI7 ii V',tag:'Cmaj7  A7  Dm7  G7',tempo:72,
+  goal:'The same roots as the turnaround, but the chord on 6 is a major dominant, A7. It pulls hard toward ii. That bright pull is a secondary dominant, which you will meet in Billie’s Bounce.',
+  ch:[{r:0,sym:'Cmaj7',iv:M7,rn:'Imaj7'},{r:9,sym:'A7',iv:D7,rn:'VI7 (V7 of ii)'},{r:2,sym:'Dm7',iv:m7,rn:'ii7'},{r:7,sym:'G7',iv:D7,rn:'V7'}],
+  q3:'Could you hear that the chord on 6 was major, not minor like last time?'},
+];
+const ENVS=[
+ {id:'E1',env:1,kind:'same',n:8,p:0.5,title:'Same or different',tag:'two progressions, two environments',
+  goal:'Each round plays two short loops of four chords, one after the other. Listen only to the lowest note of each chord, the bass. Question: is the second loop the same bass pattern as the first, just moved to a new key and played with a different sound? For example, 1 · 5 · 6 · 4 in C and then 1 · 5 · 6 · 4 in G is the SAME. 1 · 5 · 6 · 4 and then 1 · 6 · 4 · 5 is DIFFERENT. Answer Same or Different.',
+  q3:'Did you catch the same bass line when the key and the sound changed?'},
+ {id:'E2',env:1,kind:'odd',n:8,p:1/3,title:'Odd one out',tag:'three progressions, one is different',
+  goal:'Each round plays three short loops of four chords, each in a different key and sound. Two of them have the same bass pattern, only moved to another key. One has a different bass pattern. Listen only to the lowest note of each chord and pick the odd one out. Tip: hum the bass of the first loop, then check whether the second and third match it.',
+  q3:'Could you hold the first bass line in your head while the second and third played?'},
+];
+const PCN=['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+const chordName=(r,sym)=>PCN[(r+S.tonic)%12]+sym.replace(/^[A-G][♭♯]?/,'');
+/* play one chord at time t (seconds): bass root plus the chord above it */
+function playChord(r,iv,t,dur,vel){
+  let bass=36+r+S.tonic;if(bass<40)bass+=12;
+  voice(bass,t,dur,0.7*(vel||1));
+  iv.forEach(i=>{let n=48+r+S.tonic+i;while(n<55+S.tonic)n+=12;while(n>76)n-=12;voice(n,t,dur,0.26*(vel||1));});
+}
+const pcs=a=>[...new Set(a.map(x=>((x%12)+12)%12))];
+function coreTones(c){return pcs([c.r].concat(c.iv.filter(i=>i<12).map(i=>c.r+i)));}
+function allowedTones(c){return pcs([c.r].concat(c.iv.map(i=>c.r+i)));}
+function shellTones(c,tri){
+  const third=c.iv.find(i=>i===3||i===4),sev=c.iv.find(i=>i===9||i===10||i===11),fifth=c.iv.find(i=>i>=6&&i<=8);
+  const a=[c.r];if(third!=null)a.push(c.r+third);
+  if(fifth!=null)a.push(c.r+fifth);
+  return pcs(a);
+}
+const needTones=(c,mode,h)=>mode==='shell'?shellTones(c,h&&h.tri):coreTones(c);
+const hasSev=h=>false; // one rule everywhere: the middle level is the 1-3-5 triad
+const playTxt=(h,m)=>m==='shell'&&!hasSev(h)?'Play the root, 3rd and 5th of each chord together.':PLAYTXT[m];
+const PLAYTXT={roots:'Play the bass note of each chord.',shell:'Play the root, 3rd and 5th of each chord together.',full:'Play the whole chord, any inversion, all notes together.'};
+let HR=null;
+function startHarm(id){
+  window.scrollTo(0,0);audio();stopAllAudio();const h=typeof id==='object'?id:HARM.find(x=>x.id===id);
+  HR={h,idx:0,mist:0,phase:'play',slow:true,gaveUp:false,withChords:!h.rootsEx,play:(['roots','shell','full'].includes(S.hplay)?S.hplay:'shell'),buf:new Set(),bt:null};
+  $('#lessonList').hidden=true;const v=$('#lessonView');v.hidden=false;kb.classList.add('hide');clearMarks();
+  v.innerHTML='<h2></h2><p class="goal"></p><details class="how"><summary>How this works</summary><ol class="steps"><li>Hear Do, then the chords. Hear them as often as you like.</li><li>Sing only the bass note of each chord, one per chord.</li><li>Play your answer on the piano, in order. Start with roots, then try shells and full chords. Any octave works.</li><li>Then see the chord names and where each root sits in the key.</li></ol></details><div class="row"><button class="btn" id="hp">Hear it</button><button class="chip" id="sl" aria-pressed="true">Slow</button><button class="btn ghost" id="hd">Hear Do only</button>'+(h.rootsEx?'<button class="chip" id="chc" aria-pressed="false">Chords with the roots</button>':'')+'</div>'+(h.rootsEx?'<p class="mut" style="margin:4px 0 0">Start with the bass notes alone. Turn the chords on once you can sing the roots.</p>':'')+'<div class="seg" id="pm" role="group" aria-label="What you play" style="margin-top:12px"><button class="chip" data-p="roots" aria-pressed="false">Roots</button><button class="chip" data-p="shell" aria-pressed="false">'+(hasSev(h)?'Shells (root, 3rd, 7th)':'Triads (root, 3rd, 5th)')+'</button><button class="chip" data-p="full" aria-pressed="false">Full chords</button></div><p class="mut" id="pmh" style="margin:0 0 4px"></p><div class="seq" id="seq" aria-label="Your progress through the chords"></div><div class="fb" id="fb" aria-live="polite">Listen first.</div><div class="row"><button class="btn ghost" id="rv">Show me the chords</button><button class="btn ghost" id="bk">Back</button></div>';
+  v.querySelector('h2').textContent=h.title;v.querySelector('.goal').textContent=h.goal;
+  v.querySelector('h2').after(navRow(h));
+  drawHSeq(false);
+  document.querySelectorAll('#pm .chip').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===HR.play));
+  $('#pmh').textContent=playTxt(HR.h,HR.play)+(HR.play!=='roots'?' Works best with your piano connected.':'');
+  document.querySelectorAll('#pm .chip').forEach(b=>b.onclick=()=>{
+    if(HR.phase!=='play')return;
+    HR.play=b.dataset.p;S.hplay=HR.play;savePrefs();HR.idx=0;HR.mist=0;HR.buf=new Set();clearTimeout(HR.bt);
+    document.querySelectorAll('#pm .chip').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    $('#pmh').textContent=playTxt(HR.h,HR.play)+(HR.play!=='roots'?' Works best with your piano connected.':'');
+    $('#fb').className='fb';$('#fb').textContent='Listen first.';drawHSeq(false);
+  });
+  $('#hp').onclick=()=>playHarm(HR.slow,false);
+  $('#sl').onclick=e=>{HR.slow=!HR.slow;e.currentTarget.setAttribute('aria-pressed',HR.slow);};
+  $('#hd').onclick=()=>{audio();voice(60+S.tonic,ctx.currentTime+0.02,1.2);};
+  if($('#chc'))$('#chc').onclick=e=>{HR.withChords=!HR.withChords;e.currentTarget.setAttribute('aria-pressed',HR.withChords);};
+  $('#rv').onclick=()=>{HR.gaveUp=true;harmReveal();};
+  $('#bk').onclick=endHarm;
+  playHarm(true,false);
+}
+function playHarm(slow,hl){
+  audio();stopAllAudio();const h=HR.h,spb=60/(h.tempo*(slow?0.7:1)),t0=ctx.currentTime+0.05,st=t0+1.6,len=2*spb*2;
+  voice(60+S.tonic,t0,1.0);
+  h.ch.forEach((c,i)=>{
+    if(HR.withChords)playChord(c.r,c.iv,st+i*len,len*0.97);
+    else{let b=36+c.r+S.tonic;if(b<40)b+=12;voice(b,st+i*len,len*0.97,0.8);}
+    if(hl)later(()=>{const el=document.querySelector('#seq .nt[data-i="'+i+'"]');if(el){el.classList.add('hl');later(()=>el.classList.remove('hl'),len*1000);}},(1.6+i*len)*1000);
+  });
+}
+function drawHSeq(reveal){
+  const box=$('#seq');box.innerHTML='';
+  HR.h.ch.forEach((c,i)=>{
+    const d=document.createElement('div');d.dataset.i=i;
+    if(reveal){d.className='nt ch';d.innerHTML='<b></b><span></span><small></small>';d.querySelector('b').textContent=c.rn.split(' ')[0];d.querySelector('span').textContent=chordName(c.r,c.sym);d.querySelector('small').textContent='root '+numOf(c.r)+' · '+sylOf(c.r);const t2=document.createElement('small');t2.textContent=coreTones(c).map(x=>PCN[(x+S.tonic)%12]).join(' ');d.appendChild(t2);}
+    else{d.className='nt q'+(i<HR.idx?' got':'');d.innerHTML='<b></b>';d.querySelector('b').textContent=i<HR.idx?'✓':'·';}
+    box.appendChild(d);
+  });
+}
+function harmKey(m,source){
+  if(HR.play!=='roots'){chordKey(m,source);return;}
+  const exp=HR.h.ch[HR.idx].r;
+  if(degOf(m)===exp)harmOk();
+  else{
+    HR.mist++;$('#fb').className='fb bad';$('#fb').textContent='Not that root. Sing the next bass note before you try again. Wrong notes so far: '+HR.mist+'.';
+    const el=keyEl[m];if(el){el.classList.add('bad');later(()=>el.classList.remove('bad'),350);}
+  }
+}
+function harmOk(){
+  HR.idx++;drawHSeq(false);
+  const what=HR.play==='roots'?'bass note':'chord';
+  if(HR.idx>=HR.h.ch.length){$('#fb').className='fb good';$('#fb').textContent='You followed every '+what+(HR.mist?' with '+HR.mist+' wrong try'+(HR.mist===1?'':'s'):' without a wrong try')+'. Now see the chords.';later(harmReveal,700);}
+  else{$('#fb').className='fb';$('#fb').textContent='Good. '+HR.idx+' of '+HR.h.ch.length+'.';}
+}
+/* chords: gather the notes pressed close together, then judge them as one chord */
+function chordKey(m,source){
+  HR.buf.add(degOf(m));
+  clearTimeout(HR.bt);
+  HR.bt=setTimeout(evalChord,source==='tap'?2500:450);
+}
+function evalChord(){
+  if(!HR||HR.phase!=='play')return;
+  const c=HR.h.ch[HR.idx],need=needTones(c,HR.play,HR.h),ok=allowedTones(c),got=[...HR.buf];
+  HR.buf=new Set();
+  const wrong=got.filter(d=>!ok.includes(d)),missing=need.filter(d=>!got.includes(d));
+  const fb=$('#fb');
+  if(wrong.length){HR.mist++;fb.className='fb bad';fb.textContent='That chord has a note that does not belong. Sing the root first, then hear the chord color. Wrong tries so far: '+HR.mist+'.';}
+  else if(missing.length){HR.mist++;fb.className='fb bad';fb.textContent='Close, but a note is missing. '+playTxt(HR.h,HR.play)+' That is '+need.length+' different notes together. Wrong tries so far: '+HR.mist+'.';}
+  else harmOk();
+}
+function qForm(host,qs,store,onAll){
+  qs.forEach(q=>{
+    const d=document.createElement('div');d.className='q';d.innerHTML='<p></p><div class="row" style="margin:0"></div>';d.querySelector('p').textContent=q.t;
+    [['Yes',2],['A little',1],['Not yet',0]].forEach(([lab,val])=>{
+      const b=document.createElement('button');b.className='ans';b.textContent=lab;b.setAttribute('aria-pressed','false');
+      b.onclick=()=>{store[q.k]=val;d.querySelectorAll('.ans').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');if(qs.every(z=>store[z.k]!=null))onAll();};
+      d.lastChild.appendChild(b);
+    });
+    host.appendChild(d);
+  });
+}
+function harmReveal(){
+  HR.phase='reveal';HR.withChords=true;kb.classList.remove('hide');drawHSeq(true);
+  if($('#chc'))$('#chc').setAttribute('aria-pressed','true');
+  $('#hp').textContent='Hear it with the names';$('#hp').onclick=()=>playHarm(HR.slow,true);$('#rv').hidden=true;
+  $('#fb').className='fb';$('#fb').textContent='These are the chords. The roman numeral is the chord’s place in the key; the root is the note you sang. Play along and sing the roots as numbers, then syllables.';
+  const v=$('#lessonView');
+  if(HR.h.yt){const a=document.createElement('p');a.className='mut';a.innerHTML='Next step from the book: sing these roots along with a real recording. ';const l=document.createElement('a');l.href='https://www.youtube.com/results?search_query='+encodeURIComponent(HR.h.yt);l.target='_blank';l.rel='noopener';l.style.color='var(--blue)';l.textContent='Find a recording';a.appendChild(l);v.appendChild(a);}
+  const c=document.createElement('div');c.id='tqs';
+  c.innerHTML='<h3>Self-check</h3><div class="qb"></div><div class="row"><button class="btn" id="tfin" disabled>See what next</button></div><div id="tvd"></div>';v.appendChild(c);
+  HR.checks={};
+  qForm(c.querySelector('.qb'),[
+    {k:'q1',t:'Could you hear Do in your head before the reference played?'},
+    {k:'q2',t:HR.play==='roots'?'Did you sing the bass notes before you played them?':'Did you sing the roots, and hear the chord color, before you played the chord?'},
+    {k:'q3',t:HR.h.q3}],HR.checks,()=>{$('#tfin').disabled=false;});
+  $('#tfin').onclick=harmFinish;
+}
+function harmFinish(){
+  const c=HR.checks,done=HR.idx>=HR.h.ch.length&&!HR.gaveUp,sang=c.q2===2,ready=done&&HR.mist<=2&&sang&&c.q1>=1;
+  const p=prog[HR.h.id]||{tries:0};p.tries++;p.mist=HR.mist;p.last=Date.now();if(ready){p.passed=true;if(HR.play!=='roots')p['p_'+HR.play]=true;}prog[HR.h.id]=p;saveProg();
+  let msg;
+  if(ready)msg='Solid. You followed the '+(HR.play==='roots'?'roots':HR.play==='shell'?(hasSev(HR.h)?'shells':'triads'):'chords')+' with '+HR.mist+' wrong '+(HR.mist===1?(HR.play==='roots'?'note':'try'):(HR.play==='roots'?'notes':'tries'))+' and you sang first. Take the next one.';
+  else if(!done)msg='You peeked before you finished. Fine for a first look, but come back and try to follow the roots by ear before revealing.';
+  else if(!sang)msg='You got the roots, but you did not sing them first. Finding them by trial and error on the keys is not hearing them. Repeat and sing each bass note before you play it.';
+  else msg='Almost. Too many wrong notes, or Do was shaky. Repeat this one.';
+  $('#tvd').innerHTML='<p class="verdict"></p>';
+  $('.verdict').textContent=msg;$('#tfin').hidden=true;$('#tqs').querySelectorAll('.ans').forEach(b=>b.disabled=true);
+  const hh=HR.h;nextBtns($('#tvd'),hh,ready,()=>startHarm(hh),endHarm);
+}
+function endHarm(){stopAllAudio();if(HR)clearTimeout(HR.bt);HR=null;timers.forEach(clearTimeout);timers=[];kb.classList.remove('hide');clearMarks();if(S.mode==='practice')showList();}
+
+let R=null,timers=[];
+const later=(fn,ms)=>{const t=setTimeout(fn,ms);timers.push(t);};
+function endLessonIfAny(){if(ER)endEnv();if(R)endLesson();if(TR)endTune();if(HR)endHarm();}
+function endLesson(){stopAllAudio();R=null;timers.forEach(clearTimeout);timers=[];kb.classList.remove('hide');clearMarks();if(S.mode==='practice')showList();}
+
+const lessonById=id=>LESSONS.find(l=>l.id===id)||HARM.find(l=>l.id===id)||ENVS.find(l=>l.id===id);
+function nextRec(){return LESSONS.concat(HARM,ENVS).find(l=>!(prog[l.id]&&prog[l.id].passed));}
+const STAGES=[
+ {id:'A',title:'Stage 1 · Home',blurb:'A baby learns its first sounds before any words. Your first sounds: home, and the home chord.',ids:['L1','L2'],
+  checkin:['I can sing 1 from silence and land close to it.','I can tell 1, 3 and 5 apart by ear before I think about it.']},
+ {id:'B',title:'Stage 2 · The scale',blurb:'One new word at a time, each one leaning toward home.',ids:['L3','L4','L5','L6'],
+  checkin:['I can sing 1 to 7 up and down without the piano.','I can say which way each note leans (2 down, 4 down, 6 down, 7 up).']},
+ {id:'D',title:'Stage 4 · Harmony: hear the roots',blurb:'Chords are heard from the bass up. Sing the root of each chord as it goes by. Berklee teaches this before anything else in harmonic ear training.',ids:['H1','H2','H3','H4','H5','H6','H7','E1','E2'],
+  checkin:['I can sing the bass root of each chord as it goes by, without the piano.','I can tell I, IV and V, and ii V I, by hearing the roots.','I can tell whether two progressions are the same when the key, the voicing and the speed change.']},
+ {id:'C',title:'Stage 3 · Color notes',blurb:'The notes between the notes. Each one has two names, and the name says where it is heading.',ids:['C1','C2','C3','C4','C5'],
+  checkin:['I can hear a chromatic note and tell if it leans up or down.','I can sing a chromatic note and then its resolution.']},
+];
+STAGES.sort((a,b)=>a.id<b.id?-1:1);
+function modeChips(){
+  return '<div class="seg" role="group" aria-label="Practice with"><button class="chip" id="mGen" aria-pressed="'+(S.pmode==='gen')+'">Generic notes</button><button class="chip" id="mTune" aria-pressed="'+(S.pmode==='tune')+'">My three tunes</button></div>';
+}
+function wireChips(){
+  $('#mGen').onclick=()=>{S.pmode='gen';savePrefs();showList();};
+  $('#mTune').onclick=()=>{S.pmode='tune';savePrefs();showList();};
+}
+const genSeq=()=>LESSONS.concat(HARM,ENVS);
+function tuneItem(tid,a){const T=BABY_TUNES[tid],b=(PHR[tid].find(x=>x[0]===a)||[a,a])[1];return {kind:'phrase',tid,a,b,id:tuneKey_(tid,a),title:T.name+' · '+(a===b?'bar '+a:'bars '+a+'–'+b)};}
+function tuneSeq(){const out=[];['twnbay','pent','bounce'].forEach(tid=>{(BABY_TUNES[tid].sections||[]).forEach(sec=>out.push(rootsLesson(tid,sec)));PHR[tid].forEach(([a])=>out.push(tuneItem(tid,a)));});return out;}
+const curSeq=()=>S.pmode==='tune'?tuneSeq():genSeq();
+const seqFor=cur=>{const q=curSeq();return q.some(x=>x.id===cur.id)?q:genSeq();};
+function nextItem(cur){const q=seqFor(cur),i=q.findIndex(x=>x.id===cur.id);return i>=0?(q[i+1]||null):null;}
+function nextTodo(){return curSeq().find(x=>!(prog[x.id]&&prog[x.id].passed));}
+function startItem(it){if(it.env)startEnv(it.id);else if(it.kind==='phrase')startTune(it.tid,it.a,it.b);else if(it.harm)startHarm(it);else startLesson(it.id);}
+function prevItem(cur){const q=seqFor(cur),i=q.findIndex(x=>x.id===cur.id);return i>0?q[i-1]:null;}
+/* previous / next step buttons shown at the top of a running step */
+function navRow(cur){
+  const pv=prevItem(cur),nx=nextItem(cur),row=document.createElement('div');row.className='row';row.id='navrow';
+  const mk=(t,it)=>{const b=document.createElement('button');b.className='btn ghost';b.textContent=t;
+    if(!it){b.disabled=true;b.style.opacity='.4';}
+    else b.onclick=()=>{stopAllAudio();timers.forEach(clearTimeout);timers=[];if(HR)clearTimeout(HR.bt);startItem(it);};
+    row.appendChild(b);};
+  mk('← Previous',pv);mk('Next →',nx);
+  if(pv)row.children[0].title=pv.title;if(nx)row.children[1].title=nx.title;
+  return row;
+}
+function nextBtns(box,cur,ready,again,back){
+  const nx=nextItem(cur),row=document.createElement('div');row.className='row';
+  const mk=(t,cls,fn)=>{const b=document.createElement('button');b.className='btn'+(cls?' '+cls:'');b.textContent=t;b.onclick=fn;row.appendChild(b);};
+  if(ready&&nx){mk('Next: '+nx.title,'',()=>startItem(nx));mk('Repeat this one','ghost',again);}
+  else{mk('Repeat this one','',again);if(nx)mk('Skip to: '+nx.title,'ghost',()=>startItem(nx));}
+  mk('All steps','ghost',back);
+  box.appendChild(row);
+}
+function showList(){
+  $('#lessonView').hidden=true;$('#lessonList').hidden=false;kb.classList.remove('hide');clearMarks();
+  if(S.pmode==='tune')showTuneList();else showGenList();
+  wireChips();
+  const nt=nextTodo();
+  if(nt){const wrap=document.createElement('div');wrap.className='row';const b=document.createElement('button');b.className='btn';b.textContent='Continue: '+nt.title;b.onclick=()=>startItem(nt);wrap.appendChild(b);const L=$('#lessonList');L.insertBefore(wrap,L.children[1]||null);}
+}
+function showGenList(){
+  const rec=nextRec();
+  $('#lessonList').innerHTML=modeChips()+'<h2>Pick a baby step</h2><p class="mut" style="margin:0 0 4px;max-width:64ch">Each step is 8 short rounds (about 8 minutes) and a self-check. Take them in order and add one thing at a time.</p><div id="stages"></div>';
+  const host=$('#stages');
+  STAGES.forEach(st=>{
+    const d=document.createElement('div');d.className='stage';
+    d.innerHTML='<h3></h3><p class="mut" style="margin:0 0 10px;max-width:64ch"></p><div class="lessons"></div><h3 style="font-size:13.5px;color:var(--muted)">Stage check-in: tick these when they are true without trying</h3><div class="cis"></div>';
+    d.querySelector('h3').textContent=st.title;d.querySelector('p').textContent=st.blurb;
+    const box=d.querySelector('.lessons');
+    st.ids.map(lessonById).forEach(l=>{
+      const p=prog[l.id]||{},b=document.createElement('button');
+      b.className='lcard'+(p.passed?' pass':'')+(rec&&rec.id===l.id?' next':'');
+      b.innerHTML='<b></b><span></span><span class="m"></span>';
+      b.children[0].textContent=l.title;b.children[1].textContent=l.tag;
+      b.children[2].textContent=l.env?(p.tries?'best '+p.best+'/'+l.n+' (pass '+passMark(l.n,l.p,0.05)+') · '+p.tries+' tr'+(p.tries===1?'y':'ies'):(rec&&rec.id===l.id?'start here':'not tried')):(l.harm?'6 min · ':'8 min · ')+(p.p_shell?(hasSev(l)?'shells ✓ · ':'triads ✓ · '):'')+(p.p_full?'full ✓ · ':'')+(p.tries?((l.harm?'':'best '+p.best+'/8, ')+p.tries+' tr'+(p.tries===1?'y':'ies')):(rec&&rec.id===l.id?'start here':'not tried'));
+      b.onclick=()=>l.env?startEnv(l.id):l.harm?startHarm(l.id):startLesson(l.id);box.appendChild(b);
+    });
+    const ck=prog['stage:'+st.id]||[];
+    st.checkin.forEach((t,i)=>{
+      const b=document.createElement('button');b.className='ci';b.setAttribute('aria-pressed',!!ck[i]);
+      b.innerHTML='<i>'+(ck[i]?'✓':'')+'</i><span></span>';b.querySelector('span').textContent=t;
+      b.onclick=()=>{const a=prog['stage:'+st.id]||[];a[i]=!a[i];prog['stage:'+st.id]=a;saveProg();showGenList();wireChips();};
+      d.querySelector('.cis').appendChild(b);
+    });
+    host.appendChild(d);
+  });
+}
+
+/* ---------- tunes mode: learn real phrases from the three heads ---------- */
+const PHR={pent:[[1,2],[3,3],[8,8],[9,10],[11,12]],bounce:[[1,1],[2,3],[4,5],[6,7],[8,9],[10,12]],twnbay:[]};
+for(let i=1;i<32;i+=2)PHR.twnbay.push([i,i+1]);
+let TR=null;
+function phraseNotes(tid,a,b){
+  const T=BABY_TUNES[tid],out=[];
+  for(let bar=a;bar<=b;bar++)((T.bars[bar-1]||{}).m||[]).forEach(n=>out.push({t:(bar-a)*4+n.t,d:n.d,m:n.m}));
+  return out;
+}
+function phraseChords(tid,a,b){
+  const T=BABY_TUNES[tid],ev=[],seen={};
+  for(let bar=a;bar<=b;bar++)((T.bars[bar-1]||{}).c||[]).forEach(c=>{const t=(bar-a)*4+c.t;if(seen[t])return;seen[t]=1;ev.push({t,root:c.root,sym:c.sym,iv:c.iv,held:!!c.held});});
+  return ev;
+}
+function chordAt(ev,t){let r=null;ev.forEach(e=>{if(!e.held&&e.t<=t+0.001)r=e;});return r||ev.find(e=>!e.held)||ev[0]||null;}
+function placeTune(m){let x=m+S.tonic;while(x>HI)x-=12;while(x<LO)x+=12;return x;}
+function dirAt(notes,i){ // chromatic notes are named by where the line goes next
+  const c=notes[i].m,nx=notes[i+1],pv=notes[i-1];
+  if(nx&&nx.m!==c)return nx.m>c?'up':'down';
+  if(pv&&pv.m!==c)return pv.m<c?'up':'down';
+  return null;
+}
+function tuneKey_(tid,a){return 'T:'+tid+':'+a;}
+const RNN=['I','♭II','II','♭III','III','IV','♯IV','V','♭VI','VI','♭VII','VII'];
+function rnOf(r,sym){
+  const rest=sym.replace(/^[A-G][♭♯]?/,''),minor=/^m(?!aj)/.test(rest)||/[øo]/.test(rest);
+  let n=RNN[r];if(minor)n=n.toLowerCase();
+  return n+rest.replace(/^m(?!aj)/,'');
+}
+const withFifth=iv=>iv.some(i=>i%12>=6&&i%12<=8&&i<12)?iv:iv.concat(7);
+function rootsLesson(tid,sec){
+  const T=BABY_TUNES[tid],a=sec[1],b=sec[2],ev=phraseChords(tid,a,b).filter(e=>!e.held),ch=[];
+  ev.forEach(e=>{const last=ch[ch.length-1];if(last&&last.sym===e.sym&&last.r===e.root)return;ch.push({r:e.root,sym:e.sym,iv:withFifth(e.iv),rn:rnOf(e.root,e.sym)});});
+  return {id:'R:'+tid+':'+a,harm:1,rootsEx:true,yt:T.yt,tempo:90,ch,
+    title:T.name+' · roots, bars '+a+'–'+b,
+    goal:'Sing the bass note of each chord through bars '+a+'–'+b+' of '+T.name+', as numbers and as solfege. Hear the roots alone first, then with the chords. After that, try it with a real recording.',
+    q3:'Could you predict where the next root would go?'};
+}
+function showTuneList(){
+  const order=['twnbay','pent','bounce'];
+  const warn=(prog.L2&&prog.L2.passed)?'':'<p class="verdict" style="margin:10px 0">Honest heads-up: you have not passed the 1·3·5 step in Generic notes yet. Tunes work much better once 1, 3 and 5 are solid. You can still try them.</p>';
+  $('#lessonList').innerHTML=modeChips()+'<h2>Learn the tunes by ear</h2><p class="mut" style="margin:0 0 4px;max-width:64ch">Real melodies from your Baby app, in order of difficulty. You hear a short phrase, sing it, play it back on your piano, then the numbers are revealed. Only the melody is played, no chords.</p>'+warn+'<div id="tunes"></div>';
+  const host=$('#tunes');
+  order.forEach(tid=>{
+    const T=BABY_TUNES[tid],d=document.createElement('div');d.className='stage';
+    d.innerHTML='<h3></h3><p class="mut" style="margin:0 0 6px">Sing the chord roots</p><div class="lessons rts"></div><p class="mut" style="margin:10px 0 6px">Learn the melody</p><div class="lessons"></div>';
+    d.querySelector('h3').textContent=T.name+' · '+T.who;
+    (T.sections||[]).forEach(sec=>{
+      const l=rootsLesson(tid,sec),p=prog[l.id]||{},btn=document.createElement('button');
+      btn.className='lcard'+(p.passed?' pass':'');btn.innerHTML='<b></b><span></span>';
+      btn.children[0].textContent='Roots · '+sec[0];
+      btn.children[1].textContent=l.ch.length+' chords · 6 min'+(p.tries?' · '+p.tries+' tr'+(p.tries===1?'y':'ies'):'');
+      btn.onclick=()=>startHarm(l);d.querySelector('.rts').appendChild(btn);
+    });
+    PHR[tid].forEach(([a,b])=>{
+      const k=tuneKey_(tid,a),p=prog[k]||{},n=phraseNotes(tid,a,b).length,btn=document.createElement('button');
+      btn.className='lcard'+(p.passed?' pass':'');
+      btn.innerHTML='<b></b><span></span>';
+      btn.children[0].textContent=(a===b?'Bar '+a:'Bars '+a+'–'+b);
+      btn.children[1].textContent=n+' notes · 6 min'+(p.tries?' · '+p.tries+' tr'+(p.tries===1?'y':'ies'):'');
+      btn.onclick=()=>startTune(tid,a,b);d.querySelectorAll('.lessons')[1].appendChild(btn);
+    });
+    host.appendChild(d);
+  });
+}
+function playPhrase(slow,hl){
+  audio();stopAllAudio();const T=BABY_TUNES[TR.tid],spb=60/(T.tempo*(slow?0.6:1)),t0=ctx.currentTime+0.05,st=t0+1.6;
+  voice(60+S.tonic,t0,1.0);
+  if(TR.withChords){
+    const strikes=TR.chords.filter(e=>!e.held),end=(TR.b-TR.a+1)*4;
+    strikes.forEach((e,k)=>{const nx=strikes[k+1]?strikes[k+1].t:end;playChord(e.root,e.iv,st+e.t*spb,(nx-e.t)*spb*0.97);});
+  }
+  TR.notes.forEach((n,i)=>{
+    const dur=Math.max(0.18,n.d*spb*0.95);
+    voice(placeTune(n.m),st+n.t*spb,dur);
+    if(hl)later(()=>{const el=document.querySelector('#seq .nt[data-i="'+i+'"]');if(el){el.classList.add('hl');later(()=>el.classList.remove('hl'),dur*1000);}},(1.6+n.t*spb)*1000);
+  });
+}
+function startTune(tid,a,b){
+  window.scrollTo(0,0);audio();stopAllAudio();const T=BABY_TUNES[tid];
+  TR={tid,a,b,notes:phraseNotes(tid,a,b),chords:phraseChords(tid,a,b),idx:0,mist:0,phase:'play',slow:true,gaveUp:false,withChords:false};
+  $('#lessonList').hidden=true;const v=$('#lessonView');v.hidden=false;kb.classList.add('hide');clearMarks();
+  v.innerHTML='<h2></h2><p class="goal">Learn this phrase by ear. Nothing is labeled until the end.</p><details class="how"><summary>How this works</summary><ol class="steps"><li>Hear Do, then the phrase. Hear it as many times as you need.</li><li>Sing it back, on any sound. Hum it, or try numbers.</li><li>Play it on your piano. The dots fill in as you get each note right, in order.</li><li>Then see the numbers and syllables, and sing it once more with them.</li></ol></details><div class="row"><button class="btn" id="hp">Hear it</button><button class="chip" id="sl" aria-pressed="true">Slow</button><button class="btn ghost" id="hd">Hear Do only</button><button class="chip" id="chc" aria-pressed="false">Chords under it</button></div><p class="mut" style="margin:4px 0 0">Try it without chords first. Turn them on once you can sing the line.</p><div class="seq" id="seq" aria-label="Your progress through the phrase"></div><div class="fb" id="fb" aria-live="polite">Listen first.</div><div class="row"><button class="btn ghost" id="rv">Show me the numbers</button><button class="btn ghost" id="bk">Back</button></div>';
+  v.querySelector('h2').textContent=T.name+' · '+(a===b?'bar '+a:'bars '+a+'–'+b);
+  v.querySelector('h2').after(navRow(tuneItem(tid,a)));
+  drawSeq(false);
+  $('#hp').onclick=()=>playPhrase(TR.slow,false);
+  $('#sl').onclick=e=>{TR.slow=!TR.slow;e.currentTarget.setAttribute('aria-pressed',TR.slow);};
+  $('#hd').onclick=()=>{audio();voice(60+S.tonic,ctx.currentTime+0.02,1.2);};
+  $('#chc').onclick=e=>{TR.withChords=!TR.withChords;e.currentTarget.setAttribute('aria-pressed',TR.withChords);};
+  $('#rv').onclick=()=>{TR.gaveUp=true;tuneReveal();};
+  $('#bk').onclick=endTune;
+  playPhrase(true,false);
+}
+function drawSeq(reveal){
+  const box=$('#seq');box.innerHTML='';
+  TR.notes.forEach((n,i)=>{
+    const d=document.createElement('div'),deg=n.m%12;d.dataset.i=i;
+    if(reveal){const dir=dirAt(TR.notes,i);d.className='nt';d.innerHTML='<b></b><span></span>';d.querySelector('b').textContent=numOf(deg,dir);d.querySelector('span').textContent=sylOf(deg,dir);
+      const ce=chordAt(TR.chords,n.t);if(ce){d.classList.add('ch');const sm=document.createElement('small');sm.textContent='over '+chordName(ce.root,ce.sym);d.appendChild(sm);}}
+    else{d.className='nt q'+(i<TR.idx?' got':'');d.innerHTML='<b></b>';d.querySelector('b').textContent=i<TR.idx?'✓':'·';}
+    box.appendChild(d);
+  });
+}
+function tuneKey(m){
+  const exp=TR.notes[TR.idx].m%12;
+  if(degOf(m)===exp){
+    TR.idx++;drawSeq(false);
+    if(TR.idx>=TR.notes.length){$('#fb').className='fb good';$('#fb').textContent='You played the whole phrase'+(TR.mist?' with '+TR.mist+' wrong note'+(TR.mist===1?'':'s'):' without a wrong note')+'. Now see what it was.';later(tuneReveal,700);}
+    else{$('#fb').className='fb';$('#fb').textContent='Good. '+TR.idx+' of '+TR.notes.length+'.';}
+  }else{
+    TR.mist++;$('#fb').className='fb bad';$('#fb').textContent='Not that one. Sing the next note before you try again. Wrong notes so far: '+TR.mist+'.';
+    const el=keyEl[m];if(el){el.classList.add('bad');later(()=>el.classList.remove('bad'),350);}
+  }
+}
+function tuneReveal(){
+  TR.phase='reveal';TR.withChords=true;kb.classList.remove('hide');
+  drawSeq(true);
+  if($('#chc'))$('#chc').setAttribute('aria-pressed','true');
+  $('#hp').textContent='Hear it with the numbers';
+  $('#hp').onclick=()=>playPhrase(TR.slow,true);
+  $('#rv').hidden=true;
+  const done=TR.idx>=TR.notes.length;
+  $('#fb').className='fb';
+  $('#fb').textContent=(done?'That is the phrase. ':'Here it is. ')+'Chromatic notes are named by where the line goes next. Press the button to hear it with the numbers, then sing along.';
+  const v=$('#lessonView'),qs=[
+    {k:'q1',t:'Could you hear Do in your head before the reference played?'},
+    {k:'q2',t:'Did you sing the phrase before you played it?'},
+    {k:'q3',t:'Do these numbers now sound like the tune to you?'},
+    {k:'q4',t:'Did the same note feel different over different chords?'}];
+  const c=document.createElement('div');c.id='tqs';c.innerHTML='<h3>Self-check</h3><div class="qb"></div><div class="row"><button class="btn" id="tfin" disabled>See what next</button></div><div id="tvd"></div>';
+  v.appendChild(c);TR.checks={};
+  qs.forEach(q=>{
+    const d=document.createElement('div');d.className='q';d.innerHTML='<p></p><div class="row" style="margin:0"></div>';d.querySelector('p').textContent=q.t;
+    [['Yes',2],['A little',1],['Not yet',0]].forEach(([lab,val])=>{
+      const b=document.createElement('button');b.className='ans';b.textContent=lab;b.setAttribute('aria-pressed','false');
+      b.onclick=()=>{TR.checks[q.k]=val;d.querySelectorAll('.ans').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');if(qs.every(z=>TR.checks[z.k]!=null))$('#tfin').disabled=false;};
+      d.lastChild.appendChild(b);
+    });
+    c.querySelector('.qb').appendChild(d);
+  });
+  $('#tfin').onclick=tuneFinish;
+}
+function tuneFinish(){
+  const c=TR.checks,done=TR.idx>=TR.notes.length&&!TR.gaveUp,sang=c.q2===2,ready=done&&TR.mist<=3&&sang&&c.q1>=1;
+  const k=tuneKey_(TR.tid,TR.a),p=prog[k]||{tries:0};p.tries++;p.mist=TR.mist;p.last=Date.now();if(ready)p.passed=true;prog[k]=p;saveProg();
+  let msg;
+  if(ready)msg='Solid. You played the phrase with '+TR.mist+' wrong note'+(TR.mist===1?'':'s')+' and you sang it first. Take the next phrase.';
+  else if(!done)msg='You peeked before you finished the phrase. That is fine for the first pass, but come back and try to play it from ear alone before you reveal it.';
+  else if(!sang)msg='You got it, but you did not sing it first. Playing it by trial and error on the keys is not the same as hearing it. Repeat and sing before you touch a key.';
+  else msg='Almost. Too many wrong notes or Do was shaky. Repeat the phrase once more.';
+  $('#tvd').innerHTML='<p class="verdict"></p>';
+  $('.verdict').textContent=msg;$('#tfin').hidden=true;
+  $('#tqs').querySelectorAll('.ans').forEach(b=>b.disabled=true);
+  const t=TR;nextBtns($('#tvd'),tuneItem(t.tid,t.a),ready,()=>startTune(t.tid,t.a,t.b),endTune);
+}
+function endTune(){stopAllAudio();TR=null;timers.forEach(clearTimeout);timers=[];kb.classList.remove('hide');clearMarks();if(S.mode==='practice')showList();}
+
+const ROUNDS=8;
+function startLesson(id){
+  window.scrollTo(0,0);audio();stopAllAudio();
+  const l=LESSONS.find(x=>x.id===id);
+  R={l,i:0,score:0,phase:'intro',last:-1,checks:[],hist:[]};
+  $('#lessonList').hidden=true;const v=$('#lessonView');v.hidden=false;
+  v.innerHTML='<h2></h2><p class="goal"></p><details class="how" open><summary>How this works</summary><ol class="steps"><li>You hear Do (the reference), then a mystery note. Nothing is labeled.</li><li>Sing the mystery note out loud.</li><li>Then play the key you think it was, on your piano or the screen.</li><li>The app tells you the number and syllable. Sing it once more.</li></ol></details><div class="row"><button class="btn" id="go">Start round 1</button><button class="btn ghost" id="back">Back to steps</button></div>';
+  v.querySelector('h2').textContent=l.title;v.querySelector('.goal').textContent=l.goal;
+  v.querySelector('h2').after(navRow(l));
+  $('#go').onclick=nextRound;$('#back').onclick=endLesson;
+}
+function pickDeg(){
+  const l=R.l;let pool=l.degs.filter(d=>d!==R.last);
+  if(l.chroma&&R.i%2===0)return l.focus.d; // half the rounds drill the new note
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function placeMidi(d){
+  let m=60+S.tonic+d;
+  if(d>=5&&Math.random()<0.5)m-=12; // sometimes an octave lower, so the ear learns the note, not the register
+  return m;
+}
+function playRound(){
+  audio();stopAllAudio();const t=ctx.currentTime+0.05;
+  voice(60+S.tonic,t,1.0);
+  voice(R.target,t+1.5,1.3);
+}
+function nextRound(){
+  stopAllAudio();clearMarks();kb.classList.add('hide');
+  R.i++;R.deg=pickDeg();R.last=R.deg;R.target=placeMidi(R.deg);
+  R.dir=(R.l.chroma&&R.deg===R.l.focus.d)?(Math.random()<0.5?'up':'down'):null;
+  R.phase='ask';
+  const v=$('#lessonView');
+  v.innerHTML='<h2></h2><div class="prog"><i></i></div><p class="mut" id="rl"></p><div class="fb" id="fb" aria-live="polite">Listen to Do, then the mystery note. Sing it, then play it.</div><div class="row"><button class="btn ghost" id="rep">Hear it again</button><button class="btn ghost" id="doOnly">Hear Do only</button><button class="btn" id="nx" hidden></button></div>';
+  v.querySelector('h2').textContent=R.l.title;
+  v.querySelector('h2').after(navRow(R.l));
+  v.querySelector('.prog i').style.width=((R.i-1)/ROUNDS*100)+'%';
+  $('#rl').textContent='Round '+R.i+' of '+ROUNDS+' · '+R.score+' right so far';
+  $('#rep').onclick=playRound;
+  $('#doOnly').onclick=()=>{audio();voice(60+S.tonic,ctx.currentTime+0.02,1.2);};
+  playRound();
+}
+function answer(m){
+  const got=degOf(m),ok=got===R.deg;
+  R.phase='done';if(ok)R.score++;
+  const tEl=keyEl[R.target];
+  // light up the answer key(s): every key with the right degree, so octave does not matter
+  for(let k=LO;k<=HI;k++)if(degOf(k)===R.deg)keyEl[k].classList.add('reveal',ok?'good':'bad');
+  if(!ok&&keyEl[m])keyEl[m].classList.add('reveal','bad');
+  kb.classList.add('hide');
+  // the labels shown for the revealed note follow this round's direction, if it has one
+  const nm=numOf(R.deg,R.dir)+' · '+sylOf(R.deg,R.dir);
+  for(let k=LO;k<=HI;k++)if(degOf(k)===R.deg){const e=keyEl[k];e.querySelector('.num').textContent=numOf(R.deg,R.dir);e.querySelector('.syl').textContent=sylOf(R.deg,R.dir);}
+  if(!ok&&keyEl[m]){keyEl[m].querySelector('.num').textContent=numOf(got);keyEl[m].querySelector('.syl').textContent=sylOf(got);}
+  const fb=$('#fb');fb.className='fb '+(ok?'good':'bad');
+  let txt=ok?('Yes. '+nm+'.'):('Not quite. That was '+nm+'. You played '+numOf(got)+' · '+sylOf(got)+'.');
+  txt+=' Sing it now.';
+  if(R.dir){const c=R.l.focus,r=R.dir==='up'?c.up:c.down;txt+=' It leans '+R.dir+' to '+r[2]+'.';}
+  fb.textContent=txt;
+  R.hist.push({d:R.deg,ok});
+  // play the answer, then the resolution if this note has one
+  const step=R.dir==='up'?1:-1;
+  if(!ok){ // only teach the answer when it was missed; a right answer is not replayed
+    stopAllAudio();const t=ctx.currentTime+0.15;
+    voice(60+S.tonic,t,0.9);
+    voice(R.target,t+1.2,1.1);
+    if(R.dir)voice(R.target+step,t+2.5,1.2);
+  }else if(R.dir)voice(R.target+step,ctx.currentTime+0.2,1.2); // just the resolution it leans to
+  const nx=$('#nx');nx.hidden=false;
+  const last=R.i>=ROUNDS;nx.textContent=last?'Finish and self-check':'Next round';
+  nx.onclick=last?selfCheck:nextRound;
+  $('#rl').textContent='Round '+R.i+' of '+ROUNDS+' · '+R.score+' right';
+  $('.prog i').style.width=(R.i/ROUNDS*100)+'%';
+}
+const Q=[
+  {k:'q1',t:'Before the reference note played, could you hear Do in your head?'},
+  {k:'q2',t:'Did you sing the mystery note out loud before you chose a key?'},
+];
+function selfCheck(){
+  R.phase='check';kb.classList.remove('hide');clearMarks();
+  const v=$('#lessonView');
+  const qs=Q.concat([{k:'q3',t:R.l.q3}]);
+  v.innerHTML='<h2>Self-check</h2><p class="mut">You got '+R.score+' of '+ROUNDS+'. Be honest, this is only for you.</p><div id="qs"></div><div class="row"><button class="btn" id="fin" disabled>See what next</button></div><div id="vd"></div>';
+  const box=$('#qs');
+  qs.forEach(q=>{
+    const d=document.createElement('div');d.className='q';d.innerHTML='<p></p><div class="row" style="margin:0"></div>';
+    d.querySelector('p').textContent=q.t;
+    [['Yes',2],['A little',1],['Not yet',0]].forEach(([lab,val])=>{
+      const b=document.createElement('button');b.className='ans';b.textContent=lab;b.setAttribute('aria-pressed','false');
+      b.onclick=()=>{R.checks[q.k]=val;d.querySelectorAll('.ans').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');if(qs.every(z=>R.checks[z.k]!=null))$('#fin').disabled=false;};
+      d.lastChild.appendChild(b);
+    });
+    box.appendChild(d);
+  });
+  R.checks={};
+  $('#fin').onclick=finish;
+}
+function finish(){
+  const c=R.checks,l=R.l,sc=R.score;
+  const sang=c.q2===2,heardDo=c.q1>=1,good=sc>=7;
+  const ready=good&&sang&&heardDo;
+  const p=prog[l.id]||{best:0,tries:0};p.tries++;p.best=Math.max(p.best,sc);p.last=Date.now();p.checks=c;
+  if(ready)p.passed=true;prog[l.id]=p;saveProg();
+  let msg;
+  if(ready)msg='Solid. You got '+sc+'/8, you sang before you answered, and you could hold Do. Move on and add the next note.';
+  else if(good&&!sang)msg='Your score is good, but you did not sing first. Picking from a few keys by guessing is not ear training. Do it again and sing every note before you touch a key.';
+  else if(!good&&c.q1===0)msg=sc+'/8, and Do did not stay in your head. Before this step again, spend a minute just singing Do from a cold start, then check against the reference.';
+  else if(!good)msg=sc+'/8. Not there yet, which is normal. Repeat this same step. Do not add anything new until it is easy.';
+  else msg='Almost. You got '+sc+'/8, but Do was shaky. Repeat once more to lock it in.';
+  $('#vd').innerHTML='<p class="verdict"></p>';
+  $('.verdict').textContent=msg;
+  nextBtns($('#vd'),l,ready,()=>startLesson(l.id),endLesson);
+  $('#fin').hidden=true;
+  $('#qs').querySelectorAll('button').forEach(b=>b.disabled=true);
+}
+
+/* ---------- Stage 4 environments: the same progression, heard in different environments ---------- */
+let ER=null;
+const VOICINGS=['std','high','spread'],FEELS=['held','short'],TEMPOS=[66,80,96];
+const VNAME={std:'block chords',high:'high voicing',spread:'spread and rolled'};
+const rndOf=a=>a[Math.floor(Math.random()*a.length)];
+function binC(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r;}
+function binTail(n,p,k){let s=0;for(let i=k;i<=n;i++)s+=binC(n,i)*Math.pow(p,i)*Math.pow(1-p,n-i);return s;}
+function passMark(n,p,a){for(let k=0;k<=n;k++)if(binTail(n,p,k)<=a)return k;return n+1;}
+function envApart(a,b){const d=Math.abs(a.tr-b.tr)%12,dk=Math.min(d,12-d);return dk>=3&&(a.vc!==b.vc||a.feel!==b.feel);}
+function newEnv(avoid){
+  let e,g=0;
+  do{e={tr:Math.floor(Math.random()*12),vc:rndOf(VOICINGS),feel:rndOf(FEELS),tempo:rndOf(TEMPOS)};g++;}
+  while(g<300&&avoid.some(x=>!envApart(e,x)));
+  return e;
+}
+const ENV_PROGS=()=>HARM.filter(h=>h.ch.length===4);
+function envChord(c,env,t,dur,tail){
+  const d=(env.feel==='short'?dur*0.8:dur)+(tail||0);
+  let bass=36+c.r+env.tr;if(bass<40)bass+=12;
+  voice(bass,t,d,0.7);
+  const ups=c.iv.map(i=>{let n=48+c.r+env.tr+i;while(n<55+env.tr)n+=12;while(n>76)n-=12;return n;}).sort((a,b)=>a-b);
+  if(env.vc==='std')ups.forEach(n=>voice(n,t,d,0.26));
+  else if(env.vc==='high')ups.forEach(n=>voice(n+12<=84?n+12:n,t,d,0.24));
+  else ups.forEach((n,k)=>voice(n,t+k*0.05,d-k*0.05,0.24));
+}
+function playEnvProg(it,t0){
+  voice(60+it.env.tr,t0,0.8,0.7);
+  const st=t0+1.2,len=2*60/it.env.tempo;
+  it.p.ch.forEach((c,i)=>envChord(c,it.env,st+i*len,len,i===it.p.ch.length-1?0.7:0));
+  return st+it.p.ch.length*len+0.7;
+}
+function playEnvSet(idxs){
+  audio();stopAllAudio();let t=ctx.currentTime+0.1;
+  idxs.forEach(i=>{t=playEnvProg(ER.cur[i],t)+1.0;});
+}
+function envSchedule(e){
+  if(e.kind==='same'){
+    const k=rndOf([3,4,5]),a=[];for(let i=0;i<e.n;i++)a.push(i<k);
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a;
+  }
+  const a=[];for(let i=0;i<e.n;i++){let x;do{x=Math.floor(Math.random()*3);}while(i&&x===a[i-1]);a.push(x);}
+  return a;
+}
+function startEnv(id){
+  window.scrollTo(0,0);audio();stopAllAudio();
+  const e=ENVS.find(x=>x.id===id);
+  ER={e,i:0,score:0,sched:envSchedule(e),lastP:null,lastEnv:null,cur:[],locked:true,hist:[],checks:{}};
+  $('#lessonList').hidden=true;const v=$('#lessonView');v.hidden=false;kb.classList.add('hide');clearMarks();
+  const pm=passMark(e.n,e.p,0.05);
+  v.innerHTML='<h2></h2><p class="goal"></p><details class="how" open><summary>How this works</summary><ol class="steps"><li>Each round plays '+(e.kind==='same'?'two progressions':'three progressions')+', one after the other. You can hear them again as often as you like.</li><li>Hum the bass note of each chord while you listen. Do not trust the piano sound, it keeps changing on purpose.</li><li>'+(e.kind==='same'?'Say Same if the second has the same bass pattern as the first, even though the key and sound changed. Say Different if the bass pattern changed.':'Pick the loop whose bass pattern is different from the other two.')+'</li><li>After you answer, the app shows what each one was, so you can check what you heard.</li></ol></details><p class="mut" id="chance"></p><div class="row"><button class="btn" id="go">Start round 1</button><button class="btn ghost" id="back">Back to steps</button></div>';
+  v.querySelector('h2').textContent=e.title;v.querySelector('.goal').textContent=e.goal;
+  v.querySelector('h2').after(navRow(e));
+  $('#chance').textContent='Guessing would get you about '+(e.n*e.p).toFixed(1)+' of '+e.n+'. The pass mark is '+pm+' of '+e.n+', which luck reaches less than 1 time in 20.';
+  $('#go').onclick=nextEnvRound;$('#back').onclick=endEnv;
+}
+function nextEnvRound(){
+  stopAllAudio();const e=ER.e;ER.i++;ER.locked=false;
+  let P,Q;
+  const pool=ENV_PROGS();
+  do{P=rndOf(pool);}while(P===ER.lastP&&pool.length>1);
+  ER.lastP=P;
+  do{Q=rndOf(pool);}while(Q===P);
+  const avoid0=ER.lastEnv?[ER.lastEnv]:[];
+  if(e.kind==='same'){
+    const same=ER.sched[ER.i-1],e1=newEnv(avoid0),e2=newEnv([e1]);
+    ER.cur=[{p:P,env:e1},{p:same?P:Q,env:e2}];ER.truth=same;ER.lastEnv=e2;
+  }else{
+    const odd=ER.sched[ER.i-1],e1=newEnv(avoid0),e2=newEnv([e1]),e3=newEnv([e1,e2]),envs=[e1,e2,e3];
+    ER.cur=[0,1,2].map(k=>({p:k===odd?Q:P,env:envs[k]}));ER.truth=odd;ER.lastEnv=e3;
+  }
+  const v=$('#lessonView');
+  v.innerHTML='<h2></h2><div class="prog"><i></i></div><p class="mut" id="rl"></p><div class="fb" id="fb" aria-live="polite"></div><div class="row" id="hear"></div><div class="row" id="ans"></div><div id="rev"></div><div class="row"><button class="btn" id="nx" hidden></button></div>';
+  v.querySelector('h2').textContent=e.title;
+  v.querySelector('h2').after(navRow(e));
+  v.querySelector('.prog i').style.width=((ER.i-1)/e.n*100)+'%';
+  $('#rl').textContent='Round '+ER.i+' of '+e.n+' · '+ER.score+' right so far';
+  $('#fb').textContent=e.kind==='same'?'Same bass pattern as the first, just in a new key and sound?':'Which loop has a different bass pattern from the other two?';
+  const mkb=(host,txt,cls,fn)=>{const b=document.createElement('button');b.className=cls;b.textContent=txt;b.onclick=fn;$(host).appendChild(b);return b;};
+  const names=e.kind==='same'?['first','second']:['1st','2nd','3rd'];
+  names.forEach((nm,i)=>mkb('#hear','Hear '+nm,'btn ghost',()=>playEnvSet([i])));
+  mkb('#hear','Hear all','btn ghost',()=>playEnvSet(ER.cur.map((_,i)=>i)));
+  if(e.kind==='same'){mkb('#ans','Same','btn',()=>envAnswer(true));mkb('#ans','Different','btn',()=>envAnswer(false));}
+  else names.forEach((nm,i)=>mkb('#ans','The '+nm,'btn',()=>envAnswer(i)));
+  playEnvSet(ER.cur.map((_,i)=>i));
+}
+const envDesc=it=>it.p.ch.map(c=>c.rn.replace(/ \(.*\)/,'')).join(' ')+' · key of '+PCN[it.env.tr]+', '+VNAME[it.env.vc]+', '+(it.env.feel==='short'?'short':'held')+', '+it.env.tempo+' bpm';
+function envAnswer(g){
+  if(ER.locked)return;ER.locked=true;
+  const e=ER.e,ok=g===ER.truth;if(ok)ER.score++;
+  ER.hist.push({ok,a:ER.cur[0].p.id,b:ER.cur[ER.cur.length-1].p.id});
+  document.querySelectorAll('#ans .btn').forEach(b=>b.disabled=true);
+  const fb=$('#fb');fb.className='fb '+(ok?'good':'bad');
+  const nm=['first','second','third'];
+  if(e.kind==='same')fb.textContent=(ok?'Yes. ':'Not quite. ')+'They were '+(ER.truth?'the same progression.':'different progressions.');
+  else fb.textContent=(ok?'Yes. ':'Not quite. ')+'The '+nm[ER.truth]+' one was the odd one out.';
+  const rev=$('#rev');rev.innerHTML='<ul class="mut" style="margin:10px 0;padding-left:18px"></ul>';
+  ER.cur.forEach((it,i)=>{const li=document.createElement('li');li.textContent=(e.kind==='same'?(i?'Second: ':'First: '):('Number '+(i+1)+': '))+envDesc(it)+(e.kind==='odd'&&i===ER.truth?'  ← the odd one':'');rev.firstChild.appendChild(li);});
+  $('#rl').textContent='Round '+ER.i+' of '+e.n+' · '+ER.score+' right';
+  $('.prog i').style.width=(ER.i/e.n*100)+'%';
+  const nx=$('#nx');nx.hidden=false;const last=ER.i>=e.n;
+  nx.textContent=last?'Finish':'Next round';nx.onclick=last?envFinish:nextEnvRound;
+}
+function envFinish(){
+  stopAllAudio();const e=ER.e,sc=ER.score,pm=passMark(e.n,e.p,0.05),strong=passMark(e.n,e.p,0.01),pv=binTail(e.n,e.p,sc);
+  const ready=sc>=pm;
+  const p=prog[e.id]||{best:0,tries:0};p.tries++;p.best=Math.max(p.best||0,sc);p.last=Date.now();p.scores=(p.scores||[]).concat(sc).slice(-10);if(ready)p.passed=true;prog[e.id]=p;saveProg();
+  const v=$('#lessonView');
+  v.innerHTML='<h2>Result</h2><p class="mut"></p><div id="qs"></div><div id="vd"></div>';
+  v.querySelector('.mut').textContent=sc+' of '+e.n+'. Guessing gives about '+(e.n*e.p).toFixed(1)+'. Pass mark '+pm+', strong pass '+strong+'. Luck alone gets '+sc+' or more about '+(pv<0.01?'less than 1 time in 100':Math.round(pv*100)+' times in 100')+'.';
+  let msg;
+  if(sc>=strong)msg='Strong pass. That is well beyond luck: you heard the progression through the changes of environment.';
+  else if(ready)msg='Pass. That is beyond luck at the usual 5% line. Run it again later with new random environments to see if it holds.';
+  else msg='Not yet beyond luck. That is useful to know, and it is not a failure. Hum the bass of the first one while it plays, then listen for the same bass notes in the next. Repeat this step; the environments are different every time.';
+  const vd=$('#vd');vd.innerHTML='<p class="verdict"></p>';vd.firstChild.textContent=msg;
+  const qs=[{k:'q1',t:'Did you hum the bass of the first progression while it played?'},{k:'q3',t:e.q3}];
+  const hd=document.createElement('p');hd.className='mut';hd.textContent='Two questions for you. They do not change the result.';$('#qs').appendChild(hd);
+  qForm($('#qs'),qs,ER.checks,()=>{p.checks=ER.checks;saveProg();});
+  nextBtns(vd,e,ready,()=>startEnv(e.id),endEnv);
+}
+function endEnv(){stopAllAudio();ER=null;timers.forEach(clearTimeout);timers=[];kb.classList.remove('hide');clearMarks();if(S.mode==='practice')showList();}
+
+/* ---------- start ---------- */
+buildKeyboard();syncControls();try{audio();}catch(e){}
+window.__bs={S,press,release,answer:()=>R,LESSONS};
+</script>
+<script src="lab.js"></script>
+</body>
+</html>

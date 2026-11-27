@@ -1,0 +1,733 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Melody Triad Blocks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: title → phrase picker → controls → one 4-bar phrase as a pitch contour on a time grid,
+   chords staggered above, triad cards in lanes underneath → status → key.
+   Same dark card language and color-by-distance-from-C as the Stitt and Triad Palette apps. */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #f2f2f2;
+  --muted: #a3a3a8;
+  --dim: #6e6e73;
+  --line: #2c2c2e;
+  --card-line: #3a3a3c;
+  --strip-ink: #1c1c1e;
+  --panel: #111113;
+  --gold: #EED27A;
+  --half: #F1A15C;
+  --hidden: #2a2a2d;
+  --pivot: #9a9aa2;
+  --focus: hsl(205 60% 70%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--dim); font-weight: 400; }
+.sub { margin: -10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 72ch; }
+.notes-line { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+.picker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.picker .lbl { font-size: 13px; color: var(--dim); margin-right: 4px; }
+.pick { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: transparent;
+  border: 1.5px solid var(--card-line); border-radius: 999px; height: 38px; padding: 0 12px; cursor: pointer;
+  font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; }
+.pick b { font-weight: 700; color: var(--dim); }
+.pick:hover { color: var(--fg); border-color: #5a5a5e; }
+.pick[aria-pressed="true"] { color: var(--strip-ink); background: var(--fg); border-color: var(--fg); }
+.pick[aria-pressed="true"] b { color: var(--strip-ink); opacity: .55; }
+
+.controls {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
+}
+.btn {
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--fg);
+  background: #1e1e20; border: 1px solid var(--card-line); border-radius: 999px;
+  padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover { background: #26262a; }
+.btn[aria-pressed="true"] { background: var(--gold); color: var(--strip-ink); border-color: var(--gold); }
+.btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.btn[aria-pressed="true"] .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
+.ctl { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctl input[type=range] { width: 90px; accent-color: var(--gold); }
+.ctl output { color: var(--fg); font-variant-numeric: tabular-nums; min-width: 3ch; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { accent-color: var(--gold); width: 15px; height: 15px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* The phrase */
+.lick { border: 1.5px solid var(--line); border-radius: 28px; padding: clamp(10px, 2vw, 22px); }
+.scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.inner { min-width: 760px; display: flex; flex-direction: column; gap: 6px; }
+.track { position: relative; width: 100%; }
+.chords { height: 46px; }
+.chord { position: absolute; height: 20px; display: flex; align-items: center; padding-left: 5px;
+  border-left: 1.5px solid var(--card-line); font-weight: 600; font-size: 13.5px; white-space: nowrap; }
+.chord.r1 { top: 23px; }
+.chord.r0 { top: 0; }
+svg.contour { display: block; width: 100%; height: auto; overflow: visible; }
+.note { cursor: pointer; }
+.note circle, .note rect { fill: #161618; stroke: var(--card-line); stroke-width: 2; transition: stroke .1s, fill .1s; }
+.note text { fill: var(--fg); font: 600 17px var(--font); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.note text.rn { fill: var(--dim); font: 600 12.5px var(--font); }
+.note text.rn.later { fill: #8a8a90; }
+.note.on text.rn { fill: var(--muted); }
+.note text.tone { fill: var(--muted); font: 500 13px var(--font); opacity: 0; transition: opacity .2s; }
+.note text.tone.shown { opacity: .3; }
+.note.on text.tone { fill: var(--fg); }
+.note line.tick { stroke: #4a4a50; stroke-width: 1.5; }
+.note:hover circle, .note:hover rect { stroke: #6a6a70; }
+.note.on circle, .note.on rect { stroke: #fff; stroke-width: 3; fill: #2a2a2e; filter: url(#glow); }
+.note.passing circle, .note.passing rect { stroke-dasharray: 4 4; }
+.link { stroke: #3a3a3e; stroke-width: 2; fill: none; }
+.link.half.shown { stroke: var(--half); stroke-width: 3; }
+.halflbl { fill: var(--half); font: 600 12px var(--font); text-anchor: middle; opacity: 0; transition: opacity .2s; }
+.halflbl.shown { opacity: 1; }
+.barline { stroke: var(--line); stroke-width: 1.5; }
+.barnum { fill: var(--dim); font: 500 11px var(--font); }
+
+.lanes { margin-top: 4px; }
+.card {
+  position: absolute; font: inherit; color: inherit; text-align: left; padding: 0; cursor: pointer;
+  background: #000; border: 1.5px solid var(--card-line); border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; min-width: 0; height: 72px;
+  transition: transform .12s ease, border-color .15s ease, box-shadow .3s ease;
+  touch-action: manipulation;
+}
+.card:hover { border-color: #5a5a5e; }
+.card:active { transform: scale(.98); }
+.card .strip { height: 42%; display: flex; align-items: center; justify-content: center; color: var(--strip-ink);
+  font-size: 16px; font-weight: 600; background: var(--c); transition: background .3s; padding-inline: 4px; white-space: nowrap; overflow: hidden; }
+.card.pivot .strip { font-weight: 500; }
+.card .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 8px; gap: 1px; min-width: 0; }
+.card .deg { font-size: 13px; color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .sn { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.hid .strip { background: var(--hidden); color: var(--dim); }
+.card.hid .deg, .card.hid .sn { visibility: hidden; }
+.card.playing { border-color: #fff; box-shadow: 0 0 0 3px var(--glow), 0 0 24px -2px var(--glow); }
+
+.status { font-size: 13.5px; color: var(--muted); min-height: 4.4em; line-height: 1.55; max-width: 80ch; }
+.status b { color: var(--fg); font-weight: 600; }
+
+.key { display: flex; flex-direction: column; gap: 10px; }
+.key h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.key p { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin: 0; max-width: 72ch; }
+.key b { color: var(--fg); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 22px; height: 14px; border-radius: 4px; }
+.hl { width: 22px; height: 0; border-top: 3px solid var(--half); }
+.pd { width: 14px; height: 14px; border-radius: 50%; border: 2px dashed var(--card-line); }
+
+@media (max-width: 560px) {
+  .lick { padding: 10px 8px; border-radius: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <h1 id="title">There Will Never Be Another You <span>bars 1–4</span></h1>
+  <p class="sub"><span class="notes-line" id="notesLine"></span><br>Moved from E♭ to C to line up with the C drone and colors in your other apps. Big numbers are measured from C; the small ones above are each note's job in the chord under it. Listen first, guess the shapes, then tap a card.</p>
+
+  <div class="picker" role="group" aria-label="Choose a phrase" id="picker"><span class="lbl">Bars</span></div>
+
+  <div class="controls">
+    <button class="btn" id="playBtn" aria-pressed="false"><span class="dot"></span><span id="playLbl">Play phrase</span></button>
+    <button class="btn" id="revealBtn">Reveal all</button>
+    <button class="btn" id="droneBtn" aria-pressed="false"><span class="dot"></span><span id="droneLbl">C drone</span></button>
+    <label class="ctl">Drone vol <input type="range" id="droneVol" min="0" max="100" value="10"></label>
+    <label class="ctl">Piano vol <input type="range" id="keysVol" min="0" max="100" value="70"></label>
+    <label class="ctl">Tempo <input type="range" id="tempo" min="50" max="200" value="96"><output id="tempoOut">96</output></label>
+    <label class="check"><input type="checkbox" id="swing" checked> Swing</label>
+    <label class="check"><input type="checkbox" id="chordsOn" checked> Chords</label>
+    <label class="check"><input type="checkbox" id="loop"> Loop</label>
+    <label class="check"><input type="checkbox" id="cont"> Keep going</label>
+  </div>
+
+  <div class="lick">
+    <div class="scroll">
+      <div class="inner">
+        <div class="track chords" id="chords"></div>
+        <svg class="contour" id="contour" viewBox="0 0 960 300" role="img" aria-label="The phrase drawn as a pitch line, one circle per note"></svg>
+        <div class="track lanes" id="lanes"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <section class="key">
+    <h2>Reading it</h2>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--gold)"></i>Gold is home (C); the farther a triad sits from C, the cooler its color</span>
+      <span><i class="sw" style="background:var(--pivot)"></i>Grey cards are held notes, not triads</span>
+      <span><i class="pd"></i>Passing note, outside the triad</span>
+      <span><i class="hl"></i>Half step (after Reveal all)</span>
+    </div>
+    <p><b>Triad cards</b> show which triad the line comes from, and what that triad is over the chord under it. <b>Grey cards</b> follow a held note while the chord changes under it; the small numbers along a long note show its job at each chord.</p>
+    <p>The runs in bars 1, 13 and 17 are two triads interleaved, so their cards sit in two lanes. That's the triad-pair idea from the 2–5 app, used by the melody itself.</p>
+    <p>Keys: Space plays or stops, 1–8 pick a phrase, ← → step through, Esc stops.</p>
+  </section>
+</div>
+
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+const DRONE_LOOP = 24.2548125;
+// Acoustic piano samples (MIT, github.com/Leethring/piano-sound-samples), mono, keyed by MIDI note
+
+/* ---------- Audio ---------- */
+let live = [];
+let ctx, master;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  loadPiano(); loadDrone();
+  return ctx;
+}
+function b64ToBuf(url) {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+/* Drone */
+let drone = null, droneBuf = null, droneStart = 0, droneLoad = null;
+const droneVol = document.getElementById('droneVol');
+const droneLevel = () => (droneVol.value / 100) * 0.9;
+function loadDrone() {
+  if (droneLoad) return droneLoad;
+  droneLoad = new Promise(res => ctx.decodeAudioData(b64ToBuf(DRONE_URL), b => {
+    droneBuf = b;
+    const d = b.getChannelData(0); let i = 0;
+    while (i < d.length && Math.abs(d[i]) < 0.002) i++;
+    droneStart = i / b.sampleRate; res();
+  }, () => res()));
+  return droneLoad;
+}
+async function startDrone() {
+  if (drone) return;
+  audio();
+  const g = ctx.createGain(); g.gain.setValueAtTime(0, ctx.currentTime);
+  drone = { g, oscs: [] }; setDroneUI(true);
+  await loadDrone();
+  if (!drone || drone.g !== g || !droneBuf) return;
+  const src = ctx.createBufferSource(); src.buffer = droneBuf;
+  src.loop = true; src.loopStart = droneStart; src.loopEnd = droneStart + DRONE_LOOP;
+  src.connect(g); g.connect(master);
+  src.start(ctx.currentTime, droneStart);
+  g.gain.linearRampToValueAtTime(droneLevel(), ctx.currentTime + 1.2);
+  drone.oscs.push(src);
+}
+function stopDrone() {
+  if (!drone) return;
+  const { g, oscs } = drone, t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.4);
+  oscs.forEach(o => o.stop(t + 0.45));
+  drone = null; setDroneUI(false);
+}
+droneVol.addEventListener('input', () => { if (drone) drone.g.gain.setTargetAtTime(droneLevel(), ctx.currentTime, 0.05); });
+const droneBtn = document.getElementById('droneBtn');
+function setDroneUI(on) { droneBtn.setAttribute('aria-pressed', on); document.getElementById('droneLbl').textContent = on ? 'C drone on' : 'C drone'; }
+droneBtn.addEventListener('click', () => drone ? stopDrone() : startDrone());
+
+/* Piano samples; notes without their own sample borrow the nearest one, retuned */
+const buffers = {}; let pianoLoad = null;
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number);
+function loadPiano() {
+  if (pianoLoad) return pianoLoad;
+  pianoLoad = Promise.all(Object.entries(PIANO).map(([m, url]) =>
+    new Promise(res => ctx.decodeAudioData(b64ToBuf(url), b => { buffers[m] = b; res(); }, () => res()))));
+  return pianoLoad;
+}
+const keysVol = document.getElementById('keysVol');
+const keysLevel = () => (keysVol.value / 100);
+function piano(m, t, dur, scale = 1) {
+  const key = SAMPLE_KEYS.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a);
+  const buf = buffers[key];
+  if (!buf) return;
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  src.playbackRate.value = Math.pow(2, (m - key) / 12);
+  const g = ctx.createGain();
+  const end = Math.min(t + dur, t + buf.duration / src.playbackRate.value), v = keysLevel() * scale;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.004);
+  g.gain.setValueAtTime(v, Math.max(t + 0.005, end - 0.12));
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  src.connect(g); g.connect(master);
+  src.start(t); src.stop(end + 0.02);
+  live.push({ srcs: [src], g });
+}
+
+/* ---------- Names, numbers, colors ---------- */
+const NAMES  = ['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+const FROM_C = ['1','♭2','2','♭3','3','4','♯4','5','♭6','6','♭7','7'];
+const PC = { 'C':0,'C♯':1,'D♭':1,'D':2,'E♭':3,'E':4,'F':5,'F♯':6,'G':7,'G♯':8,'A♭':8,'A':9,'B♭':10,'B':11 };
+
+const RAMP = {
+  sharp: ['#EED27A','#F1B56C','#EA937A','#CB8DB1','#958FD2','#6F86C8'],
+  flat:  ['#EED27A','#D2D879','#A2CC8C','#7DC0AF','#7DA7D0','#6F86C8'],
+};
+const MAXD = 7;
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+function color(side, d, dim) {
+  const stops = RAMP[side], x = Math.min(d, MAXD) / MAXD * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2), f = x - i;
+  const [a, b] = [hex(stops[i]), hex(stops[i+1])];
+  let rgb = a.map((v, j) => v + (b[j] - v) * f);
+  if (dim) rgb = rgb.map(v => v * 0.45 + 165 * 0.55);
+  return `rgb(${rgb.map(Math.round).join(' ')})`;
+}
+// Triad Palette rule: a major triad sits in its own key, a minor one in its relative major's (+0.5),
+// a diminished one in the key it's the leading tone of (+1, greyed); distance = steps round the circle of fifths from C.
+const fifths = pc => { const k = ((pc * 7) % 12 + 12) % 12; return k > 6 ? k - 12 : k; };
+function triadColor(root, q) {
+  if (q === 'maj') { const k = fifths(root); return color(k < 0 ? 'flat' : 'sharp', Math.abs(k)); }
+  if (q === 'min') { const k = fifths(root + 3); return color(k < 0 ? 'flat' : 'sharp', Math.abs(k) + 0.5); }
+  const k = [0, 3, 6, 9].map(o => fifths(root + o + 1)).sort((a, b) => Math.abs(a) - Math.abs(b))[0];
+  return color(k < 0 ? 'flat' : 'sharp', Math.abs(k) + 1, true);
+}
+const PIVOT_COLOR = 'rgb(154 154 162)';
+
+/* The note's job in the chord under it */
+const TONES_DOM = ['1','♭9','9','♯9','3','11','♯11','5','♭13','13','♭7','7'];
+const TONES_MIN = ['1','♭9','9','♭3','3','11','♭5','5','♭13','13','♭7','7'];
+const TONES_DIM = ['1','♭9','9','♭3','3','11','♭5','5','♭6','°7','♭7','7'];
+function chordTone(m, ch) {
+  const i = ((m - ch.pc) % 12 + 12) % 12, q = ch.q;
+  if (q.includes('°')) return TONES_DIM[i];
+  if (/^(-|m)|ø/.test(q)) return TONES_MIN[i];
+  if (i === 8 && q.includes('♯5')) return '♯5';
+  if (i === 6 && q.includes('♭5')) return '♭5';
+  if (i === 5 && q.includes('sus')) return '4';
+  return TONES_DOM[i];
+}
+
+/* A left-hand voicing: root low, then 3rd (or 4th), 7th and up to two colors from the symbol */
+function voicing(ch) {
+  const q = ch.q, has = re => re.test(q);
+  const iv = [];
+  iv.push(has(/sus/) ? 5 : (has(/^(-|m)/) || has(/[°ø]/)) ? 3 : 4);
+  if (has(/°/)) iv.push(6, 9);
+  else if (has(/ø/)) iv.push(6, 10);
+  else if (q === '6') iv.push(7, 9);
+  else if (has(/Δ/)) iv.push(11);
+  else if (has(/[79]|11|13/)) iv.push(10);
+  else iv.push(7);
+  const tens = [[/♯9/, 3], [/♭9/, 1], [/♯11/, 6], [/♭13/, 8], [/♯5/, 8], [/♭5/, 6], [/(^|[^♭♯])13/, 9], [/(^|[^♭♯])11/, 5], [/(^|[^♭♯1])9/, 2]];
+  tens.filter(([re]) => re.test(q)).slice(0, 2).forEach(([, t]) => { if (!iv.includes(t)) iv.push(t); });
+  const bass = 40 + ((ch.pc - 4) % 12 + 12) % 12;
+  return [bass, ...iv.map(t => 52 + (((ch.pc + t - 52) % 12) + 12) % 12)];
+}
+
+/* ---------- There Will Never Be Another You, standard changes, moved from E♭ to C ----------
+   Four-bar phrases. Notes: [MIDI, eighth-note slot inside the phrase, length in slots].
+   Slot -2 is the pickup. Chords: [slot, root, quality]. Second chords in a bar fall on beat 3. */
+const tri = (name, root, q, o) => ({ kind: 'triad', name, root, q, lane: 0, passing: [], ...o });
+const piv = (name, o) => ({ kind: 'pivot', name, lane: 0, passing: [], ...o });
+
+const A_NOTES = [[57,0,2],[59,2,2],[60,4,2],[62,6,2],[64,8,2],[67,10,2],[62,12,3],[60,15,1],[62,16,14],[64,30,2]];
+const B_NOTES = [[60,0,2],[62,2,2],[64,4,2],[67,6,2],[69,8,2],[72,10,2],[69,12,3],[67,15,1],[69,16,14],[67,30,2]];
+const A_CHORDS = [[0,'C','Δ7'],[16,'B','ø7'],[24,'E','7♭9']];
+const B_CHORDS = [[0,'A','m7'],[16,'G','m7'],[24,'C','7']];
+const B_CARDS = () => [
+  tri('C', 0, 'maj', { use: [0,1,2,3], passing: [1], labels: ['1','2','3','5'], over: '♭3–5–♭7 over Am7',
+    about: 'C–(D)–E–G: the C triad, D passing. Over Am7 those notes are its ♭3, 5th and ♭7. Am7 is just a C triad with A underneath.' }),
+  tri('Am7', 9, 'min', { use: [4,5,6,7], labels: ['1','♭3','1','♭7'], over: 'its own chord, Am7',
+    about: 'A–C–A–G: Am with G, its ♭7. Plain chord tones.' }),
+  piv('A held', { use: [8,9], labels: ['9','5'], over: '9 of Gm7 → 13 of C7',
+    about: 'A holds over Gm7–C7, the ii–V into F: first the 9th, then the 13th. The G at the end is C7\'s 5th.' }),
+];
+
+const PHRASES = [
+  { bars: '1–4', sec: 'A',
+    notes: [[55,-2,2], ...A_NOTES], chords: A_CHORDS,
+    cards: [
+      tri('G', 7, 'maj', { use: [0,2,4,6], labels: ['1','3','5','1'], over: '5–7–9 over CΔ7',
+        about: 'G–B–D–G: every other note of the run, starting from the pickup. Over CΔ7 the G triad is the 5th, 7th and 9th, so it sounds like CΔ9 without the root.' }),
+      tri('Am', 9, 'min', { lane: 1, use: [1,3,5], labels: ['1','♭3','5'], over: '6–1–3 over CΔ7',
+        about: 'A–C–E: the other half of the run. Interleave Am and G and you get the whole line, G A B C D E G: the C scale with F left out. It\'s a triad pair, a whole step apart.' }),
+      piv('D held', { use: [7,8,9,10], passing: [8], labels: ['9','1','♭3','1'], over: '9 → ♭3 of Bø7 → ♭7 of E7',
+        about: 'D holds while the harmony heads for A minor: the 9th of CΔ7, the ♭3 of Bø7, then the ♭7 of E7♭9. C is a neighbor note, and the E at the end is the root of E7.' }),
+    ],
+    summary: 'Up a run built from <b>G</b> and <b>Am</b> over CΔ7, then D held across Bø7–E7♭9, the ii–V into A minor.' },
+
+  { bars: '5–8', sec: 'A', notes: B_NOTES, chords: B_CHORDS, cards: B_CARDS(),
+    summary: 'The <b>C</b> triad over Am7 (its top three notes), <b>Am7</b> itself, then A held as 9th and 13th over the ii–V to F.' },
+
+  { bars: '9–12', sec: 'B',
+    notes: [[72,0,2],[69,2,2],[67,4,2],[65,6,2],[64,8,2],[62,10,2],[64,12,2],[65,14,2],[67,16,2],[64,18,2],[62,20,2],[60,22,2],[62,24,2],[60,26,2],[62,28,3],[60,31,1]],
+    chords: [[0,'F','Δ7'],[8,'B♭','7♯11'],[16,'C','Δ7'],[24,'A','m7']],
+    cards: [
+      tri('F', 5, 'maj', { use: [0,1,2,3], passing: [2], labels: ['5','3','2','1'], over: '1–3–5 over FΔ7',
+        about: 'C–A–(G)–F: FΔ7\'s own triad from the top, with G passing.' }),
+      piv('E on B♭7', { use: [4,5,6,7], labels: ['♯11','3','♯11','5'], over: '♯11 and 3 of B♭7♯11',
+        about: 'E and D over B♭7♯11: E is the ♯11, D the 3rd. The ♯11 is what gives this chord its sound, and it\'s just E from C major.' }),
+      tri('C', 0, 'maj', { use: [8,9,10,11], passing: [10], labels: ['5','3','2','1'], over: '1–3–5 over CΔ7',
+        about: 'G–E–(D)–C: the home triad coming down over its own chord, D passing.' }),
+      piv('D ↔ C', { use: [12,13,14,15], labels: ['11','♭3','11','♭3'], over: '11 and ♭3 of Am7',
+        about: 'D and C rock back and forth over Am7: its 11th and ♭3. No triad here.' }),
+    ],
+    summary: 'Down <b>F</b> over FΔ7, E as the ♯11 of B♭7, down <b>C</b> over CΔ7, then D and C rocking over Am7.' },
+
+  { bars: '13–16', sec: 'B',
+    notes: [[71,0,2],[69,2,2],[67,4,2],[66,6,2],[64,8,2],[62,10,2],[64,12,2],[62,14,2],[65,16,14],[55,30,2]],
+    chords: [[0,'D','7'],[16,'D','m7'],[24,'G','7']],
+    cards: [
+      tri('Em', 4, 'min', { use: [0,2,4,6], labels: ['5','♭3','1','1'], over: '13–11–9 over D7',
+        about: 'B–G–E–E: every other note of the line down. Over D7 they are its 13th, 11th and 9th, the top of the chord.' }),
+      tri('D', 2, 'maj', { lane: 1, use: [1,3,5,7], labels: ['5','3','1','1'], over: '1–3–5 of D7',
+        about: 'A–F♯–D–D: D7\'s own triad. Em and D are a whole step apart, the same pair idea as G and Am in bar 1. F♯ is the only note in the melody outside C major, borrowed from D7.' }),
+      piv('F held', { use: [8,9], labels: ['♭3','1'], over: '♭3 of Dm7 → ♭7 of G7',
+        about: 'F holds over Dm7–G7: the ♭3, then the ♭7. As G7\'s 7th it wants to fall to E on the C chord. Low G, G7\'s root, is the pickup back to the top.' }),
+    ],
+    summary: 'Down a line split between <b>Em</b> and <b>D</b> over D7, then F held over Dm7–G7, back to the top.' },
+
+  { bars: '17–20', sec: 'A', notes: A_NOTES, chords: A_CHORDS,
+    cards: [
+      tri('G', 7, 'maj', { lane: 1, use: [1,3,5], labels: ['3','5','1'], over: '5–7–9 over CΔ7',
+        about: 'B–D–G: the G half of the run, as in bar 1 but without the pickup.' }),
+      tri('Am', 9, 'min', { use: [0,2,4], labels: ['1','♭3','5'], over: '6–1–3 over CΔ7',
+        about: 'A–C–E: the other half. Same pair, same chords as bar 1.' }),
+      piv('D held', { use: [6,7,8,9], passing: [7], labels: ['9','1','♭3','1'], over: '9 → ♭3 of Bø7 → ♭7 of E7',
+        about: 'Same as bar 3: D is the 9th of CΔ7, the ♭3 of Bø7, then the ♭7 of E7♭9.' }),
+    ],
+    summary: 'A repeat of bars 1–4.' },
+
+  { bars: '21–24', sec: 'A', notes: B_NOTES, chords: B_CHORDS, cards: B_CARDS(),
+    summary: 'A repeat of bars 5–8.' },
+
+  { bars: '25–28', sec: 'C',
+    notes: [[72,0,2],[69,2,2],[67,4,2],[65,6,2],[64,8,2],[62,10,2],[64,12,3],[65,15,1],[67,16,2],[64,18,2],[62,20,2],[60,22,2],[71,24,6],[69,30,2]],
+    chords: [[0,'F','Δ7'],[8,'B♭','7♯11'],[16,'C','Δ7'],[24,'F♯','ø7'],[28,'B','7']],
+    cards: [
+      tri('F', 5, 'maj', { use: [0,1,2,3], passing: [2], labels: ['5','3','2','1'], over: '1–3–5 over FΔ7',
+        about: 'C–A–(G)–F, as in bar 9.' }),
+      piv('E on B♭7', { use: [4,5,6,7], labels: ['♯11','3','♯11','5'], over: '♯11 and 3 of B♭7♯11',
+        about: 'Same as bar 10: E is the ♯11 of B♭7, D its 3rd.' }),
+      tri('C', 0, 'maj', { use: [8,9,10,11], passing: [10], labels: ['5','3','2','1'], over: '1–3–5 over CΔ7',
+        about: 'G–E–(D)–C: the home triad coming down over CΔ7.' }),
+      piv('B → A', { use: [12,13], labels: ['11','♭7'], over: '11 of F♯ø7 → ♭7 of B7',
+        about: 'B is the 11th of F♯ø7 and A the ♭7 of B7. That ii–V points at E minor, but the tune goes back to C instead.' }),
+    ],
+    summary: 'Down <b>F</b>, E over B♭7, down <b>C</b>, then B and A over F♯ø7–B7.' },
+
+  { bars: '29–32', sec: 'C',
+    notes: [[67,0,2],[72,2,2],[71,4,2],[69,6,2],[67,8,2],[60,10,2],[67,12,2],[65,14,2],[62,16,4],[64,20,4],[60,24,8]],
+    chords: [[0,'C','Δ7'],[4,'F','7'],[8,'E','m7'],[12,'A','7'],[16,'D','m7'],[20,'G','7'],[24,'C','6'],[28,'G','7']],
+    cards: [
+      tri('C', 0, 'maj', { use: [0,1,2,3], passing: [2,3], labels: ['5','1','7','6'], over: '5–1 over CΔ7',
+        about: 'G–C over CΔ7, then B and A over F7: its ♯11 and 3rd. F7, the IV7, is a bluesy color on the way down.' }),
+      tri('C', 0, 'maj', { use: [4,5,6,7], passing: [7], labels: ['5','1','5','4'], over: '♭3 of Em7, ♭7 of A7',
+        about: 'G–C–G: the C triad again. Over Em7 the G is its ♭3; over A7 the G is the ♭7 and F the ♭13, pulling down to D.' }),
+      tri('C', 0, 'maj', { use: [8,9,10], passing: [8], labels: ['2','3','1'], over: 'Dm7 → G7 → C6',
+        about: 'D–E–C: the root of Dm7, the 13th of G7, then home on C.' }),
+    ],
+    summary: 'The last phrase stays on the <b>C</b> triad over a ii–V every two beats (Em7–A7, Dm7–G7) and lands home on C6.' },
+];
+
+/* ---------- Layout ---------- */
+const W = 960, R = 17;
+let SLOTS = 32, G = 0, SW = W / 32;
+const xOf = s => (s + G) * SW + SW / 2;
+const pct = s => ((s + G) / SLOTS * 100) + '%';
+let yOf = m => m;
+const svg = document.getElementById('contour');
+const NS = 'http://www.w3.org/2000/svg';
+const mk = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+const chordsEl = document.getElementById('chords'), lanesEl = document.getElementById('lanes');
+const status = document.getElementById('status'), revealBtn = document.getElementById('revealBtn');
+const LANE_H = 72, LANE_GAP = 8;
+
+let NOTES = [], CHORDS = [], CARDS = [], noteEls = [], toneEls = [], links = [], cardEls = [], cur = 0;
+const revealed = new Set();
+const isPassing = i => CARDS.some(c => c.passing.includes(i));
+const chordAt = s => { let c = null; CHORDS.forEach(ch => { if (ch.slot <= s) c = ch; }); return c; };
+const chordName = ch => ch.root + ch.q;
+const DEFAULT_STATUS = 'Press <b>Play phrase</b> (or Space), or tap any note. The grey cards hide the shapes in the line: tap one to reveal it and hear it.';
+
+function render(k, keep) {
+  if (!keep) stopPlayback();
+  cur = k;
+  const P = PHRASES[k];
+  NOTES = P.notes.map(([m, s, len]) => ({ m, s, len: len || 1 }));
+  CHORDS = P.chords.map(([slot, root, q], i, a) => ({ slot, root, q, pc: PC[root], end: i + 1 < a.length ? a[i + 1][0] : 32 }));
+  CARDS = P.cards.map(c => ({ ...c, color: c.kind === 'triad' ? triadColor(c.root, c.q) : PIVOT_COLOR }));
+  revealed.clear();
+  G = NOTES.some(n => n.s < 0) ? 2 : 0; SLOTS = 32 + G; SW = W / SLOTS;
+
+  const first = +P.bars.split('–')[0];
+  document.getElementById('title').innerHTML = `There Will Never Be Another You <span>bars ${P.bars}</span>`;
+  const bars = [0, 1, 2, 3].map(b => NOTES.filter(n => n.s >= b * 8 && n.s < b * 8 + 8).map(n => NAMES[n.m % 12]).join(' '));
+  const pick = NOTES.filter(n => n.s < 0).map(n => NAMES[n.m % 12]).join(' ');
+  document.getElementById('notesLine').textContent = (pick ? pick + ' | ' : '') + bars.join(' | ');
+  document.querySelectorAll('.pick').forEach((b, i) => b.setAttribute('aria-pressed', i === k));
+  revealBtn.textContent = 'Reveal all';
+  status.innerHTML = DEFAULT_STATUS;
+
+  // chords, staggered onto two rows when they come fast
+  chordsEl.innerHTML = '';
+  let prev = null;
+  CHORDS.forEach(ch => {
+    const row = prev && prev.row === 0 && ch.slot - prev.slot < 6 ? 1 : 0;
+    ch.row = row; prev = ch;
+    const d = document.createElement('div');
+    d.className = 'chord r' + row; d.style.left = pct(ch.slot); d.textContent = chordName(ch);
+    chordsEl.appendChild(d);
+  });
+
+  // vertical scale fits this phrase
+  const lo = Math.min(...NOTES.map(n => n.m)), hi = Math.max(...NOTES.map(n => n.m));
+  const step = 200 / Math.max(hi - lo, 12);
+  yOf = m => 250 - (m - lo) * step;
+
+  svg.innerHTML = '';
+  mk('defs', {}).innerHTML = '<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  [0, 8, 16, 24].forEach((s, b) => {
+    if (s > 0 || G) mk('line', { class: 'barline', x1: (s + G) * SW, x2: (s + G) * SW, y1: 0, y2: 300 });
+    mk('text', { class: 'barnum', x: (s + G) * SW + 5, y: 296 }).textContent = first + b;
+  });
+
+  links = [];
+  NOTES.forEach((n, i) => {
+    if (!i) return;
+    const p = NOTES[i - 1], half = Math.abs(n.m - p.m) === 1;
+    const line = mk('line', { class: 'link' + (half ? ' half' : ''), x1: xOf(p.s), y1: yOf(p.m), x2: xOf(n.s), y2: yOf(n.m) });
+    let lbl = null;
+    if (half) { lbl = mk('text', { class: 'halflbl', x: (xOf(p.s) + xOf(n.s)) / 2 + 10, y: (yOf(p.m) + yOf(n.m)) / 2 - 10 }); lbl.textContent = '½'; }
+    links.push({ line, lbl });
+  });
+
+  toneEls = [];
+  noteEls = NOTES.map((n, i) => {
+    const g = mk('g', { class: 'note' + (isPassing(i) ? ' passing' : ''), tabindex: 0, role: 'button', 'aria-label': `${NAMES[n.m % 12]}, ${FROM_C[n.m % 12]} from C` });
+    const x = xOf(n.s), y = yOf(n.m);
+    if (n.len > 2) mk('rect', { x: x - R, y: y - R, width: (n.len - 2) * SW + 2 * R, height: 2 * R, rx: R }, g);
+    else mk('circle', { cx: x, cy: y, r: R }, g);
+    mk('text', { x, y: y + 1 }, g).textContent = FROM_C[n.m % 12];
+    // above: the note's job in the chord under it, again at every chord change while it holds
+    const ch = chordAt(n.s);
+    if (ch) mk('text', { class: 'rn', x, y: y - R - 8 }, g).textContent = chordTone(n.m, ch);
+    CHORDS.filter(c => c.slot > n.s && c.slot < n.s + n.len).forEach(c => {
+      const cx = Math.min(xOf(c.slot), x + (n.len - 2) * SW);
+      mk('line', { class: 'tick', x1: cx, x2: cx, y1: y - R, y2: y - R + 6 }, g);
+      mk('text', { class: 'rn later', x: cx, y: y - R - 8 }, g).textContent = chordTone(n.m, c);
+    });
+    toneEls.push(mk('text', { class: 'tone', x, y: y + R + 14 }, g));
+    g.addEventListener('pointerdown', e => { if (e.button === 0) tapNote(i); });
+    g.addEventListener('keydown', e => { if (e.key === 'Enter') tapNote(i); });
+    return g;
+  });
+  CARDS.forEach(c => c.use.forEach((i, j) => { toneEls[i].textContent = c.labels[j]; }));
+
+  // cards, in lanes
+  const lanes = 1 + Math.max(...CARDS.map(c => c.lane));
+  lanesEl.style.height = (lanes * LANE_H + (lanes - 1) * LANE_GAP) + 'px';
+  lanesEl.innerHTML = '';
+  cardEls = CARDS.map((c, k) => {
+    const a = Math.min(...c.use.map(i => NOTES[i].s));
+    const b = Math.min(32, Math.max(...c.use.map(i => NOTES[i].s + NOTES[i].len)));
+    const el = document.createElement('button');
+    el.className = 'card hid' + (c.kind === 'pivot' ? ' pivot' : '');
+    el.style.left = `calc(${pct(a)} + 3px)`; el.style.width = `calc(${(b - a) / SLOTS * 100}% - 6px)`;
+    el.style.top = (c.lane * (LANE_H + LANE_GAP)) + 'px';
+    el.style.setProperty('--c', c.color); el.style.setProperty('--glow', c.color);
+    el.setAttribute('aria-label', 'Hidden shape. Tap to reveal and hear it.');
+    const deg = c.use.filter(i => !c.passing.includes(i)).map(i => FROM_C[NOTES[i].m % 12]).join('–');
+    el.innerHTML = `<div class="strip">?</div><div class="body"><div class="deg">${deg}</div><div class="sn">${c.over}</div></div>`;
+    el.addEventListener('pointerdown', e => { if (e.button === 0) tapCard(k); });
+    el.addEventListener('click', e => { if (e.detail === 0) tapCard(k); });
+    lanesEl.appendChild(el); return el;
+  });
+}
+
+/* ---------- Picker ---------- */
+const picker = document.getElementById('picker');
+const choose = k => { render(k); try { localStorage.setItem('melody-triads-phrase', k); } catch (e) {} };
+PHRASES.forEach((P, k) => {
+  const b = document.createElement('button');
+  b.className = 'pick'; b.innerHTML = `<b>${P.sec}</b>${P.bars}`; b.setAttribute('aria-pressed', 'false');
+  b.setAttribute('aria-label', `Bars ${P.bars}, section ${P.sec}`);
+  b.addEventListener('click', () => choose(k));
+  picker.appendChild(b);
+});
+
+/* ---------- Reveal ---------- */
+function reveal(k) {
+  if (revealed.has(k)) return;
+  revealed.add(k);
+  const el = cardEls[k], c = CARDS[k];
+  el.classList.remove('hid');
+  el.querySelector('.strip').textContent = c.name;
+  el.setAttribute('aria-label', `${c.name}, ${c.over}`);
+  c.use.forEach(i => toneEls[i].classList.add('shown'));
+  const tint = 'rgb(' + c.color.match(/\d+/g).map((v, j) => Math.round(v * 0.1 + [22, 22, 24][j] * 0.9)).join(' ') + ')';
+  c.use.filter(i => !c.passing.includes(i)).forEach(i => { noteEls[i].firstChild.style.fill = tint; });
+  if (revealed.size === CARDS.length) {
+    links.forEach(l => { l.line.classList.add('shown'); if (l.lbl) l.lbl.classList.add('shown'); });
+    revealBtn.textContent = 'Hide all';
+  }
+}
+function hideAll() {
+  revealed.clear();
+  cardEls.forEach(el => { el.classList.add('hid'); el.querySelector('.strip').textContent = '?'; el.setAttribute('aria-label', 'Hidden shape. Tap to reveal and hear it.'); });
+  toneEls.forEach(r => r.classList.remove('shown'));
+  noteEls.forEach(n => { n.firstChild.style.fill = ''; });
+  links.forEach(l => { l.line.classList.remove('shown'); if (l.lbl) l.lbl.classList.remove('shown'); });
+  revealBtn.textContent = 'Reveal all';
+}
+revealBtn.addEventListener('click', () => {
+  if (revealed.size === CARDS.length) { hideAll(); status.innerHTML = 'Hidden again. Play it and see if you can hear the shapes.'; return; }
+  CARDS.forEach((_, k) => reveal(k));
+  status.innerHTML = PHRASES[cur].summary;
+});
+
+/* ---------- Playback ---------- */
+const tempo = document.getElementById('tempo'), tempoOut = document.getElementById('tempoOut');
+tempo.addEventListener('input', () => { tempoOut.textContent = tempo.value; });
+const swingBox = document.getElementById('swing'), chordsBox = document.getElementById('chordsOn');
+const loopBox = document.getElementById('loop'), contBox = document.getElementById('cont');
+const playBtn = document.getElementById('playBtn');
+let timers = [], playing = false;
+
+function stopPlayback() {
+  timers.forEach(clearTimeout); timers = [];
+  if (ctx) {
+    const now = ctx.currentTime;
+    live.forEach(({ srcs, g }) => { try {
+      g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.linearRampToValueAtTime(0, now + 0.03); srcs.forEach(o => o.stop(now + 0.04));
+    } catch (e) {} });
+  }
+  live = [];
+  noteEls.forEach(n => n.classList.remove('on'));
+  cardEls.forEach(c => c.classList.remove('playing'));
+  setPlayUI(false);
+}
+function setPlayUI(on) { playing = on; playBtn.setAttribute('aria-pressed', on); document.getElementById('playLbl').textContent = on ? 'Stop' : 'Play phrase'; }
+async function begin() {
+  audio(); stopPlayback();
+  await loadPiano();
+  return 60 / tempo.value;
+}
+// eighth-note slot → beats (swung: on-beats get 2/3, off-beats 1/3)
+const beatOf = s => Math.floor(s / 2) + (((s % 2) + 2) % 2 ? (swingBox.checked ? 2 / 3 : 0.5) : 0);
+const at = (when, fn) => timers.push(setTimeout(fn, Math.max(0, (when - ctx.currentTime) * 1000)));
+const cardsWith = i => CARDS.map((c, k) => c.use.includes(i) && !c.passing.includes(i) ? k : -1).filter(k => k >= 0);
+function light(i, from, to) {
+  at(from, () => {
+    noteEls.forEach((n, j) => n.classList.toggle('on', j === i));
+    const ks = cardsWith(i);
+    cardEls.forEach((c, k) => c.classList.toggle('playing', ks.includes(k)));
+  });
+  at(to, () => { if (noteEls[i]) noteEls[i].classList.remove('on'); cardsWith(i).forEach(k => cardEls[k] && cardEls[k].classList.remove('playing')); });
+}
+function playChord(ch, t, dur) {
+  const v = voicing(ch);
+  piano(v[0], t, dur, 0.75);
+  v.slice(1).forEach(m => piano(m, t + 0.01, dur, 0.32));
+}
+// schedules the notes and chords between two slots, with slot `from` landing at time t0
+function schedule(t0, B, from, to, notes) {
+  if (chordsBox.checked) CHORDS.forEach(ch => {
+    const a = Math.max(ch.slot, from), b = Math.min(ch.end, to);
+    if (a < b) playChord(ch, t0 + (beatOf(a) - beatOf(from)) * B, (beatOf(b) - beatOf(a)) * B);
+  });
+  notes.forEach(i => {
+    const n = NOTES[i];
+    const start = t0 + (beatOf(n.s) - beatOf(from)) * B, end = t0 + (beatOf(n.s + n.len) - beatOf(from)) * B;
+    piano(n.m, start, end - start + 0.12);
+    light(i, start, end);
+  });
+}
+async function playPhrase() {
+  const B = await begin(); setPlayUI(true);
+  let t0 = ctx.currentTime + 0.05;
+  const go = () => {
+    const from = G ? -2 : 0;
+    schedule(t0, B, from, 32, NOTES.map((_, i) => i));
+    const end = t0 + (beatOf(32) - beatOf(from)) * B;
+    at(end - 0.06, () => {
+      if (!playing) return;
+      if (contBox.checked && cur < PHRASES.length - 1) { render(cur + 1, true); t0 = end; go(); }
+      else if (loopBox.checked) { if (contBox.checked) render(0, true); t0 = end; go(); }
+      else setPlayUI(false);
+    });
+  };
+  go();
+}
+playBtn.addEventListener('click', () => playing ? stopPlayback() : playPhrase());
+
+async function tapNote(i) {
+  const n = NOTES[i], ch = chordAt(n.s);
+  const B = await begin(), t = ctx.currentTime + 0.02;
+  if (ch && chordsBox.checked) playChord(ch, t, 1.8);
+  piano(n.m, t, 1.5);
+  light(i, t, t + 1.3);
+  const shown = CARDS.filter((x, k) => revealed.has(k) && x.use.includes(i));
+  const later = CHORDS.filter(c => c.slot > n.s && c.slot < n.s + n.len);
+  status.innerHTML = `<b>${NAMES[n.m % 12]}</b> · <b>${FROM_C[n.m % 12]}</b> from C` +
+    (ch ? ` · the <b>${chordTone(n.m, ch)}</b> of ${chordName(ch)}` : ' · pickup') +
+    later.map(c => `, then the <b>${chordTone(n.m, c)}</b> of ${chordName(c)}`).join('') +
+    (shown.length ? `<br>${isPassing(i) ? 'A passing note inside' : 'The'} ${shown.map(x => `<b>${x.labels[x.use.indexOf(i)]}</b> of <b>${x.name}</b>`).join(', ')}.` : '');
+}
+async function tapCard(k) {
+  const c = CARDS[k], wasHidden = !revealed.has(k);
+  reveal(k);
+  const B = await begin(), t0 = ctx.currentTime + 0.03;
+  let end;
+  if (c.kind === 'pivot') {
+    // play the held note in time, with the chords changing under it
+    const from = Math.min(...c.use.map(i => NOTES[i].s));
+    const to = Math.min(32, Math.max(...c.use.map(i => NOTES[i].s + NOTES[i].len)));
+    schedule(t0, B, from, to, c.use);
+    end = t0 + (beatOf(to) - beatOf(from)) * B;
+  } else {
+    // the triad's own notes, stepped, over the chord where it starts
+    const play = c.use.filter(i => !c.passing.includes(i));
+    const step = B * 0.75;
+    const ch = chordAt(NOTES[c.use[0]].s);
+    if (ch && chordsBox.checked) playChord(ch, t0, step * (play.length + 1.5));
+    play.forEach((i, j) => { piano(NOTES[i].m, t0 + j * step, step * 1.6 + 0.3); light(i, t0 + j * step, t0 + (j + 1) * step); });
+    end = t0 + play.length * step + step;
+  }
+  at(t0, () => cardEls[k].classList.add('playing'));
+  at(end, () => cardEls[k] && cardEls[k].classList.remove('playing'));
+  status.innerHTML = `${wasHidden ? 'Revealed: ' : ''}<b>${c.name}</b> · ${c.over}<br>${c.about}`;
+}
+
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA/.test(e.target.tagName) && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
+  if (e.code === 'Space' && e.target.tagName !== 'BUTTON') { e.preventDefault(); playing ? stopPlayback() : playPhrase(); }
+  else if (e.key === 'Escape') stopPlayback();
+  else if (e.key === 'ArrowRight' && e.target.type !== 'range') choose(Math.min(cur + 1, PHRASES.length - 1));
+  else if (e.key === 'ArrowLeft' && e.target.type !== 'range') choose(Math.max(cur - 1, 0));
+  else if (/^[1-8]$/.test(e.key) && !e.metaKey && !e.ctrlKey) choose(+e.key - 1);
+});
+['pointerdown','keydown'].forEach(ev => document.addEventListener(ev, () => { if (ctx && ctx.state === 'suspended') ctx.resume(); }, { capture: true }));
+
+let startAt = 0;
+try { const v = +localStorage.getItem('melody-triads-phrase'); if (v >= 0 && v < PHRASES.length) startAt = v; } catch (e) {}
+render(startAt);
+</script>
+
+<script src="lab.js"></script>
+</body></html>

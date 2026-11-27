@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triad Home Base</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110f; --panel:#1d1916; --line:#2e2824; --ink:#f3ece4; --mute:#a3978b; --dim:#6d635a;
+    --home:#e9b96e; --dep:#e0715a; --ret:#8fc4a4; --you:#9db4e8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:560px;margin:0 auto;padding:22px 16px 60px}
+  h1{font-family:Fraunces,serif;font-weight:700;font-size:28px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--mute);font-size:14px;margin:6px 0 18px;line-height:1.45}
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 16px 18px;position:relative;overflow:hidden;transition:border-color .4s}
+  .stage::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 0%,var(--glow,transparent),transparent 70%);opacity:.18;transition:background .5s;pointer-events:none}
+  .status{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--c,var(--mute));display:flex;justify-content:space-between;align-items:center}
+  .status small{letter-spacing:.04em;text-transform:none;font-weight:500;color:var(--dim)}
+  .chips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-height:64px;align-items:center;margin:20px 0 10px}
+  .chip{min-width:42px;height:54px;padding:0 8px;border-radius:12px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:Fraunces,serif;font-size:24px;font-weight:600;color:var(--ink);background:#181512;transition:transform .12s,background .12s,border-color .2s}
+  .chip.dec{border-color:var(--dep);color:var(--dep)}
+  .chip.on{transform:translateY(-4px) scale(1.06);background:var(--c,#333);color:#14110f;border-color:var(--c)}
+  .chip.hid{color:var(--dim)}
+  .desc{text-align:center;color:var(--mute);font-size:14px;min-height:20px}
+  .srcline{text-align:center;color:var(--mute);opacity:.75;font-size:11.5px;min-height:16px;margin-top:3px;letter-spacing:.01em}
+  .strip{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:18px}
+  .cell{height:34px;border-radius:6px;background:#181512;border:1px solid var(--line);font-size:10px;color:var(--dim);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;transition:background .1s}
+  .cell.ct{border-color:#5a4a33;color:var(--home)}
+  .cell.on{background:var(--c,#555);color:#14110f}
+  .play{width:100%;margin:16px 0 8px;height:58px;border-radius:14px;border:0;background:var(--home);color:#14110f;font-size:18px;font-weight:600;font-family:Inter;cursor:pointer}
+  .play.stop{background:#3a322c;color:var(--ink)}
+  .ctrl{display:flex;gap:8px;margin:16px 0 8px}
+  .ctrl .play{margin:0;flex:1}
+  .nav{width:64px;height:58px;border-radius:14px;border:1px solid var(--line);background:#181512;color:var(--ink);font-size:24px;cursor:pointer;font-family:Inter}
+  .nav:disabled{opacity:.3;cursor:default}
+  .meta{display:flex;justify-content:space-between;color:var(--dim);font-size:12px;margin-bottom:22px}
+  details{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:10px}
+  summary{padding:14px 16px;font-weight:600;font-size:15px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+  summary::after{content:"+";color:var(--mute)}
+  details[open] summary::after{content:"–"}
+  .body{padding:0 16px 16px;display:grid;gap:14px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px}
+  .row label{color:var(--mute)}
+  .row output{font-variant-numeric:tabular-nums;color:var(--ink);min-width:54px;text-align:right}
+  input[type=range]{flex:1;accent-color:var(--home)}
+  select{background:#181512;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:14px;font-family:Inter}
+  .toggles{display:flex;flex-wrap:wrap;gap:7px}
+  .tg{border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:8px 13px;font-size:13px;cursor:pointer;user-select:none;font-family:Inter}
+  .tg.on{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .grp{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:-6px}
+  .how{color:var(--mute);font-size:13.5px;line-height:1.55}
+  .how b{color:var(--ink);font-weight:600}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:4px}
+  .favbtn{position:absolute;right:12px;bottom:10px;z-index:2;border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:Inter;display:none}
+  .favbtn.show{display:block}
+  .favbtn.on{color:var(--home);border-color:var(--home);background:#3a2f22}
+  .stage.haslick{padding-bottom:50px}
+  .favs{display:grid;gap:8px}
+  .fav{display:flex;align-items:center;gap:10px;background:#181512;border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+  .fav .tx{flex:1;min-width:0}
+  .fav .dg{font-family:Fraunces,serif;font-size:16px;color:var(--ink);letter-spacing:.02em}
+  .fav .dg i{font-style:normal;color:var(--dep)}
+  .fav .wh{font-size:11.5px;color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fav button{width:40px;height:40px;border-radius:9px;border:1px solid var(--line);background:#14110f;color:var(--ink);font-size:15px;cursor:pointer;flex:none}
+  .fav button.rm{color:var(--dim)}
+  .fav.now{border-color:var(--home)}
+  .favplay{height:46px;border-radius:12px;border:0;background:var(--home);color:#14110f;font-size:15px;font-weight:600;font-family:Inter;cursor:pointer}
+  .favplay:disabled{opacity:.35;cursor:default}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
+  .tabs{display:flex;gap:6px;overflow-x:auto;margin:14px -16px 4px;padding:0 16px 6px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:none;border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:8px 13px;font-size:13px;cursor:pointer;font-family:Inter;white-space:nowrap}
+  .tab b{font-weight:600;margin-right:5px;color:var(--dim)}
+  .tab.on{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .tab.on b{color:var(--home)}
+  .tab.later{opacity:.6}
+  .pane{display:none}.pane.on{display:block}
+  .scard{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px 16px;margin-top:14px}
+  .scard h2{font-family:Fraunces,serif;font-weight:600;font-size:21px;margin:0 0 2px}
+  .scard .notes{color:var(--home);font-family:Fraunces,serif;font-size:15px;margin-bottom:12px}
+  .badge{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:3px 9px;margin-bottom:10px}
+  .blk{border-top:1px solid var(--line);padding:11px 0 2px}
+  .blk .k{font-size:11.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+  .blk .v{font-size:14px;line-height:1.55;color:var(--ink)}
+  .chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;color:var(--ink);cursor:pointer}
+  .chk input{accent-color:var(--home);width:18px;height:18px;margin:1px 0 0;flex:none}
+  .ready{font-size:13px;color:var(--ret);display:none}.ready.show{display:block}
+  /* C ↔ G tab: the same player, with its own drills. Elements marked m-tri belong to tab 1 only, m-iv to C ↔ G only,
+     d1–d4 to one drill. */
+  body[data-mode="iv"] .m-tri{display:none!important}
+  body:not([data-mode="iv"]) .m-iv{display:none!important}
+  body:not([data-drill="1"]):not([data-drill="A"]) .d1,body:not([data-drill="2"]):not([data-drill="A"]) .d2,body:not([data-drill="3"]) .d3,body:not([data-drill="4"]):not([data-drill="A"]) .d4{display:none!important}
+  body:not([data-drill="A"]) .dA{display:none!important}
+  body:not([data-tridrill="A"]) .tA{display:none!important}
+  body:not([data-tridrill="1"]) .t1{display:none!important}
+  body:not([data-tridrill="2"]) .t2{display:none!important}
+  body[data-tridrill="1"] .tsrc,body[data-tridrill="2"] .tsrc,body[data-tridrill="1"] .tlick{display:none!important}
+  body[data-drill="3"] .dns{display:none!important}
+  body[data-away="IV"] .awv{display:none!important}
+  body:not([data-away="IV"]) .awf{display:none!important}
+  :root{--away:#8ec5e6}
+  .tri{font-family:Fraunces,serif;font-size:50px;font-weight:700;text-align:center;line-height:1;margin:16px 0 -6px;color:var(--c,var(--ink));min-height:50px;transition:color .2s}
+  .chip.aw{border-color:var(--away);color:var(--away)}
+  .cell.vt{border-color:#2f4f63;color:var(--away)}
+  .cell.ct.vt{border-color:#5a4a33;color:var(--home);box-shadow:inset 0 -3px 0 #2f4f63}
+  .ans{display:flex;gap:8px;margin-top:16px;position:relative;z-index:2}
+  .ans button{flex:1;height:54px;border-radius:12px;border:1px solid var(--line);background:#181512;font-size:16px;font-weight:600;font-family:Inter;cursor:pointer}
+  .ans button.h{color:var(--home)} .ans button.a{color:var(--away)}
+  .ans button:disabled{opacity:.35;cursor:default}
+  .ans button.h.picked{background:#3a2f22;border-color:var(--home)} .ans button.a.picked{background:#1f3340;border-color:var(--away)}
+  .score{text-align:center;color:var(--mute);font-size:12.5px;margin-top:8px;min-height:16px}
+  body:not([data-cells="1"]) .m-cell{display:none!important}
+  body[data-cells="1"] .nocell{display:none!important}
+  .chip.cn{box-shadow:0 0 0 2px var(--home)}
+  /* Chord tones tab: its own mode on the same player */
+  body[data-mode="ct"] .m-tri{display:none!important}
+  body:not([data-mode="ct"]) .m-ct{display:none!important}
+  .keytag{text-align:center;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-top:6px;min-height:15px}
+  .keytag b{color:var(--home);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Triad Home Base</h1>
+  <div class="tabs" id="tabs" role="tablist">
+    <button class="tab on" data-t="1" role="tab"><b>1</b>Major triad</button>
+    <button class="tab" data-t="iv" role="tab" id="ivTab"><b>1b</b>C ↔ G</button>
+    <button class="tab" data-t="f" role="tab" id="fTab"><b>1c</b>C ↔ F</button>
+    <button class="tab" data-t="ct" role="tab" id="ctTab"><b>♩</b>Chord tones</button>
+    <button class="tab" data-t="c" role="tab" id="cTab"><b>♪</b>Cells</button>
+    <button class="tab later" data-t="2" role="tab"><b>2</b>I7 as home</button>
+    <button class="tab later" data-t="3" role="tab"><b>3</b>Blue rub</button>
+    <button class="tab later" data-t="4" role="tab"><b>4</b>I7 → IV7</button>
+    <button class="tab later" data-t="5" role="tab"><b>5</b>Phrases</button>
+    <button class="tab later" data-t="6" role="tab"><b>6</b>Jazz blues</button>
+  </div>
+
+  <div class="pane" id="pane2"><div class="scard"><span class="badge">Later</span><h2>Add the ♭7: I7 is home</h2><div class="notes">1 3 5 ♭7 · in C: C E G B♭</div>
+    <div class="blk"><div class="k">Learn to hear</div><div class="v">♭7 as a resting colour. In the blues the dominant chord doesn't need to resolve. It's where you live.</div></div>
+    <div class="blk"><div class="k">Drill</div><div class="v">Over the drone, sing 1-3-5-♭7 and its inversions. End phrases on ♭7 and let it sit there.</div></div>
+    <div class="blk"><div class="k">Checkpoint</div><div class="v">I7 sounds like home, not a doorway.</div></div>
+    <div class="blk"><div class="k">Preview now</div><div class="v">In tab 1, under What leaves home → Lick concepts, keep only <b>+ ♭7</b> to hear real licks that use the triad plus ♭7.</div></div></div></div>
+
+  <div class="pane" id="pane3"><div class="scard"><span class="badge">Later</span><h2>The blue rub: ♭3 against 3</h2><div class="notes">♭3 → 3, plus ♭5 and ♭7 · in C: E♭ → E</div>
+    <div class="blk"><div class="k">Learn to hear</div><div class="v">Minor pentatonic over a major chord, and the cry of ♭3 bending up to 3.</div></div>
+    <div class="blk"><div class="k">Drill</div><div class="v">Sing ♭3 sliding into 3 over I7, then land on the triad you already own.</div></div>
+    <div class="blk"><div class="k">Checkpoint</div><div class="v">♭3 sounds like a cry that wants to bend up, not like a wrong note.</div></div>
+    <div class="blk"><div class="k">Preview now</div><div class="v">In tab 1, keep only the <b>+ ♭3</b> lick concept, and turn on the <b>Half step from below</b> decoration on the 3rd.</div></div></div></div>
+
+  <div class="pane" id="pane4"><div class="scard"><span class="badge">Later</span><h2>I7 → IV7: the bar-5 moment</h2><div class="notes">Guide tones · in C: E → E♭, B♭ → A</div>
+    <div class="blk"><div class="k">Learn to hear</div><div class="v">The 3rd and ♭7 each moving a half step as the chord changes. The whole form hangs on these lines.</div></div>
+    <div class="blk"><div class="k">Drill</div><div class="v">Sing only guide tones through a 12-bar. One idea, over and over.</div></div>
+    <div class="blk"><div class="k">Checkpoint</div><div class="v">With your eyes closed, you can tell where you are in the form.</div></div></div></div>
+
+  <div class="pane" id="pane5"><div class="scard"><span class="badge">Later</span><h2>Phrase language</h2><div class="notes">Call and response · riffs · space</div>
+    <div class="blk"><div class="k">Learn to hear</div><div class="v">A 2-bar question and a 2-bar answer. The same riff changing colour when the chord moves to IV.</div></div>
+    <div class="blk"><div class="k">Drill</div><div class="v">Learn 3 blues heads and 5 licks by ear only. Sing them first, then play them.</div></div>
+    <div class="blk"><div class="k">Checkpoint</div><div class="v">You can answer a phrase someone plays you, on the spot.</div></div></div></div>
+
+  <div class="pane" id="pane6"><div class="scard"><span class="badge">Later</span><h2>Jazz blues changes</h2><div class="notes">Billie's Bounce · bars 8–10 ii–V</div>
+    <div class="blk"><div class="k">Learn to hear</div><div class="v">V/ii and ii–V pulling back to I, heard through your triad map.</div></div>
+    <div class="blk"><div class="k">Drill</div><div class="v">Transcribe one Parker blues chorus by ear before you look at the notation.</div></div>
+    <div class="blk"><div class="k">Checkpoint</div><div class="v">A full chorus at a jam where you're hearing, not calculating.</div></div></div></div>
+
+  <div class="pane on" id="pane1">
+  <p class="sub m-ct">One sound at a time over the bass. You hear the bass, then one note above it, and its number. The ground can move to any key; the number stays the same. Each round goes from 1 3 5 to the cell of the week.</p>
+  <p class="sub m-cell">The cell of the week in real lines, over the drone. Each line plays as home, then the line, then the same notes plain, so you hear what was added. Chord tones show as numbers; every other note is red. The cell is outlined in gold. Tap ☆ Save lick to keep one.</p>
+  <p class="sub m-tri nocell">Press play and stay inside one major triad. Each shape leaves home with one decoration, then comes back clean. Every few rounds you return to plain 1-3-5.</p>
+  <p class="sub m-iv" id="ivSub">Two triads, home and away. <b class="ivI">C</b> is the ground you stand on. <span class="awv"><b class="ivV">G</b> keeps the 5 and moves 1→7 and 3→2, so the light shifts and pulls you back.</span><span class="awf"><b class="ivV">F</b> keeps the 1 and lifts 3→4 and 5→6, so home widens, then settles back down.</span> Every trip leaves home and comes back.</p>
+
+  <div class="stage" id="stage">
+    <div class="status" id="status"><span>Ready</span><small id="where"></small></div>
+    <div class="keytag" id="keyTag"></div>
+    <div class="tri m-iv" id="triName"></div>
+    <div class="chips" id="chips"><div class="chip">1</div><div class="chip">3</div><div class="chip">5</div></div>
+    <div class="desc" id="desc">Drone + home + departures</div>
+    <div class="srcline" id="srcLine"></div>
+    <div class="strip" id="strip"></div>
+    <button class="favbtn" id="favBtn" aria-label="Save this lick to favorites">☆ Save lick</button>
+    <div class="ans m-iv d3" id="ansRow"><button class="h" data-a="I" disabled>Home · <span class="ivI">C</span></button><button class="a" data-a="V" disabled>Away · <span class="ivV">G</span></button></div>
+    <div class="score m-iv d3" id="score">Tap Home or Away while it plays (keys H / A)</div>
+  </div>
+
+  <div class="ctrl"><button class="nav" id="prev" aria-label="Back to what you just heard" disabled>←</button><button class="play" id="play">▶ Play</button><button class="nav" id="stopB" aria-label="Stop" disabled>■</button><button class="nav" id="next" aria-label="Skip ahead" disabled>→</button></div>
+  <div class="meta"><span id="clock">0:00</span><span id="count">—</span></div>
+
+  <details id="favPanel" class="m-tri">
+    <summary><span>Favorite licks <span id="favN" style="color:var(--mute);font-weight:500"></span></span></summary>
+    <div class="body">
+      <button class="favplay" id="favPlay">▶ Play my favorites</button>
+      <div class="how" id="favHow" style="font-size:12.5px;margin-top:-4px">A session with only your saved licks, each one home → lick → plain, in the order you saved them. Tap ▶ on a row to hear just that lick. All your favorites, Blues Vocab's too, are also under <b>★ Favorite licks</b> in the Music Lab menu.</div>
+      <div class="favs" id="favList"></div>
+    </div>
+  </details>
+
+  <details open class="m-tri nocell">
+    <summary>Drill</summary>
+    <div class="body">
+      <div class="toggles" id="triDrillT"></div>
+      <div class="how tA">Press play and just listen. Departures mix built-in patterns with real licks from your solos — set the mix under <b>What leaves home</b>.</div>
+      <div class="how t1">Only built-in shapes and decorations leave home.</div>
+      <div class="how t2">Only real licks from your solos leave home: the piece of a line that uses the triad plus one colour note, in its real rhythm, then the same notes plain. Pick the colours under <b>What leaves home → Lick concepts</b>. <span id="triLickN"></span></div>
+      <div class="toggles tlick"><span class="tg" id="eraT">1920s–30s licks first</span></div>
+      <div class="how tlick" style="font-size:12.5px;margin-top:-6px">Lick departures come from the 1920s–30s solos in your library whenever the chosen concept has one there; later eras only fill the gaps. That era's lines stay close to the plain triad, so there's less between you and the shape.</div>
+    </div>
+  </details>
+
+  <details open class="m-iv">
+    <summary>Drill</summary>
+    <div class="body">
+      <div class="toggles" id="drillT"></div>
+      <div class="toggles dns"><span class="tg" id="ivSingT">Sing each away first</span></div>
+      <div class="how dA">Press play and listen. Each round goes simple to complex: blocks &amp; arpeggios, then voice leading, then a real lick from your solos. The trips vary — sometimes <span class="ivV">G</span> comes twice, sometimes a longer wander, sometimes it never leaves — so keep asking: where am I? Home or away? is its own drill, for when you want to test yourself.</div>
+      <div class="how d1">C, then <span class="ivV">G</span>, then home — but the trip varies, so listen for where you are. Arpeggios borrow rhythms from the solos in your library, and returns often resolve like real lines do.</div>
+      <div class="grp d1">Shapes</div>
+      <div class="toggles d1" id="ivShapeT"></div>
+      <div class="toggles d1"><span class="tg" id="ivChordT">Chord before each arpeggio</span></div>
+      <div class="how d2">Each <span class="ivI">C</span> shape goes to the nearest <span class="ivV">G</span>: <span class="awv">5 stays where it is, 1 drops to 7, 3 drops to 2.</span><span class="awf">1 stays where it is, 3 lifts to 4, 5 lifts to 6.</span> Chord first, then the same notes one by one.</div>
+      <div class="grp d2">Start from</div>
+      <div class="toggles d2" id="ivPosT"></div>
+      <div class="how d3">You hear <span class="ivI">C</span> or <span class="ivV">G</span> over the drone with the name and numbers hidden. Answer before it's revealed.</div>
+      <div class="grp d3">Play it as</div>
+      <div class="toggles d3" id="ivQuizT"></div>
+      <div class="how d4" id="ivLickNote">Real lines from your solos that sit on the <span class="ivV">G</span> triad <span class="awv">over a V chord and land on 1 or 3</span><span class="awf">over a IV chord and land on 3 or 5</span> of <span class="ivI">C</span>, moved to this key. You hear the away triad plain, then the lick in its own rhythm with the chords under it, then home. <span id="ivLickN"></span></div>
+      <div class="toggles d4"><span class="tg" id="eraT2">1920s–30s licks</span></div>
+      <div class="how d4" style="font-size:12.5px;margin-top:-6px">That era rarely spelled out a clean <span class="ivV">G</span> → <span class="ivI">C</span> line, so with this on you also get its triad licks played on the <span class="ivV">G</span> triad — the 1920s–30s way of saying the away chord — then a walk home.</div>
+      <div class="row"><label id="ivRepL">Repeat each trip</label><input type="range" id="ivRep" min="1" max="8" value="1"><output id="ivRepV">1</output></div>
+    </div>
+  </details>
+
+  <details open class="m-ct" id="ctPanel">
+    <summary>Chord tones</summary>
+    <div class="body">
+      <div class="grp">Path</div>
+      <div class="toggles" id="ctStageT"></div>
+      <div class="how" id="ctHow" style="font-size:12.5px">Each round: home, then 1, 3 and 5 one at a time over the bass, then each note of the cell alone, then the cell as a shape, then three lines that use it.</div>
+      <div class="how" id="ctCell" style="font-size:12.5px"></div>
+      <div class="toggles"><span class="tg" id="ctHideT">Name it first</span></div>
+      <div class="how" style="font-size:12.5px;margin-top:-6px">The number stays hidden. Sing it and name it in the gap, then it plays again with the answer.</div>
+      <div class="row"><label>Hear each</label><select id="ctRep"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></div>
+      <div class="how" style="font-size:12.5px">For all keys, set <b>Move keys</b> under Feel. Every round in a new key starts with the drone alone, then home.</div>
+    </div>
+  </details>
+
+  <details open class="m-cell" id="cellPanel">
+    <summary><span>Cell lines <span id="cellN" style="color:var(--mute);font-weight:500"></span></span></summary>
+    <div class="body">
+      <div class="grp">Cell</div>
+      <div class="toggles" id="cellChips"></div>
+      <div class="grp">Lines</div>
+      <div class="toggles" id="cellSrcT"></div>
+      <div class="toggles"><span class="tg" id="cellEraT">1920s–30s lines first</span></div>
+      <div class="row"><label>Repeat each line</label><select id="cellRep"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></div>
+      <div class="how" style="font-size:12.5px">Every cell you've studied stays here. Real lines come from your solo library, moved to home, in their own rhythm. Only the chord tones (1 3 5 of home) count as chord tones, so a 7th from a dominant solo shows red. Lines shuffle, each repeated, until you stop. Press play and just listen.</div>
+    </div>
+  </details>
+
+  <details open>
+    <summary>Feel</summary>
+    <div class="body">
+      <div class="row"><label>Tempo</label><input type="range" id="tempo" min="40" max="140" value="66"><output id="tempoV">66</output></div>
+      <div class="row"><label>Notes</label><select id="subdiv"><option value="1">Quarter notes</option><option value="0.5">Eighth notes</option><option value="0.5s">Swung eighths</option></select></div>
+      <div class="row"><label>Sing-back gap</label><select id="gap"><option value="dep">After departures</option><option value="all">After every line</option><option value="off">Off (just listen)</option></select></div>
+      <div class="row m-tri"><label>Shapes before global home</label><input type="range" id="pairs" min="1" max="6" value="1"><output id="pairsV">1</output></div>
+      <div class="row"><label>Session</label><select id="session"><option value="0">Endless</option><option value="5">5 min</option><option value="10">10 min</option><option value="20">20 min</option><option value="30" selected>30 min</option></select></div>
+      <div class="row"><label id="keyL">Key</label><select id="key"></select></div>
+      <div class="row"><label>Move keys</label><select id="keyMove"><option value="stay">Stay in this key</option><option value="round">Every round</option><option value="2">Every 2 min</option><option value="5">Every 5 min</option><option value="10">Every 10 min</option></select></div>
+      <div class="row" id="keyOrdRow"><label>Order</label><select id="keyOrd"><option value="4ths">Round the 4ths (C F B♭ E♭ …)</option><option value="random">Shuffled, all 12 before any repeat</option></select></div>
+      <div class="how" id="keyNote" style="font-size:12.5px;margin-top:-6px">Every tab. A key change waits for the end of a round, then the drone slides to the new key and you hear the new home before anything else. The numbers don't change, only the ground does.</div>
+      <div class="toggles"><span class="tg" id="offT">Keep playing with the screen off</span></div>
+      <div class="how" id="offNote" style="font-size:12.5px;margin-top:-6px">Prepares the whole session as audio first (a few seconds), then plays it like music, so you can lock your phone. Settings are fixed once it starts. Endless becomes 20 min.</div>
+    </div>
+  </details>
+
+  <details class="m-tri nocell">
+    <summary>What leaves home</summary>
+    <div class="body">
+      <div class="grp">Shapes</div>
+      <div class="toggles" id="shapeT"></div>
+      <div class="grp">Decorations</div>
+      <div class="toggles" id="decoT"></div>
+      <div class="grp">Decorate which note</div>
+      <div class="toggles" id="targT"></div>
+      <div class="grp tsrc">Departures come from</div>
+      <div class="toggles tsrc" id="srcT"></div>
+      <div class="grp tlick">Lick concepts</div>
+      <div class="toggles tlick" id="conT"></div>
+      <div class="how tlick" id="lickNote" style="font-size:12.5px;margin-top:-6px">Only the piece of a lick that uses the triad plus that one note, in its real rhythm, then the same notes plain. "Repeated note" finds spots where one triad tone is struck again and again, so you hear rhythm alone make it a melody. Found in every solo in your Music Lab library.</div>
+      <div class="grp">Ear test</div>
+      <div class="toggles"><span class="tg" id="hideT">Hide departure notes until return</span></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Sound</summary>
+    <div class="body">
+      <div class="row"><label>Drone</label><input type="range" id="droneVol" min="0" max="100" value="3"><output id="droneVolV">3</output></div>
+      <div class="row"><label>Piano</label><input type="range" id="melVol" min="0" max="100" value="70"><output id="melVolV">70</output></div>
+      <div class="row"><label>Room</label><input type="range" id="verb" min="0" max="100" value="20"><output id="verbV">20</output></div>
+    </div>
+  </details>
+
+  <details class="m-iv">
+    <summary>How the home ↔ away loop works</summary>
+    <div class="body how">
+      <div><b>Home</b>: <span class="ivI">C</span>, the triad you already own.</div>
+      <div><b>Away</b>: <span class="ivV">G</span>. Same field, light shifted. <span class="awv">5 is shared, 7 and 2 lean back down to 1 and 3.</span><span class="awf">1 is shared, 4 and 6 settle back down to 3 and 5.</span></div>
+      <div><b>Trips vary</b>: sometimes two aways in a row, a longer wander, or a round that never leaves home at all.</div>
+      <div><b>Sing first</b>: with "Sing each away first" on, you get a silent moment to sing the away <i>before</i> it plays. Sing, then check.</div>
+      <div><b>Coming home</b>: returns often resolve the way real lines do — <span class="awv">7 leaning up to 1, 2 falling to 1.</span><span class="awf">4 falling to 3, 6 falling to 5.</span></div>
+      <div><b>Your turn</b>: after each away, sing it back, then hear the way home.</div>
+      <div><b>Home or away?</b>: one triad, hidden. Name it, then hear the answer.</div>
+      <div>The big letter on the screen is the triad sounding now. The numbers are always counted from home, so <span class="ivV">G</span> shows as <span class="awv">5-7-2</span><span class="awf">4-6-1</span>.</div>
+      <div class="legend"><span><i style="background:var(--home)"></i>Home</span><span><i style="background:var(--away)"></i>Away</span><span><i style="background:var(--dep)"></i>Passing note</span><span><i style="background:var(--you)"></i>Your turn</span></div>
+    </div>
+  </details>
+
+  <details class="m-tri">
+    <summary>How the loop works</summary>
+    <div class="body how">
+      <div><b>Global home</b>: the chord, then 1-3-5. Your true north.</div>
+      <div><b>Home</b>: a clean shape, like 3-1-5.</div>
+      <div><b>Departure</b>: the same shape with one outside note added, like 3-1-♭5-5.</div>
+      <div><b>Return</b>: the clean shape again, so you hear what was taken away.</div>
+      <div><b>Your turn</b>: sing it or play it back in the gap. If you only listen, it turns into background music.</div>
+      <div class="legend"><span><i style="background:var(--home)"></i>Home</span><span><i style="background:var(--dep)"></i>Departure</span><span><i style="background:var(--ret)"></i>Return</span><span><i style="background:var(--you)"></i>Your turn</span></div>
+    </div>
+  </details>
+
+  <details id="ckPanel" class="m-tri">
+    <summary><span>Ready for stage 2? <span id="ckN" style="color:var(--mute);font-weight:500"></span></span></summary>
+    <div class="body">
+      <div class="how" style="font-size:12.5px">Tick these only when they're true without the screen. Sing first, check after.</div>
+      <label class="chk"><input type="checkbox" data-ck="a">With only the drone, I can sing 3 and 5 straight away, no reference note</label>
+      <label class="chk"><input type="checkbox" data-ck="b">I can sing every inversion of the triad up and down</label>
+      <label class="chk"><input type="checkbox" data-ck="c">With "Hide departure notes" on, I can name the outside note most of the time</label>
+      <label class="chk"><input type="checkbox" data-ck="d">When I hear a melody note, I can tell whether it's the 1, 3 or 5</label>
+      <div class="ready" id="ckReady">All four true. Tab 2 is ready when you are.</div>
+    </div>
+  </details>
+
+  <details id="ckPanelIV" class="m-iv">
+    <summary><span>Ready to add Am and F? <span id="ckNIV" style="color:var(--mute);font-weight:500"></span></span></summary>
+    <div class="body">
+      <div class="how" style="font-size:12.5px">Tick these only when they're true without the screen.</div>
+      <label class="chk"><input type="checkbox" data-ckiv="a">Over the drone I can sing <span class="ivI">C</span>'s 1-3-5 and <span class="ivV">G</span>'s 5-7-2 with no reference note</label>
+      <label class="chk"><input type="checkbox" data-ckiv="b">When <span class="ivI">C</span> goes to <span class="ivV">G</span>, I hear 1 drop to 7 and 3 drop to 2 while 5 stays</label>
+      <label class="chk"><input type="checkbox" data-ckiv="c">In Home or away?, I'm right almost every time, with chords and with arpeggios</label>
+      <label class="chk"><input type="checkbox" data-ckiv="d">When a real lick lands, I can tell whether it landed on 1 or 3</label>
+      <div class="ready" id="ckReadyIV">All four true. Am (home in sunlight) and F (home in shade) are next.</div>
+    </div>
+  </details>
+  </div>
+</div>
+<script>
+(function(){
+  const tabs=[...document.querySelectorAll("#tabs .tab")];
+  // Tab 1 and C ↔ G share one player (pane1); the body's data-mode decides which controls show
+  function show(t){
+    if(!tabs.some(b=>b.dataset.t===t)) t="1";
+    tabs.forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+    const pane=(t==="iv"||t==="f"||t==="c"||t==="ct")?"1":t;
+    document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.id==="pane"+pane));
+    const mode=(t==="iv"||t==="f")?"iv":t==="ct"?"ct":"tri", away=t==="f"?"IV":"V";
+    const cm=t==="c"?"1":"0";
+    const changed=document.body.dataset.mode!==mode||(mode==="iv"&&document.body.dataset.away!==away)||(document.body.dataset.cells||"0")!==cm;
+    document.body.dataset.mode=mode; document.body.dataset.away=away; document.body.dataset.cells=cm;
+    if(changed) window.dispatchEvent(new CustomEvent("thb:mode"));
+    try{localStorage.setItem("thb.tab",t)}catch(e){}
+  }
+  tabs.forEach(b=>b.onclick=()=>show(b.dataset.t));
+  let saved="1"; try{saved=localStorage.getItem("thb.tab")||"1"}catch(e){}
+  show(saved);
+  let ck={}; try{ck=JSON.parse(localStorage.getItem("thb.ck1")||"{}")}catch(e){}
+  const boxes=[...document.querySelectorAll("[data-ck]")];
+  function upd(){
+    const n=boxes.filter(b=>b.checked).length;
+    document.getElementById("ckN").textContent=n+"/"+boxes.length;
+    document.getElementById("ckReady").classList.toggle("show",n===boxes.length);
+  }
+  boxes.forEach(b=>{ b.checked=!!ck[b.dataset.ck]; b.onchange=()=>{ ck[b.dataset.ck]=b.checked; try{localStorage.setItem("thb.ck1",JSON.stringify(ck))}catch(e){} upd(); }; });
+  upd();
+  let ck2={}; try{ck2=JSON.parse(localStorage.getItem("thb.ckIV")||"{}")}catch(e){}
+  const boxes2=[...document.querySelectorAll("[data-ckiv]")];
+  function upd2(){
+    const n=boxes2.filter(b=>b.checked).length;
+    document.getElementById("ckNIV").textContent=n+"/"+boxes2.length;
+    document.getElementById("ckReadyIV").classList.toggle("show",n===boxes2.length);
+  }
+  boxes2.forEach(b=>{ b.checked=!!ck2[b.dataset.ckiv]; b.onchange=()=>{ ck2[b.dataset.ckiv]=b.checked; try{localStorage.setItem("thb.ckIV",JSON.stringify(ck2))}catch(e){} upd2(); }; });
+  upd2();
+})();
+</script>
+
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+const DRONE_LOOP = 24.2548125;
+</script>
+<script>
+const LABEL = ["1","♭2","2","♭3","3","4","♭5","5","♭6","6","♭7","7"];
+const KEYS = ["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
+const lab = s => LABEL[((s%12)+12)%12];
+const UP = {0:2,4:5,7:9,12:14,"-5":-3};      // diatonic step above each chord tone
+const COLORS = {global:"var(--home)",home:"var(--home)",dep:"var(--dep)",ret:"var(--ret)",you:"var(--you)",away:"var(--away)",quiz:"var(--mute)"};
+
+const SHAPES = [
+  {id:"135",  name:"1-3-5",   n:[0,4,7],      root:true},
+  {id:"531",  name:"5-3-1",   n:[7,4,0],      root:true},
+  {id:"1358", name:"1-3-5-1", n:[0,4,7,12],   root:true},
+  {id:"8531", name:"1-5-3-1 ↓", n:[12,7,4,0], root:true},
+  {id:"315",  name:"3-1-5",   n:[4,0,7]},
+  {id:"351",  name:"3-5-1",   n:[4,7,12]},
+  {id:"513",  name:"5-1-3",   n:[-5,0,4]},
+  {id:"153",  name:"1-5-3",   n:[0,7,4]},
+  {id:"5315", name:"5-3-1-5", n:[7,4,0,-5]},
+];
+const DECOS = [
+  {id:"cb",  name:"Half step from below", f:t=>({pre:[t-1]})},
+  {id:"ca",  name:"Half step from above", f:t=>({pre:[t+1]})},
+  {id:"da",  name:"Scale step from above", f:t=>({pre:[UP[t]]})},
+  {id:"dc",  name:"Double chromatic", f:t=>({pre:[t-2,t-1]})},
+  {id:"e1",  name:"Enclosure (above → below)", f:t=>({pre:[UP[t],t-1]})},
+  {id:"e2",  name:"Enclosure (below → above)", f:t=>({pre:[t-1,UP[t]]})},
+  {id:"nu",  name:"Upper neighbor", f:t=>({post:[UP[t],t]})},
+  {id:"nl",  name:"Lower neighbor", f:t=>({post:[t-1,t]})},
+];
+const DESC = {cb:"half step from below into",ca:"half step from above into",da:"scale-step approach into",dc:"double chromatic into",e1:"enclosure around",e2:"enclosure around",nu:"upper neighbor on",nl:"lower neighbor on"};
+
+// Concepts: the triad plus one added note. A lick piece counts only if every note in it is a triad note or that added note.
+const CONCEPTS=[
+  {id:"2",iv:2,name:"Triad + 2"},{id:"4",iv:5,name:"Triad + 4"},{id:"6",iv:9,name:"Triad + 6"},{id:"7",iv:11,name:"Triad + 7"},
+  {id:"b3",iv:3,name:"Triad + ♭3"},{id:"b6",iv:8,name:"Triad + ♭6"},{id:"b7",iv:10,name:"Triad + ♭7"},
+  {id:"rep",iv:null,name:"Repeated note"},
+];
+const state = {
+  shapes:new Set(SHAPES.map(s=>s.id)),
+  decos:new Set(["cb","ca","da","e1","e2","nu"]),
+  targets:new Set(["1","3","5"]),
+  hide:false
+};
+
+// ---------- UI setup ----------
+const $ = id => document.getElementById(id);
+KEYS.forEach((k,i)=>{const o=document.createElement("option");o.value=i;o.textContent=k+" major";$("key").appendChild(o)});
+// ---------- Keys: one key, or moving through all twelve ----------
+// Every line is written in semitones from home's 1; each queued line carries the key it was made in (it.key),
+// and scheduleItem adds that key, and slides the drone when it changes.
+const KEYMOVE={mode:"stay",order:"4ths"};
+try{ Object.assign(KEYMOVE,JSON.parse(localStorage.getItem("thb.keyMove")||"{}")); const sk=localStorage.getItem("thb.key"); if(sk!==null) $("key").value=sk; }catch(e){}
+let curKey=+$("key").value||0, keyRounds=0, keyT0=0, planT=0, keyBag=[];
+const KEY=()=>curKey;
+function keyUI(){
+  $("keyMove").value=KEYMOVE.mode; $("keyOrd").value=KEYMOVE.order;
+  const moving=KEYMOVE.mode!=="stay";
+  $("keyOrdRow").style.display=moving?"":"none"; $("keyL").textContent=moving?"Start key":"Key";
+}
+function keySave(){ try{ localStorage.setItem("thb.keyMove",JSON.stringify(KEYMOVE)); localStorage.setItem("thb.key",$("key").value); }catch(e){} }
+$("keyMove").onchange=()=>{ KEYMOVE.mode=$("keyMove").value; keyT0=planT; keySave(); keyUI(); };
+$("keyOrd").onchange=()=>{ KEYMOVE.order=$("keyOrd").value; keyBag=[]; keySave(); };
+keyUI();
+function keyReset(){ curKey=+$("key").value||0; keyRounds=0; keyT0=0; planT=0; keyBag=[]; }
+function nextKeyFrom(k){
+  if(KEYMOVE.order==="random"){
+    if(!keyBag.length){ keyBag=KEYS.map((_,i)=>i).filter(i=>i!==k).sort(()=>Math.random()-.5); }
+    return keyBag.pop();
+  }
+  return (k+5)%12;   // round the 4ths: C F B♭ E♭ A♭ D♭ G♭ B E A D G
+}
+// Called at the start of every round (refill). True when this round starts in a new key.
+function keyStep(){
+  keyRounds++;
+  const m=KEYMOVE.mode;
+  if(keyRounds===1){ keyT0=planT; return false; }
+  if(m==="stay") return false;
+  const due = m==="round" || (planT-keyT0 >= (+m)*60-1);
+  if(!due) return false;
+  curKey=nextKeyFrom(curKey); keyT0=planT; return true;
+}
+function mkToggles(el,items,set,minOne=true){
+  items.forEach(it=>{
+    const b=document.createElement("span");b.className="tg"+(set.has(it.id)?" on":"");b.textContent=it.name;
+    b.onclick=()=>{ if(set.has(it.id)){ if(minOne&&set.size===1)return; set.delete(it.id);} else set.add(it.id); b.classList.toggle("on",set.has(it.id)); };
+    el.appendChild(b);
+  });
+}
+mkToggles($("shapeT"),SHAPES,state.shapes);
+mkToggles($("decoT"),DECOS,state.decos);
+state.src=new Set(["pat","lick"]);
+try{ const sv=JSON.parse(localStorage.getItem("thb.src")||"null"); if(Array.isArray(sv)&&sv.length) state.src=new Set(sv); }catch(e){}
+mkToggles($("srcT"),[{id:"pat",name:"Built-in patterns"},{id:"lick",name:"Licks from your solos"},{id:"fav",name:"Your favorites"}],state.src);
+$("srcT").addEventListener("click",()=>{ try{localStorage.setItem("thb.src",JSON.stringify([...state.src]))}catch(e){} });
+state.concepts=new Set(CONCEPTS.map(c=>c.id));
+try{ const cv=JSON.parse(localStorage.getItem("thb.concepts")||"null"); if(Array.isArray(cv)&&cv.length){ state.concepts=new Set(cv);
+  // concepts added after the choice was saved start switched on
+  if(!localStorage.getItem("thb.repSeen")) state.concepts.add("rep"); }
+  localStorage.setItem("thb.repSeen","1"); }catch(e){}
+mkToggles($("conT"),CONCEPTS.map(c=>({id:c.id,name:c.name.replace("Triad ","")})),state.concepts);
+$("conT").addEventListener("click",()=>{ try{localStorage.setItem("thb.concepts",JSON.stringify([...state.concepts]))}catch(e){} });
+mkToggles($("targT"),[{id:"1",name:"Root (1)"},{id:"3",name:"Third (3)"},{id:"5",name:"Fifth (5)"}],state.targets);
+$("hideT").onclick=()=>{state.hide=!state.hide;$("hideT").classList.toggle("on",state.hide)};
+[["tempo"],["pairs"],["droneVol"],["melVol"],["verb"]].forEach(([id])=>{
+  const f=()=>{$(id+"V").textContent=$(id).value; applyMix();}; $(id).addEventListener("input",f);
+});
+function drawStrip(){
+  const s=$("strip"); s.innerHTML="";
+  for(let i=0;i<12;i++){const c=document.createElement("div");c.className="cell"+([0,4,7].includes(i)?" ct":"");c.textContent=LABEL[i];c.id="cell"+i;s.appendChild(c)}
+}
+drawStrip();
+
+// ---------- Phrase generator ----------
+let lastShape=null,lastDeco=null;
+const pick = a => a[Math.floor(Math.random()*a.length)];
+function makeDeparture(){
+  const shapes=SHAPES.filter(s=>state.shapes.has(s.id));
+  const decos=DECOS.filter(d=>state.decos.has(d.id));
+  for(let tries=0;tries<80;tries++){
+    const sh=pick(shapes), de=pick(decos);
+    if(shapes.length>1 && sh.id===lastShape) continue;
+    const idxs=sh.n.map((v,i)=>i).filter(i=>state.targets.has(lab(sh.n[i])));
+    if(!idxs.length) continue;
+    const ti=pick(idxs), t=sh.n[ti];
+    if(UP[t]===undefined && (de.id==="da"||de.id==="e1"||de.id==="e2"||de.id==="nu")) continue;
+    const r=de.f(t), out=[];
+    sh.n.forEach((v,i)=>{
+      if(i===ti){ (r.pre||[]).forEach(p=>out.push({s:p,dec:true})); out.push({s:v,tgt:true}); (r.post||[]).forEach((p,j)=>out.push({s:p,dec:j===0})); }
+      else out.push({s:v});
+    });
+    // reject repeated adjacent pitches or a decoration that is itself a chord tone of the shape right next to it
+    let bad=false; for(let i=1;i<out.length;i++) if(out[i].s===out[i-1].s) bad=true;
+    if(bad) continue;
+    if(decos.length>1 && de.id===lastDeco && Math.random()<.7) continue;
+    lastShape=sh.id; lastDeco=de.id;
+    return {shape:sh, line:out, desc:`${sh.name.replace(" ↓","")} · ${DESC[de.id]} ${lab(t)}`};
+  }
+  const sh=SHAPES[0]; return {shape:sh,line:sh.n.map(s=>({s})),desc:"1-3-5"};
+}
+let queue=[], cycle=0;
+const MODE=()=>{ const m=document.body.dataset.mode; return m==="iv"||m==="ct"?m:"tri"; };
+function refill(){
+  const moved=keyStep(), n0=queue.length;
+  if(MODE()==="iv") refillIV(); else if(MODE()==="ct"&&window.refillCT) refillCT(); else refillTri();
+  const fresh=queue.slice(n0); fresh.forEach(it=>{ if(it.key==null) it.key=curKey; });
+  if(moved){
+    const nk=`New key: ${KEYS[curKey]} major. Same numbers, new ground.`;
+    const g=fresh[0];
+    if(g&&g.kind==="global"){ g.lead=3; g.keyIntro=nk; }
+    else queue.splice(n0,0,{kind:"global",line:[0,4,7].map(s=>({s})),desc:"Home: the chord, then 1-3-5",chord:true,cycle,lead:3,keyIntro:nk,key:curKey});
+  }
+}
+function refillTri(){
+  const P=+$("pairs").value; cycle++;
+  queue.push({kind:"global",line:[0,4,7].map(s=>({s})),desc:"The chord, then 1-3-5",chord:true,cycle});
+  for(let i=0;i<P;i++){
+    if(window.cellsOn&&cellsOn()&&!favOnly){ const CL=cellNext(); if(CL){ for(let r=0;r<cellRep();r++) queue.push(...lickItems(CL,cycle,i+1,P)); continue; } }
+    const src=favOnly?new Set(["fav"]):triDrill==="1"?new Set(["pat"]):triDrill==="2"?new Set(["lick"]):state.src;
+    const usePat=src.has("pat")&&!favOnly, useLick=src.has("lick")&&LICKS&&LICKS.length, useFav=src.has("fav")&&FAVS.length;
+    const opts=[usePat&&"pat",useLick&&"lick",useFav&&"fav"].filter(Boolean);
+    const choice=favOnly?"fav":(opts.length?pick(opts):"pat");
+    if(choice==="fav"&&useFav){ const L=nextFav(); queue.push(...lickItems(L,cycle,i+1,P)); continue; }
+    if(choice==="lick"){ const L=nextLick(); if(L){ queue.push(...lickItems(L,cycle,i+1,P)); continue; } }
+    const d=makeDeparture(), clean=d.shape.n.map(s=>({s}));
+    queue.push({kind:"home",line:clean,desc:`Home shape: ${d.shape.name.replace(" ↓","")}`,cycle,pair:i+1,P});
+    queue.push({kind:"dep",line:d.line,desc:d.desc,cycle,pair:i+1,P});
+    queue.push({kind:"ret",line:clean,desc:`Back to ${d.shape.name.replace(" ↓","")}`,cycle,pair:i+1,P});
+  }
+}
+
+
+// ---------- Licks from your solos ----------
+// Reads every solo in the Music Lab library, finds major-triad ideas (the triad plus approach notes,
+// enclosures or neighbours), and keeps each one's real rhythm.
+let LICKS=null, lickLoad=null, lickBag=[];
+function parseSoloNotes(xml){
+  const doc=new DOMParser().parseFromString(xml,"application/xml");
+  const parts=[...doc.getElementsByTagName("part")];
+  const part=parts.find(p=>p.getElementsByTagName("pitch").length); if(!part) return [];
+  const STEPS={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  const out=[]; let div=1, pos=0, voice0=null;
+  [...part.getElementsByTagName("measure")].forEach((m,mi)=>{
+    let cur=pos, maxEnd=pos;
+    [...m.children].forEach(el=>{
+      const tag=el.nodeName;
+      if(tag==="attributes"){ const d=el.getElementsByTagName("divisions")[0]; if(d) div=+d.textContent||div; }
+      else if(tag==="backup"){ cur-=(+(el.getElementsByTagName("duration")[0]||{}).textContent||0)/div; }
+      else if(tag==="forward"){ cur+=(+(el.getElementsByTagName("duration")[0]||{}).textContent||0)/div; }
+      else if(tag==="note"){
+        if(el.getElementsByTagName("grace").length) return;
+        const v=(el.getElementsByTagName("voice")[0]||{}).textContent||"1";
+        if(voice0===null) voice0=v;
+        const dur=(+(el.getElementsByTagName("duration")[0]||{}).textContent||0)/div;
+        const isChord=el.getElementsByTagName("chord").length>0;
+        if(v!==voice0){ if(!isChord) cur+=dur; maxEnd=Math.max(maxEnd,cur); return; }
+        if(isChord) return;
+        const pitch=el.getElementsByTagName("pitch")[0];
+        if(pitch){
+          const st=pitch.getElementsByTagName("step")[0].textContent, al=+((pitch.getElementsByTagName("alter")[0]||{}).textContent||0),
+            oc=+pitch.getElementsByTagName("octave")[0].textContent, midi=12*(oc+1)+STEPS[st]+al;
+          const tieStop=[...el.getElementsByTagName("tie")].some(t=>t.getAttribute("type")==="stop"), prev=out[out.length-1];
+          if(tieStop&&prev&&prev.midi===midi&&Math.abs(prev.q+prev.dur-cur)<0.01) prev.dur+=dur;
+          else out.push({midi,q:cur,dur,bar:mi+1});
+        }
+        cur+=dur; maxEnd=Math.max(maxEnd,cur);
+      }
+    });
+    pos=Math.max(maxEnd,pos);
+  });
+  return out;
+}
+function findLicks(notes,src){
+  const segs=[]; let curS=[];
+  notes.forEach((n,k)=>{ const p=notes[k-1]; if(p&&n.q-(p.q+p.dur)>0.26){segs.push(curS);curS=[];} curS.push(n); });
+  if(curS.length) segs.push(curS);
+  const out=[], seenRep=new Set();
+  segs.forEach(seg=>{
+    const pcsAll=new Set(seg.map(n=>((n.midi%12)+12)%12));
+    for(const r of pcsAll){
+      if(!pcsAll.has((r+4)%12)||!pcsAll.has((r+7)%12)) continue;
+      const rel=n=>((n.midi-r)%12+12)%12;
+      const runsFor=allowed=>{ const runs=[]; let k=0;
+        while(k<seg.length){
+          if(!allowed.has(rel(seg[k]))){k++;continue;}
+          let e=k; while(e+1<seg.length&&allowed.has(rel(seg[e+1]))) e++;
+          runs.push(seg.slice(k,e+1)); k=e+1;
+        } return runs; };
+      const heard=(w,isT)=>w.some((n,j)=>j&&isT(n)&&isT(w[j-1])&&Math.abs(n.midi-w[j-1].midi)>=3);
+      const span=w=>w[w.length-1].q+w[w.length-1].dur-w[0].q;
+      for(const C of CONCEPTS){
+        if(C.iv===null) continue;
+        const allowed=new Set([0,4,7,C.iv]);
+        // maximal runs of notes that are only triad notes or the added note
+        for(const run of runsFor(allowed)){
+          if(run.length<4) continue;
+          // the tightest piece (up to 8 notes) with all three triad notes and the added note, starting and ending on triad notes
+          let best=null, bA=0, bB=0;
+          for(let a=0;a<run.length;a++) for(let b=a+3;b<run.length&&b-a<8;b++){
+            const w=run.slice(a,b+1), rs=new Set(w.map(rel));
+            if(!(rs.has(0)&&rs.has(4)&&rs.has(7)&&rs.has(C.iv))) continue;
+            if(rel(w[0])===C.iv||rel(w[w.length-1])===C.iv) continue;
+            if(!best||w.length<best.length){ best=w; bA=a; bB=b; }
+          }
+          if(!best) continue;
+          // keep repeated notes at either edge (5-5-♭3-3-1, not just 5-♭3-3-1): the repeat is part of the idea
+          while(bA>0&&run[bA-1].midi===run[bA].midi&&bB-bA<11) bA--;
+          while(bB<run.length-1&&run[bB+1].midi===run[bB].midi&&bB-bA<11) bB++;
+          best=run.slice(bA,bB+1);
+          // the triad has to be heard: at least one leap of a third or more between triad notes
+          if(!heard(best,n=>rel(n)!==C.iv)) continue;
+          if(span(best)>8) continue;
+          out.push(makeLick(best,r,C,src));
+        }
+      }
+      // Repeated note: one triad tone struck two or more times in a row, then on into the triad.
+      // The rest of the piece may use the triad plus at most one added note.
+      for(const iv of [null,...CONCEPTS.filter(c=>c.iv!==null).map(c=>c.iv)]){
+        const allowed=new Set([0,4,7]); if(iv!==null) allowed.add(iv);
+        for(const run of runsFor(allowed)){
+          for(let g=0;g<run.length;g++){
+            if(!(g===0||run[g-1].midi!==run[g].midi)) continue;
+            let ge=g; while(ge+1<run.length&&run[ge+1].midi===run[g].midi) ge++;
+            if(ge===g||![0,4,7].includes(rel(run[g]))) continue;
+            // smallest piece around the repeats with all three triad notes, edges on triad notes, repeats kept whole
+            let best=null;
+            for(let a=g;a>=Math.max(0,g-4);a--){
+              if(a<g&&run[a].midi===run[g].midi) break;
+              for(let b=ge;b<run.length&&b-a<12;b++){
+                const w=run.slice(a,b+1), rs=new Set(w.map(rel));
+                if(!(rs.has(0)&&rs.has(4)&&rs.has(7))) continue;
+                if(!allowed.has(rel(w[0]))||[0,4,7].indexOf(rel(w[0]))<0||[0,4,7].indexOf(rel(w[w.length-1]))<0) continue;
+                if(iv!==null&&!rs.has(iv)) continue;
+                if(b+1<run.length&&run[b+1].midi===run[b].midi) continue;   // don't cut a later repeat in half
+                const score=w.length+(a<g?0.5:0);   // prefer starting on the repeated note
+                if(!best||score<best.score) best={w,score};
+              }
+            }
+            if(!best) continue;
+            const w=best.w, isT=n=>[0,4,7].includes(rel(n));
+            if(!heard(w,isT)||span(w)>8) continue;
+            // skip pieces that mostly overlap one already found (same spot heard through another added note)
+            const q0=w[0].q, q1=q0+span(w);
+            if([...seenRep].some(([x0,x1])=>Math.min(q1,x1)-Math.max(q0,x0)>0.5*(q1-q0))) continue;
+            seenRep.add([q0,q1]);
+            const times=ge-g+1, tone=lab(rel(run[g]));
+            const C={id:"rep",iv,name:`Repeated ${tone}${times>2?" ×"+times:""}${iv!==null?", with "+lab(iv):""}`};
+            out.push(makeLick(w,r,C,src));
+          }
+        }
+      }
+    }
+  });
+  return out;
+}
+function makeLick(win,r,C,src){
+  const rel=n=>((n.midi-r)%12+12)%12, q0=win[0].q;
+  const notes=win.map(n=>({midi:n.midi,t:n.q-q0,d:n.dur,tone:C.iv===null||rel(n)!==C.iv}));
+  const skel=[]; notes.filter(n=>n.tone).forEach(n=>{ if(!skel.length||skel[skel.length-1]!==n.midi) skel.push(n.midi); });
+  const who=(src.name||"").split(" · "), label= who.length>1 ? `${who[1]} · ${who[0]}` : (src.name||"Your solo");
+  return {r,notes,skel,concept:C.id,ideas:[C.name],solo:src.id||label,src:`${label}, bar ${win[0].bar}`,year:src.year||0};
+}
+// Focus tunes (Music Lab sidebar): lean 70/30 toward material from solos on the tunes being learned
+const FOC=(pool,key)=>{ try{ return window.MusicLab&&MusicLab.focus?MusicLab.focus.prefer(pool,key):pool; }catch(e){ return pool; } };
+function loadLicks(){
+  if(lickLoad) return lickLoad;
+  lickLoad=(async()=>{
+    if(!window.MusicLab){ LICKS=[]; return; }
+    try{
+      const solos=await window.MusicLab.solos(), all=[];
+      solos.forEach(so=>{ try{ all.push(...findLicks(parseSoloNotes(so.xml),so)); }catch(e){} });
+      LICKS=all;
+    }catch(e){ LICKS=[]; }
+    try{ triLickCount(); }catch(e){}
+  })();
+  return lickLoad;
+}
+if(window.MusicLab&&MusicLab.onChange) MusicLab.onChange(()=>{ lickLoad=null; LICKS=null; lickBag=[]; try{ triLickCount(); }catch(e){} });
+// Pick a solo first, then a lick from it, so a long solo doesn't crowd out the short ones
+let lastSolo=null;
+function nextLick(){
+  let pool=FOC((LICKS||[]).filter(l=>state.concepts.has(l.concept)),l=>l.src);
+  if(eraPref){ const early=pool.filter(l=>l.year&&l.year<1940); if(early.length) pool=early; }
+  if(!pool.length) return null;
+  // pick a concept first, then a solo that has it, then a piece
+  const cons=[...new Set(pool.map(l=>l.concept))], con=cons[Math.floor(Math.random()*cons.length)];
+  const byCon=pool.filter(l=>l.concept===con);
+  const solos=[...new Set(byCon.map(l=>l.solo))];
+  let pickS=solos[Math.floor(Math.random()*solos.length)];
+  if(solos.length>1) while(pickS===lastSolo) pickS=solos[Math.floor(Math.random()*solos.length)];
+  lastSolo=pickS;
+  const mine=byCon.filter(l=>l.solo===pickS&&!l.used); if(!mine.length){ byCon.forEach(l=>{ if(l.solo===pickS) l.used=false; }); return byCon.filter(l=>l.solo===pickS)[0]; }
+  const L=mine[Math.floor(Math.random()*mine.length)]; L.used=true; return L;
+}
+// Put the lick in this key: its triad root becomes 1, in a comfortable register around home
+function lickItems(L,cycle,pair,P){
+  const pc=((L.r%12)+12)%12;
+  let shift=-pc; const mids=L.notes.map(n=>n.midi+shift), mean=mids.reduce((a,b)=>a+b,0)/mids.length;
+  // 1 in this key sits at semitone 0 relative to home; aim the middle of the lick around 5
+  shift+=12*Math.round((5-(mean-0))/12);
+  const rel=m=>m-0+shift;   // semitones from home's 1 (scheduleItem adds the key)
+  const lineLick=L.notes.map(n=>({s:rel(n.midi),dec:!n.tone,cell:!!n.cell}));
+  const rhythm=L.notes.map(n=>({t:n.t,d:n.d}));
+  const clean=L.skel.map(m=>({s:rel(m)}));
+  const idea=L.ideas.join(", ");
+  const shapeName=clean.map(x=>lab(x.s)).join("-");
+  return [
+    {kind:"home",line:clean,desc:`Home shape: ${shapeName}`,cycle,pair,P,lickSrc:`From ${L.src}`,L},
+    {kind:"dep",line:lineLick,rhythm,desc:idea,cycle,pair,P,lick:true,lickSrc:`From ${L.src}`,L},
+    {kind:"ret",line:lineLick.map(x=>({s:x.s,dec:x.dec,cell:x.cell})),desc:`Same notes, plain: ${idea}`,cycle,pair,P,lickSrc:`From ${L.src}`,L},
+  ];
+}
+// ---------- I ↔ V: licks from your solos that sit on the V triad and land on home ----------
+// Uses the chord symbols in each solo: wherever a V chord moves to its I, keep the line over V if it
+// spells the V triad (with at most two step-wise passing notes), plus the landing on 1 or 3 of I.
+function parseSoloFull(xml){
+  const doc=new DOMParser().parseFromString(xml,"application/xml");
+  const parts=[...doc.getElementsByTagName("part")];
+  const part=parts.find(p=>p.getElementsByTagName("pitch").length); if(!part) return {notes:[],chords:[]};
+  const STEPS={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  const notes=[], chords=[]; let div=1, pos=0, voice0=null;
+  [...part.getElementsByTagName("measure")].forEach((m,mi)=>{
+    let cur=pos, maxEnd=pos;
+    [...m.childNodes].filter(e=>e.nodeType===1).forEach(el=>{
+      const tag=el.nodeName;
+      const num=(name)=>+((el.getElementsByTagName(name)[0]||{}).textContent||0);
+      if(tag==="attributes"){ const d=el.getElementsByTagName("divisions")[0]; if(d) div=+d.textContent||div; }
+      else if(tag==="backup"){ cur-=num("duration")/div; }
+      else if(tag==="forward"){ cur+=num("duration")/div; }
+      else if(tag==="harmony"){
+        const rs=el.getElementsByTagName("root-step")[0]; if(!rs) return;
+        const ra=+((el.getElementsByTagName("root-alter")[0]||{}).textContent||0);
+        const kindEl=el.getElementsByTagName("kind")[0];
+        const kind=kindEl?(kindEl.textContent||"").trim():"major";
+        const off=num("offset")/div;
+        chords.push({q:cur+off,root:((STEPS[rs.textContent.trim()]+ra)%12+12)%12,kind,bar:mi+1});
+      }
+      else if(tag==="note"){
+        if(el.getElementsByTagName("grace").length) return;
+        const v=(el.getElementsByTagName("voice")[0]||{}).textContent||"1";
+        if(voice0===null) voice0=v;
+        const dur=num("duration")/div;
+        const isChord=el.getElementsByTagName("chord").length>0;
+        if(v!==voice0){ if(!isChord) cur+=dur; maxEnd=Math.max(maxEnd,cur); return; }
+        if(isChord) return;
+        const pitch=el.getElementsByTagName("pitch")[0];
+        if(pitch){
+          const st=pitch.getElementsByTagName("step")[0].textContent.trim(), al=+((pitch.getElementsByTagName("alter")[0]||{}).textContent||0),
+            oc=+pitch.getElementsByTagName("octave")[0].textContent, midi=12*(oc+1)+STEPS[st]+al;
+          const tieStop=[...el.getElementsByTagName("tie")].some(t=>t.getAttribute("type")==="stop"), prev=notes[notes.length-1];
+          if(tieStop&&prev&&prev.midi===midi&&Math.abs(prev.q+prev.dur-cur)<0.01) prev.dur+=dur;
+          else notes.push({midi,q:cur,dur,bar:mi+1});
+        }
+        cur+=dur; maxEnd=Math.max(maxEnd,cur);
+      }
+    });
+    pos=Math.max(maxEnd,pos);
+  });
+  chords.sort((a,b)=>a.q-b.q);
+  return {notes,chords};
+}
+// chord kinds that give a major triad on their root
+const MAJ_KIND=k=>/^(major|dominant|major-seventh|major-sixth|major-ninth|dominant-ninth|dominant-11th|dominant-13th|augmented-seventh|7|maj7|6|9|13|)$/.test(k)||(/^dominant|^major/.test(k)&&!/minor/.test(k));
+function findViLicks(full,src,kind){
+  // kind "V": V → I licks on the 5-7-2 triad, landing on 1 or 3 (5 is shared with V).
+  // kind "IV": IV → I licks on the 4-6-1 triad, landing on 3 or 5 (1 is shared with IV).
+  const A=AWAYS[kind||"V"], step=kind==="IV"?7:5, landOK=kind==="IV"?[4,7]:[0,4];
+  const {notes,chords}=full, out=[];
+  for(let c=0;c+1<chords.length;c++){
+    const V=chords[c], I=chords[c+1];
+    if(I.root!==(V.root+step)%12) continue;
+    if(!MAJ_KIND(V.kind)||!MAJ_KIND(I.kind)) continue;
+    if(I.q-V.q<1) continue;   // the away chord must last at least a beat
+    const r=I.root, rel=n=>((n.midi-r)%12+12)%12, isV=n=>A.pcs.includes(rel(n)), isI=n=>[0,4,7].includes(rel(n));
+    // landing: first note around the I chord's arrival, on a tone the away triad doesn't share
+    let k=notes.findIndex(n=>n.q>=I.q-0.26);
+    if(k<1||notes[k].q>I.q+1.01) continue;
+    if(!landOK.includes(rel(notes[k]))) continue;
+    // walk back over the V chord
+    let j=k-1, pass=0;
+    const start=Math.max(V.q-0.26,I.q-6.01);
+    while(j>=0){
+      const n=notes[j], nx=notes[j+1];
+      if(n.q<start) break;
+      if(nx.q-(n.q+n.dur)>0.26) break;               // a rest ends the phrase
+      if(!isV(n)){
+        { const st=Math.abs(nx.midi-n.midi); if(st<1||st>2||pass>=2) break; } // passing notes only by step, at most two
+        if(j<k-1&&!isV(nx)) break;                     // no two passing notes in a row
+        pass++;
+      }
+      j--;
+    }
+    let a=j+1; while(a<k&&!isV(notes[a])){ a++; }      // start on a triad tone
+    const vpart=notes.slice(a,k);
+    if(vpart.length<3) continue;
+    const have=new Set(vpart.filter(isV).map(rel));
+    if(have.size<3) continue;
+    // the triad has to be heard: a leap of a third or more between triad notes
+    if(!vpart.some((n,i)=>i&&isV(n)&&isV(vpart[i-1])&&Math.abs(n.midi-vpart[i-1].midi)>=3)) continue;
+    // landing: the arrival note plus up to two more home-triad notes right after it
+    let e=k; while(e+1<notes.length&&e-k<2&&isI(notes[e+1])&&notes[e+1].q-(notes[e].q+notes[e].dur)<=0.26&&notes[e+1].q<I.q+2) e++;
+    const win=notes.slice(a,e+1), q0=Math.floor(win[0].q+1e-6);   // keep its place in the beat, so swing lands on the off-beats
+    const who=(src.name||"").split(" · "), label= who.length>1 ? `${who[1]} · ${who[0]}` : (src.name||"Your solo");
+    out.push({
+      r, landQ:I.q-q0,
+      notes:win.map((n,i)=>({midi:n.midi,t:n.q-q0,d:n.dur,role:a+i<k?(isV(n)?"v":"p"):"i"})),
+      solo:src.id||label, src:`${label}, bar ${win[0].bar}`, concept:"iv", away:kind||"V", year:src.year||0, Iq:I.q
+    });
+  }
+  return out;
+}
+
+// ---------- C ↔ G: home and away, I and V ----------
+// Same player as tab 1. refillIV() makes the lines for whichever of the four drills is chosen.
+const iv={drill:"A",shapes:new Set(["blk","up","dn"]),chordFirst:true,pos:new Set(["0","1","2"]),quizAs:new Set(["chord","arp"]),sing:true};
+try{ const v=JSON.parse(localStorage.getItem("thb.iv")||"null"); if(v){ if(["A","1","2","3","4"].includes(String(v.drill))&&localStorage.getItem("thb.ivAuto1")) iv.drill=String(v.drill);
+  ["shapes","pos","quizAs"].forEach(k=>{ if(Array.isArray(v[k])&&v[k].length) iv[k]=new Set(v[k]); });
+  if(typeof v.chordFirst==="boolean") iv.chordFirst=v.chordFirst; if(typeof v.sing==="boolean") iv.sing=v.sing; if(v.rep&&localStorage.getItem("thb.ivRep1")) $("ivRep").value=v.rep; } localStorage.setItem("thb.ivRep1","1"); localStorage.setItem("thb.ivAuto1","1"); }catch(e){}
+const ivSave=()=>{ try{ localStorage.setItem("thb.iv",JSON.stringify({drill:iv.drill,shapes:[...iv.shapes],pos:[...iv.pos],quizAs:[...iv.quizAs],chordFirst:iv.chordFirst,sing:iv.sing,rep:+$("ivRep").value})); }catch(e){} };
+const DRILLS=[{id:"A",name:"Auto · just listen"},{id:"1",name:"1 · Blocks & arpeggios"},{id:"2",name:"2 · Voice leading"},{id:"3",name:"3 · Home or away?"},{id:"4",name:"4 · Real licks"}];
+function mkRadio(el,items,get,set){
+  items.forEach(it=>{ const b=document.createElement("span"); b.className="tg"; b.textContent=it.name; b.dataset.id=it.id;
+    b.onclick=()=>{ set(it.id); [...el.children].forEach(c=>c.classList.toggle("on",c.dataset.id===get())); }; el.appendChild(b); });
+  [...el.children].forEach(c=>c.classList.toggle("on",c.dataset.id===get()));
+}
+mkRadio($("drillT"),DRILLS,()=>iv.drill,id=>{
+  if(id===iv.drill) return;
+  if(playing||readyToTap) stop(false);
+  iv.drill=id; document.body.dataset.drill=id; queue=[]; ivSave(); ivRepLabel();
+  if(id!=="3") loadVLicks();
+});
+document.body.dataset.drill=iv.drill;
+
+// ---------- Main tab drill: what leaves home while you listen ----------
+const TRIDRILLS=[{id:"A",name:"Auto · just listen"},{id:"1",name:"1 · Patterns"},{id:"2",name:"2 · Real licks"}];
+let triDrill="A"; try{ const tv=localStorage.getItem("thb.triDrill"); if(["A","1","2"].includes(tv)) triDrill=tv; }catch(e){}
+mkRadio($("triDrillT"),TRIDRILLS,()=>triDrill,id=>{
+  if(id===triDrill) return;
+  if(playing||readyToTap) stop(false);
+  triDrill=id; document.body.dataset.tridrill=id; queue=[];
+  try{ localStorage.setItem("thb.triDrill",id); }catch(e){}
+  if(id==="2"&&!LICKS) loadLicks();
+  triLickCount();
+});
+document.body.dataset.tridrill=triDrill;
+let eraPref=false; try{ eraPref=localStorage.getItem("thb.era")==="1"; }catch(e){}
+const eraChips=()=>["eraT","eraT2"].forEach(id=>{ const el=$(id); if(el) el.classList.toggle("on",eraPref); });
+eraChips();
+["eraT","eraT2"].forEach(id=>{ const el=$(id); if(el) el.onclick=()=>{ eraPref=!eraPref; eraChips(); try{ localStorage.setItem("thb.era",eraPref?"1":"0"); }catch(e){}
+  if(eraPref&&!LICKS) loadLicks().then(()=>{ try{ ivLickCount(); }catch(e){} }); else { try{ ivLickCount(); }catch(e){} } }; });
+function triLickCount(){
+  const el=$("triLickN"); if(!el) return;
+  if(!LICKS){ el.textContent=""; return; }
+  const so=new Set(LICKS.map(l=>l.solo)).size;
+  const early=LICKS.filter(l=>l.year&&l.year<1940).length;
+  el.textContent=LICKS.length?`Found ${LICKS.length} in ${so} of your solos${early?`, ${early} from the 1920s–30s`:""}.`:"None found in your library yet — the session falls back to patterns.";
+}
+mkToggles($("ivShapeT"),[{id:"blk",name:"Blocks"},{id:"up",name:"Arpeggio up"},{id:"dn",name:"Arpeggio down"}],iv.shapes);
+mkToggles($("ivPosT"),[{id:"0",name:"1-3-5 (root)"},{id:"1",name:"3-5-1 (1st inversion)"},{id:"2",name:"5-1-3 (2nd inversion)"}],iv.pos);
+mkToggles($("ivQuizT"),[{id:"chord",name:"Chord"},{id:"arp",name:"Arpeggio"}],iv.quizAs);
+["ivShapeT","ivPosT","ivQuizT"].forEach(id=>$(id).addEventListener("click",ivSave));
+$("ivChordT").classList.toggle("on",iv.chordFirst);
+$("ivChordT").onclick=()=>{ iv.chordFirst=!iv.chordFirst; $("ivChordT").classList.toggle("on",iv.chordFirst); ivSave(); };
+$("ivSingT").classList.toggle("on",iv.sing);
+$("ivSingT").onclick=()=>{ iv.sing=!iv.sing; $("ivSingT").classList.toggle("on",iv.sing); ivSave(); };
+$("ivRepV").textContent=$("ivRep").value;
+$("ivRep").addEventListener("input",()=>{ $("ivRepV").textContent=$("ivRep").value; ivSave(); });
+function ivRepLabel(){ $("ivRepL").textContent = iv.drill==="3" ? "Guesses before a home reminder" : iv.drill==="4" ? "Repeat each lick" : "Repeat each trip"; }
+ivRepLabel();
+
+// The away triad: V (tab 1b, C ↔ G) or IV (tab 1c, C ↔ F). Everything below reads the active one through AW().
+const AWK=()=>document.body.dataset.away==="IV"?"IV":"V";
+const AWAYS={
+  V:{int:7,pcs:[7,11,2],deg:"5-7-2",blk:[-5,-1,2],CH:[-17,-13,-10,-5],
+     VO:{"0":[-1,2,7],"1":[2,7,11],"2":[-5,-1,2]},
+     SH:[[-5,-1,2],[-1,2,7],[2,7,11],[2,-1,-5],[7,2,-1]],
+     CADS:[{n:[-1,0,4,7],d:"7 leans up to 1, then 3-5"},{n:[2,0,4,7],d:"2 falls to 1, then 3-5"},{n:[11,12,7,4],d:"7 leans up to 1, then down 5-3"}]},
+  IV:{int:5,pcs:[5,9,0],deg:"4-6-1",blk:[0,5,9],CH:[-19,-15,-12,-7],
+     VO:{"0":[0,5,9],"1":[5,9,12],"2":[-3,0,5]},
+     SH:[[0,5,9],[5,9,12],[-3,0,5],[9,5,0],[12,9,5]],
+     CADS:[{n:[5,4,0,7],d:"4 falls to 3, then 1-5"},{n:[9,7,4,0],d:"6 falls to 5, then down 3-1"},{n:[5,4,7,12],d:"4 falls to 3, then up 5-1"}]}
+};
+const AW=()=>AWAYS[AWK()];
+// names in the chosen key (C ↔ G or C ↔ F in C)
+const ivNames=(k=KEY())=>({I:KEYS[k],V:KEYS[(k+AW().int)%12]});
+const nm=st=>KEYS[((KEY()+st)%12+12)%12];
+function ivLabels(kk){
+  const k=kk==null?KEY():kk, n=ivNames(k);
+  document.querySelectorAll(".ivI").forEach(e=>e.textContent=n.I);
+  document.querySelectorAll(".ivV").forEach(e=>e.textContent=n.V);
+  $("ivTab").innerHTML=`<b>1b</b>${KEYS[k]} ↔ ${KEYS[(k+7)%12]}`;
+  $("fTab").innerHTML=`<b>1c</b>${KEYS[k]} ↔ ${KEYS[(k+5)%12]}`;
+}
+$("key").addEventListener("change",()=>{ curKey=+$("key").value; keySave(); ivLabels(); keyTag(curKey); }); ivLabels();
+// "playing" is declared further down; on page load it doesn't exist yet, so ask safely
+const isPlaying=()=>{ try{ return playing; }catch(e){ return false; } };
+function keyTag(k){ $("keyTag").innerHTML = `Key of <b>${KEYS[k]}</b>` + (KEYMOVE.mode!=="stay"&&isPlaying()?" · moving":""); }
+keyTag(curKey);
+// the strip marks the away triad's notes as well as home's
+function ivStrip(){ document.querySelectorAll(".cell").forEach((c,i)=>c.classList.toggle("vt",MODE()==="iv"&&AW().pcs.includes(i))); }
+ivStrip();
+window.addEventListener("thb:mode",()=>{ if(playing||readyToTap) stop(false); queue=[]; ivStrip(); ivLabels(); $("triName").textContent=""; if(MODE()==="iv"){ ivLickCount(); if(iv.drill!=="3"&&!VLICKS) loadVLicks(); } });
+
+const IV_CH={I:[-12,-8,-5,0]};   // home chord with its own bass, semitones from home's 1
+const IVCH=T=>T==="I"?IV_CH.I:AW().CH;
+function tri(t,line,extra){
+  const n=ivNames();
+  return Object.assign({kind:t==="I"?"home":"away",triName:t==="I"?n.I:n.V,line:line.map(s=>({s,aw:t==="V"}))},extra);
+}
+let ivLast=null;
+function ivPick(set,list){ const opts=list.filter(x=>set.has(x)); if(!opts.length) return list[0]; let c=pick(opts); if(opts.length>1) while(c===ivLast) c=pick(opts); ivLast=c; return c; }
+
+let ivAuto=0;
+const DNAME={"1":"Blocks & arpeggios","2":"Voice leading","3":"Home or away?","4":"Real lick"};
+function refillIV(){
+  cycle++;
+  let d=iv.drill;
+  if(d==="A"){ const al=ALICKS(); const seq=["1","2"].concat((al&&al.length)||eraTri().length?["4"]:[]); d=seq[ivAuto%seq.length]; ivAuto++; }
+  const auto=iv.drill==="A", tag=auto?` · ${DNAME[d]}`:"";
+  const R=(auto&&d==="3")?Math.max(3,+$("ivRep").value):+$("ivRep").value, n=ivNames(), W=i=>`Round ${cycle}${tag} · ${i}/${R}`;
+  if(d==="1"){
+    // 1. C → G → C as chords or arpeggios — but the trip varies: two aways in a row, a longer wander,
+    //    or a round that never leaves. Arpeggio trips often borrow a rhythm cell from the library licks,
+    //    and the last return can resolve melodically (7 up to 1, 2 down to 1) instead of restating the triad.
+    const A=AW(), aUp=A.blk, aDn=[...A.blk].reverse();
+    const LN={I:{blk:[0,4,7],up:[0,4,7],dn:[7,4,0]},V:{blk:aUp,up:aUp,dn:aDn}};
+    const HOW={blk:"block chord",up:"arpeggio up",dn:"arpeggio down"};
+    const CADS=A.CADS;
+    const TRIPS=[["I","V","I"],["I","V","I"],["I","V","I"],["I","V","V","I"],["I","V","I","V","I"],["I","I"]];
+    const alt=p=>{ const o=["blk","up","dn"].filter(x=>iv.shapes.has(x)&&x!==p); return o.length?pick(o):p; };
+    for(let i=1;i<=R;i++){
+      const trip=pick(TRIPS), sh0=ivPick(iv.shapes,["blk","up","dn"]), left=trip.includes("V");
+      const rc=sh0!=="blk"&&Math.random()<.6?tripCell(3):null;
+      let shP=sh0, sung=false;
+      trip.forEach((T,gi)=>{
+        const last=gi===trip.length-1, again=gi>0&&trip[gi-1]===T;
+        const shLeg=again?alt(shP):sh0; shP=shLeg;
+        if(last&&T==="I"&&left&&Math.random()<.5){   // come home the way real lines do
+          const cad=pick(CADS);
+          const it={kind:"ret",line:cad.n.map((s,j)=>({s,aw:j===0})),desc:`Home: ${cad.d}`,where:W(i),cycle,triName:n.I};
+          if(iv.chordFirst) it.chordNotes=IVCH("I");
+          const c4=rc&&tripCell(4); if(c4){ it.rhythm=c4.cell; it.lickSrc=`Rhythm from ${c4.src}`; }
+          queue.push(it); return;
+        }
+        const it=tri(T,LN[T][shLeg],{
+          chordNotes:(shLeg==="blk"||iv.chordFirst)?IVCH(T):null, chordBeats:shLeg==="blk"?3:2, noLine:shLeg==="blk",
+          desc:(T==="V" ? (again?`${n.V} again, new shape`:`Away: ${n.V} = ${A.deg}`)
+            : gi===0?`Home: ${n.I}` : again?`Still ${n.I} — it never left` : last?`Back home: ${n.I}`:`Home for a moment`)+` · ${HOW[shLeg]}`,
+          where:W(i), cycle});
+        if(rc&&!it.noLine){ it.rhythm=rc.cell; if(T==="V") it.lickSrc=`Rhythm from ${rc.src}`; }
+        if(T==="V"&&iv.sing&&!sung){ it.preGap=(it.noLine?(it.chordBeats||3):it.line.length)+1; it.preText=`Your turn first: sing ${n.V} — then listen`; it.noGap=true; sung=true; }
+        queue.push(it);
+      });
+    }
+  } else if(d==="2"){
+    // 2. each C shape to its nearest G: 5 stays, 1 → 7, 3 → 2 (voices listed low to high).
+    //    Trips vary here too: sometimes a double swing out, sometimes nothing moves at all.
+    const P=ivPick(iv.pos,["0","1","2"]);
+    const VO={"0":{I:[0,4,7],V:AW().VO["0"]},"1":{I:[4,7,12],V:AW().VO["1"]},"2":{I:[-5,0,4],V:AW().VO["2"]}}[P];
+    const shape=VO.I.map(lab).join("-");
+    const moves=VO.I.map((x,j)=>x===VO.V[j]?`${lab(x)} stays`:`${lab(x)}→${lab(VO.V[j])}`).join(" · ");
+    const names=VO.I.map((x,j)=>x===VO.V[j]?`${nm(x)} stays`:`${nm(x)}→${nm(VO.V[j])}`).join(", ");
+    const homeIt=(w,d2)=>tri("I",VO.I,{chordNotes:[-12,...VO.I],desc:d2||`Home: ${n.I} as ${shape}`,where:w,cycle});
+    const awayIt=w=>Object.assign(tri("V",VO.V,{chordNotes:[AW().CH[0],...VO.V],desc:`${moves} (${names})`,where:w,cycle}),
+      {line:VO.V.map((x,j)=>({s:x,aw:x!==VO.I[j]}))});   // only the voices that moved are coloured
+    for(let i=1;i<=R;i++){
+      const w=W(i), r=Math.random(), a1=awayIt(w);
+      if(iv.sing){ a1.preGap=a1.line.length+2; a1.preText="Your turn first: sing where each voice goes"; a1.noGap=true; }
+      if(r<.15) queue.push(homeIt(w),homeIt(w,"Still home — nothing moved"));
+      else if(r<.4) queue.push(homeIt(w),a1,homeIt(w,`Back home: ${shape}`),awayIt(w),homeIt(w,`Back home: ${shape}`));
+      else queue.push(homeIt(w),a1,homeIt(w,`Back home: ${shape}`));
+    }
+  } else if(d==="3"){
+    // 3. hidden C or G; answer, then the reveal plays it again with its name
+    queue.push({kind:"global",line:[0,4,7].map(s=>({s})),desc:`Home reminder: ${n.I}, then 1-3-5`,chord:true,cycle,triName:n.I,where:`Round ${cycle}${tag}`});
+    const SH={I:[[0,4,7],[4,7,12],[-5,0,4],[7,4,0],[12,7,4]],V:AW().SH};
+    for(let i=1;i<=R;i++){
+      let a=Math.random()<.5?"I":"V";
+      if(ivRun.length>=2&&ivRun.slice(-2).every(x=>x===a)) a=a==="I"?"V":"I";   // never three the same in a row
+      ivRun.push(a);
+      const as=pick([...iv.quizAs]), line=pick(SH[a]);
+      const extra = as==="chord" ? {chordNotes:[a==="I"?-12:AW().CH[0],...[...line].sort((x,y)=>x-y)],chordBeats:2,noLine:true} : {};
+      const w=`Round ${cycle}${tag} · guess ${i}/${R}`;
+      const q=tri(a,line,Object.assign({kind:"quiz",hideAll:true,desc:"Home or away?",youText:"Home or away?",wait:3,noGap:true,answer:a,where:w,cycle},extra));
+      queue.push(q, tri(a,line,Object.assign({revealOf:q,desc:"",noGap:true,where:w,cycle},extra)));
+    }
+  } else {
+    // 4. real V → I licks, each R times
+    // with the era chip on, 1920s–30s triad licks played on the away triad share the drill with the strict away → home licks
+    const ET=eraTri(), EV=(ALICKS()||[]).filter(l=>l.year&&l.year<1940);
+    if(ET.length&&(!EV.length||Math.random()<.35)){   // real early away → home lines first; moved triad licks fill in
+      const T=nextEraTri(ET), items=eraAwayItems(T,cycle);
+      if(iv.sing){ const a=items[0]; a.preGap=a.line.length+1; a.preText=`Your turn first: sing ${n.V} — then the lick`; }
+      for(let i=1;i<=R;i++) queue.push(...items.map((x,xi)=>{ const c=Object.assign({},x,{where:`Round ${cycle}${tag} · ${i}/${R}`}); if(i>1&&xi===0) delete c.preGap; return c; }));
+      return;
+    }
+    const L=nextVLick();
+    if(!L){ queue.push({kind:"home",line:[0,4,7].map(s=>({s})),desc:`No ${n.V} → ${n.I} licks found in your library yet`,chord:true,cycle,triName:n.I,where:`Round ${cycle}`}); return; }
+    const items=vLickItems(L,cycle);
+    if(iv.sing){ const a=items[0]; a.preGap=a.line.length+1; a.preText=`Your turn first: sing ${n.V} — then the lick`; }
+    for(let i=1;i<=R;i++) queue.push(...items.map((x,xi)=>{ const c=Object.assign({},x,{where:`Round ${cycle}${tag} · ${i}/${R}`}); if(i>1&&xi===0) delete c.preGap; return c; }));
+  }
+}
+
+// Home or away? answers
+let ivQ=null, ivScore={r:0,n:0}, ivRun=[];
+function ivAnsUI(){ document.querySelectorAll("#ansRow button").forEach(b=>{ b.disabled=!ivQ; b.classList.toggle("picked",!!ivQ&&ivQ.guess===b.dataset.a); }); }
+function ivScoreReset(){ ivScore={r:0,n:0}; ivRun=[]; ivAuto=0; ivQ=null; $("score").textContent="Tap Home or Away while it plays (keys H / A)"; ivAnsUI(); }
+function ivAsk(it){ if(ivQ===it) return; ivQ=it; ivAnsUI(); }
+function ivAnswer(a){ if(!ivQ||ivQ.guess) return; ivQ.guess=a; ivAnsUI(); }
+function ivReveal(it){
+  const q=it.revealOf, n=ivNames(), name=q.answer==="I"?`${n.I}, home`:`${n.V}, away`;
+  it.scored=true;
+  if(q.guess){ ivScore.n++; const ok=q.guess===q.answer; if(ok) ivScore.r++; it.desc=(ok?"✓ Right: ":"✗ It was ")+name; }
+  else it.desc=`It was ${name}`;
+  $("score").textContent=ivScore.n?`${ivScore.r} / ${ivScore.n} right this session`:"No answer that time. Tap Home or Away while it plays";
+  ivQ=null; ivAnsUI();
+}
+document.querySelectorAll("#ansRow button").forEach(b=>b.onclick=()=>ivAnswer(b.dataset.a));
+
+// Real V → I licks from the library
+let VLICKS=null, FLICKS=null, vLoad=null, lastVSolo=null;
+const ALICKS=()=>AWK()==="IV"?FLICKS:VLICKS;   // the active tab's lick list (1b: V → I, 1c: IV → I)
+function ivLickCount(){
+  const L=ALICKS();
+  if(!L) { $("ivLickN").textContent=""; return; }
+  const so=new Set(L.map(l=>l.solo)).size, early=L.filter(l=>l.year&&l.year<1940).length;
+  const et=eraTri().length;
+  $("ivLickN").textContent = (L.length ? `Found ${L.length} in ${so} of your solos${early?`, ${early} from the 1920s–30s`:""}.` : "None found in your library yet.")
+    + (et?` Plus ${et} 1920s–30s triad licks to play on the away triad.`:"");
+}
+function loadVLicks(){
+  if(vLoad) return vLoad;
+  vLoad=(async()=>{
+    if(!window.MusicLab){ VLICKS=[]; FLICKS=[]; ivLickCount(); return; }
+    try{
+      const solos=await window.MusicLab.solos(), all=[], fall=[];
+      solos.forEach(so=>{ try{ const full=parseSoloFull(so.xml); all.push(...awayLicks(full,so,"V")); fall.push(...awayLicks(full,so,"IV")); }catch(e){} });
+      VLICKS=all; FLICKS=fall;
+    }catch(e){ VLICKS=[]; FLICKS=[]; }
+    try{ if((window.MusicLab&&MusicLab.focus&&MusicLab.focus.active())||eraPref) await loadLicks(); }catch(e){}
+    harvestCells();
+    ivLickCount();
+  })();
+  return vLoad;
+}
+window.addEventListener("musiclab:focus",()=>{ if(VLICKS){ (async()=>{ try{ if(MusicLab.focus.active()) await loadLicks(); }catch(e){} harvestCells(); })(); } });
+window.addEventListener("musiclab:solos",()=>{ vLoad=null; VLICKS=null; FLICKS=null; RCELLS=null; if(iv.drill!=="3"&&MODE()==="iv") loadVLicks(); });
+window.addEventListener("load",()=>{ if(iv.drill!=="3"&&MODE()==="iv") loadVLicks(); });
+// Rhythm cells: 3-5-note rhythms lifted from the library licks, so arpeggio trips move like real lines.
+// Even rhythms are skipped (that is the plain setting already); each cell keeps its place in the beat so swing lands right.
+let RCELLS=null;
+function tripCell(len){ const l=RCELLS&&RCELLS[len]; return l&&l.length?pick(FOC(l,c=>c.src)):null; }
+function harvestCells(){
+  RCELLS={}; const seen=new Set();
+  // Focus tunes (Music Lab sidebar): besides the V→I licks, take rhythms from every lick found in solos on those tunes
+  const FX=window.MusicLab&&MusicLab.focus, extra=FX&&FX.active()?(LICKS||[]).filter(l=>FX.is(l.src)):[];
+  (VLICKS||[]).concat(FLICKS||[],extra).forEach(L=>{
+    for(let len=3;len<=5;len++) for(let i=0;i+len<=L.notes.length;i++){
+      const w=L.notes.slice(i,i+len), t0=Math.floor(w[0].t+1e-6);
+      const cell=w.map(x=>({t:x.t-t0,d:x.d}));
+      const span=cell[len-1].t+cell[len-1].d-cell[0].t;
+      if(span<1||span>4.05) continue;
+      const iois=cell.slice(1).map((x,j)=>x.t-cell[j].t);
+      if(iois.some(x=>x<.22)) continue;                          // too fast to sing along with
+      if(iois.every(x=>Math.abs(x-iois[0])<.05)) continue;       // even = what the plain setting already plays
+      const key=len+":"+cell.map(x=>x.t.toFixed(2)).join(",");
+      if(seen.has(key)) continue; seen.add(key);
+      (RCELLS[len]=RCELLS[len]||[]).push({cell,src:L.src});
+    }
+  });
+}
+// Looser away → home finder, used only on 1920s–30s solos: those players rarely spelled a clean triad line over V,
+// so here the line over the away chord just has to touch all three away-triad notes (any passing notes, no leap needed)
+// and land on a home note the away triad doesn't share. Chords the strict finder already took are skipped.
+function findViLicksLoose(full,src,kind,taken){
+  const A=AWAYS[kind||"V"], step=kind==="IV"?7:5, landOK=kind==="IV"?[4,7]:[0,4];
+  const {notes,chords}=full, out=[];
+  for(let c=0;c+1<chords.length;c++){
+    const V=chords[c], I=chords[c+1];
+    if(I.root!==(V.root+step)%12||!MAJ_KIND(V.kind)||!MAJ_KIND(I.kind)||I.q-V.q<1) continue;
+    if(taken.has(I.q)) continue;
+    const r=I.root, rel=n=>((n.midi-r)%12+12)%12, isV=n=>A.pcs.includes(rel(n)), isI=n=>[0,4,7].includes(rel(n));
+    // landing: one of the first two notes around the arrival (a little early or up to 1½ beats late).
+    // Arriving on 1 or 3 (3 or 5 after IV) counts as home at once. Arriving on the shared tone, 2 or 6 also counts,
+    // but only if the line then outlines the whole home triad (1, 3 and 5) within the next few notes.
+    const softOK=kind==="IV"?[0,2,9]:[7,2,9];
+    let k=notes.findIndex(n=>n.q>=I.q-0.51);
+    if(k<1||notes[k].q>I.q+1.51) continue;
+    let soft=false;
+    if(!landOK.includes(rel(notes[k]))){
+      if(k+1<notes.length&&notes[k+1].q<=I.q+1.51&&landOK.includes(rel(notes[k+1]))&&isI(notes[k])) k++;
+      else if(softOK.includes(rel(notes[k]))) soft=true;
+      else continue;
+    }
+    // walk back over the away chord (up to 8 beats), allowing short breaths of up to a beat
+    let a=k-1; const start=Math.max(V.q-0.26,I.q-8.01);
+    if(notes[k].q-(notes[a].q+notes[a].dur)>1.01) continue;
+    while(a-1>=0&&notes[a-1].q>=start&&notes[a].q-(notes[a-1].q+notes[a-1].dur)<=1.01&&k-(a-1)<=16) a--;
+    if(notes[a].q<start-0.01) continue;
+    while(a<k&&!isV(notes[a])) a++;
+    const vpart=notes.slice(a,k);
+    if(vpart.length<3) continue;
+    if(new Set(vpart.filter(isV).map(rel)).size<3) continue;
+    let e=k;
+    if(soft){
+      // the shortest run after the arrival (up to 10 notes, within two bars, short breaths allowed) that holds 1, 3 and 5
+      let got=null;
+      for(let x=k;x<notes.length&&x-k<10&&notes[x].q<I.q+8.01;x++){
+        if(x>k&&notes[x].q-(notes[x-1].q+notes[x-1].dur)>1.01) break;
+        const hs=new Set(notes.slice(k,x+1).filter(isI).map(rel));
+        if(hs.has(0)&&hs.has(4)&&hs.has(7)){ got=x; break; }
+      }
+      if(got===null) continue;
+      e=got;
+    } else {
+      while(e+1<notes.length&&e-k<2&&isI(notes[e+1])&&notes[e+1].q-(notes[e].q+notes[e].dur)<=0.26&&notes[e+1].q<I.q+2.5) e++;
+    }
+    const win=notes.slice(a,e+1), q0=Math.floor(win[0].q+1e-6);
+    const who=(src.name||"").split(" · "), label= who.length>1 ? `${who[1]} · ${who[0]}` : (src.name||"Your solo");
+    out.push({ r, landQ:I.q-q0, arrive:rel(notes[k]), outline:soft,
+      notes:win.map((n,i)=>({midi:n.midi,t:n.q-q0,d:n.dur,role:a+i<k?(isV(n)?"v":"p"):(isI(n)?"i":"p")})),
+      solo:src.id||label, src:`${label}, bar ${win[0].bar}`, concept:"iv", away:kind||"V", year:src.year||0, Iq:I.q, loose:true });
+  }
+  return out;
+}
+
+// Both finders for one solo: strict everywhere, plus the loose one for 1920s–30s solos
+function awayLicks(full,so,kind){
+  const strict=findViLicks(full,so,kind);
+  if(!(so.year&&so.year<1940)) return strict;
+  return strict.concat(findViLicksLoose(full,so,kind,new Set(strict.map(l=>l.Iq))));
+}
+// 1920s–30s triad licks (from tab 1's finder) set on the away triad, then home. Only with the era chip on.
+const eraTri=()=>eraPref&&LICKS?LICKS.filter(l=>l.year&&l.year<1940):[];
+let lastEraSolo=null;
+function nextEraTri(pool){
+  const solos=[...new Set(pool.map(l=>l.solo))];
+  let s=pick(solos); if(solos.length>1) while(s===lastEraSolo) s=pick(solos);
+  lastEraSolo=s; return pick(pool.filter(l=>l.solo===s));
+}
+function eraAwayItems(T,cyc){
+  const n=ivNames(), A=AW(), pc=((T.r%12)+12)%12;
+  let shift=A.int-pc; const mean=T.notes.reduce((a,x)=>a+x.midi+shift,0)/T.notes.length;
+  shift+=12*Math.round((5-mean)/12);
+  const line=T.notes.map(x=>({s:x.midi+shift,aw:x.tone,dec:!x.tone}));
+  const rhythm=T.notes.map(x=>({t:x.t,d:x.d}));
+  const sk=T.skel.map(m=>m+shift), last=T.notes[T.notes.length-1], end=last.t+last.d;
+  const cad=pick(A.CADS), src=`From ${T.src} (${T.year}), moved onto ${n.V}`;
+  return [
+    tri("V",sk,{chordNotes:IVCH("V"),desc:`Away: ${n.V} = ${sk.map(lab).join("-")}`,lickSrc:src,noGap:true,cycle:cyc,L:T}),
+    Object.assign(tri("V",[],{}),{line,rhythm,triName:n.V,desc:`${T.year}: ${(T.ideas||[]).join(", ")} on ${n.V}`,lickSrc:src,cycle:cyc,L:T,
+      backing:[{tb:0,notes:IVCH("V"),beats:Math.max(1,Math.ceil(end))}]}),
+    {kind:"ret",line:cad.n.map((s,j)=>({s,aw:j===0})),desc:`Home: ${cad.d}`,cycle:cyc,triName:n.I,chordNotes:IVCH("I"),lickSrc:src}
+  ];
+}
+function nextVLick(){
+  let pool=FOC(ALICKS()||[],l=>l.src);
+  if(eraPref){ const early=pool.filter(l=>l.year&&l.year<1940); if(early.length) pool=early; }
+  if(!pool.length) return null;
+  const solos=[...new Set(pool.map(l=>l.solo))];
+  let s=pick(solos); if(solos.length>1) while(s===lastVSolo) s=pick(solos);
+  lastVSolo=s;
+  let mine=pool.filter(l=>l.solo===s&&!l.used);
+  if(!mine.length){ pool.forEach(l=>{ if(l.solo===s) l.used=false; }); mine=pool.filter(l=>l.solo===s); }
+  const L=pick(mine); L.used=true; return L;
+}
+// Moved to this key (I's root becomes 1), in a comfortable register: away triad plain → the lick over V → I → home
+function vLickItems(L,cyc){
+  const n=ivNames(), pc=((L.r%12)+12)%12;
+  let shift=-pc; const mm=L.notes.map(x=>x.midi+shift), mean=mm.reduce((a,b)=>a+b,0)/mm.length;
+  shift+=12*Math.round((5-mean)/12);
+  const rel=m=>m+shift;
+  const line=L.notes.map(x=>({s:rel(x.midi),aw:x.role==="v",dec:x.role==="p"}));
+  const rhythm=L.notes.map(x=>({t:x.t,d:x.d}));
+  const vSk=[]; L.notes.filter(x=>x.role==="v").forEach(x=>{ const s=rel(x.midi); if(!vSk.length||vSk[vSk.length-1]!==s) vSk.push(s); });
+  const land=[]; L.notes.filter(x=>x.role==="i").forEach(x=>{ const s=rel(x.midi); if(!land.length||land[land.length-1]!==s) land.push(s); });
+  const src=`From ${L.src}`, path=vSk.map(lab).join("-");
+  // home: the landing note, then on up through the C triad until all three are heard
+  const home=[land[0]]; for(let x=land[0]+1;home.length<3;x++) if([0,4,7].includes(((x%12)+12)%12)) home.push(x);
+  const firstT=L.notes[0].t;
+  return [
+    tri("V",vSk,{chordNotes:IVCH("V"),desc:`Away: the ${n.V} triad in this lick, ${path}`,lickSrc:src,noGap:true,cycle:cyc,L}),
+    Object.assign(tri("V",[],{}),{line,rhythm,triName:`${n.V} → ${n.I}`,desc:`${path} → lands on ${lab(L.arrive!=null?L.arrive:land[0])}${L.outline?", then outlines home":""}`,lickSrc:src,cycle:cyc,L,
+      backing:[{tb:firstT,notes:IVCH("V"),beats:Math.max(1,L.landQ-firstT)},{tb:L.landQ,notes:IVCH("I"),beats:2}]}),
+    tri("I",home,{chordNotes:IVCH("I"),desc:`Home: landed on ${lab(land[0])}, then ${home.map(lab).join("-")}`,lickSrc:src,cycle:cyc,L}),
+  ];
+}
+
+// ---------- Audio ----------
+let ctx,master,melBus,droneBus,verbSend,drone=null;
+// Short, light room: 1.4 s instead of 2.6 s, with a soft onset. Long reverbs are heavy on phones and can make the audio glitch.
+const IR={};   // made once per sample rate, so every rendered piece uses the identical room
+function impulse(sec=1.4){
+  const sr=ctx.sampleRate, len=Math.floor(sr*sec), fade=Math.floor(sr*.008), b=ctx.createBuffer(2,len,sr);
+  if(!IR[sr]){ IR[sr]=[0,1].map(()=>{const d=new Float32Array(len);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8)*Math.min(1,i/fade);return d;}); }
+  for(let c=0;c<2;c++) b.getChannelData(c).set(IR[sr][c]);
+  return b;
+}
+let conv=null, convOn=false, convOff=null;
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number).sort((a,b)=>a-b);
+const buffers = {}; let pianoLoad=null, droneBuf=null, droneStart=0, droneLoad=null;
+const b64 = url => { const bin=atob(url.slice(url.indexOf(',')+1)), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); return u8.buffer; };
+function buildGraph(){
+  const comp=ctx.createDynamicsCompressor();
+  comp.threshold.value=-8; comp.knee.value=6; comp.ratio.value=12; comp.attack.value=.003; comp.release.value=.25;
+  master=ctx.createGain(); master.gain.value=.9; master.connect(comp); comp.connect(ctx.destination);
+  conv=ctx.createConvolver(); conv.buffer=impulse(); verbSend=ctx.createGain(); conv.connect(master); convOn=false;
+  melBus=ctx.createGain(); melBus.connect(master); melBus.connect(verbSend);
+  droneBus=ctx.createGain(); droneBus.connect(master);
+  applyMix();
+}
+function initAudio(){
+  if(!ctx){
+    // "playback" gives the audio engine a bigger buffer. Everything here is scheduled ahead, so nothing is lost, and it stops dropouts (clicks) on phones and Bluetooth.
+    ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'playback'});
+    buildGraph();
+  }
+  if(ctx.state==='suspended') ctx.resume();
+  if(!pianoLoad) pianoLoad=Promise.all(Object.entries(PIANO).map(([m,url])=>new Promise(res=>ctx.decodeAudioData(b64(url),b=>{buffers[m]=b;res()},()=>res()))));
+  if(!droneLoad) droneLoad=new Promise(res=>ctx.decodeAudioData(b64(DRONE_URL),b=>{
+    droneBuf=seamless(b); droneStart=0; res();
+  },()=>res()));
+  return Promise.all([pianoLoad,droneLoad]);
+}
+// The decoded drone file has a tiny glitch in its first few milliseconds, which clicked every time the loop wrapped (~24 s).
+// Build a new loop that skips it and crossfades the tail into the head, so the wrap point is smooth.
+function seamless(b){
+  const sr=b.sampleRate, skip=Math.floor(sr*.03), X=Math.floor(sr*.4), L=b.length-skip-X;
+  const out=ctx.createBuffer(b.numberOfChannels,L,sr);
+  for(let c=0;c<b.numberOfChannels;c++){
+    const src=b.getChannelData(c), dst=out.getChannelData(c);
+    for(let i=0;i<L;i++) dst[i]=src[skip+i];
+    for(let i=0;i<X;i++){ const f=i/X; dst[i]=src[skip+i]*Math.sin(f*Math.PI/2)+src[skip+L+i]*Math.cos(f*Math.PI/2); }
+  }
+  return out;
+}
+function applyMix(){
+  if(!ctx) return;
+  const t=ctx.currentTime;
+  melBus.gain.setTargetAtTime(+$("melVol").value/100*1.1,t,.05);
+  droneBus.gain.setTargetAtTime(+$("droneVol").value/100*.9,t,.1);
+  const v=+$("verb").value/100*.6;
+  verbSend.gain.setTargetAtTime(v,t,.1);
+  // Room at 0 takes the reverb out of the audio path completely, so it costs nothing
+  clearTimeout(convOff);
+  if(v>0 && !convOn){ verbSend.connect(conv); convOn=true; }
+  else if(v===0 && convOn){ convOff=setTimeout(()=>{ if(+$("verb").value===0 && convOn){ verbSend.disconnect(); convOn=false; } },2000); }
+}
+const base = (k=KEY()) => (k<=6?60:48)+k;
+// Real piano: nearest sample, pitch-shifted by at most a semitone or two
+let REC=null;
+function note(m,t,dur,vel=1){
+  if(REC){ REC.push([m,t,dur,vel]); return; }
+  const s=SAMPLE_KEYS.reduce((b,k)=>Math.abs(k-m)<Math.abs(b-m)?k:b,SAMPLE_KEYS[0]);
+  const buf=buffers[s]; if(!buf) return;
+  const src=ctx.createBufferSource(); src.buffer=buf; const rate=Math.pow(2,(m-s)/12); src.playbackRate.value=rate;
+  const g=ctx.createGain(), v=.85*vel, end=Math.min(t+dur*1.15+.15, t+buf.duration/rate);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.004);
+  g.gain.setValueAtTime(v,Math.max(t+.01,end-.2)); g.gain.linearRampToValueAtTime(.0001,end);
+  src.connect(g); g.connect(melBus); src.start(t); src.stop(end+.02);
+  voices.push({src,g,t,end});
+}
+let voices=[];
+// Silence notes that are queued or ringing, with a quick fade so it doesn't click
+function cancelVoices(now){
+  voices.forEach(v=>{
+    try{
+      if(v.t>now+.005){ v.src.stop(0); }
+      else if(v.end>now){ v.g.gain.cancelScheduledValues(now); v.g.gain.setValueAtTime(v.g.gain.value,now); v.g.gain.linearRampToValueAtTime(0,now+.04); v.src.stop(now+.05); }
+    }catch(e){}
+  });
+  voices=[];
+}
+function chord(ms,t,dur){ ms.forEach((m,i)=>note(m,t+i*.012,dur,.62)); }
+// The tanpura-style C drone from the other apps, looped and shifted to the key (never more than 6 semitones)
+const droneRate=k=>Math.pow(2,(k>5?k-12:k)/12);
+let droneKey=null, drones=[], KEYREC=null;   // KEYREC: [time, key] while planning the screen-off audio file
+function startDrone(){
+  droneKey=KEY();
+  if(!droneBuf) return;
+  const g=ctx.createGain(), src=ctx.createBufferSource();
+  src.buffer=droneBuf; src.loop=true; src.playbackRate.value=droneRate(droneKey);
+  src.connect(g); g.connect(droneBus);
+  g.gain.setValueAtTime(0,ctx.currentTime); g.gain.linearRampToValueAtTime(1,ctx.currentTime+2);
+  src.start(ctx.currentTime,droneStart);
+  drone={g,src}; drones=[drone];
+}
+// Slide the drone to a new key at time t: the old one fades out as the new one fades in
+function droneTo(k,t){
+  droneKey=k;
+  if(REC){ if(KEYREC) KEYREC.push([t,k]); return; }
+  if(!droneBuf||!ctx) return;
+  const old=drone, g=ctx.createGain(), src=ctx.createBufferSource();
+  src.buffer=droneBuf; src.loop=true; src.playbackRate.value=droneRate(k);
+  src.connect(g); g.connect(droneBus);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(1,t+1.6);
+  src.start(t,Math.random()*droneBuf.duration*.8);
+  if(old){ try{ old.g.gain.cancelScheduledValues(t); old.g.gain.setTargetAtTime(0,t,.45); old.src.stop(t+2.6); }catch(e){} }
+  drone={g,src}; drones=drones.filter(d=>d!==old).concat(drone);
+}
+function stopDrone(){
+  const t=ctx.currentTime;
+  drones.forEach(({g,src})=>{ try{ g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(0,t+1.2); src.stop(t+1.3); }catch(e){} });
+  drones=[]; drone=null;
+}
+
+// ---------- Scheduler ----------
+let playing=false,nextTime=0,startTime=0,timer=null,uiEvents=[],raf=null;
+function noteTimes(n){
+  const beat=60/+$("tempo").value, sv=$("subdiv").value, swing=sv==="0.5s", u=beat*(sv==="1"?1:.5);
+  const times=[],durs=[]; let t=0;
+  for(let i=0;i<n;i++){ const d=swing?(i%2===0?u*4/3:u*2/3):u; times.push(t); durs.push(d); t+=d; }
+  return {times,durs,total:t,beat};
+}
+function scheduleItem(it,t0){
+  const k=it.key==null?KEY():it.key, b=base(k); let t=t0;
+  const gapMode=$("gap").value;
+  if(k!==droneKey) droneTo(k,t);
+  // a new key: the drone alone for a moment, so the new ground settles before anything is played on it
+  if(it.lead){ uiEvents.push({time:t,type:"key",it}); t+=it.lead; }
+  // Sing first: a silent moment to sing the away before it plays (preGap is in beats)
+  if(it.preGap){ uiEvents.push({time:t,type:"you",pre:true,it}); t+=it.preGap*(60/+$("tempo").value); }
+  if(it.chord||it.chordNotes){   // chordNotes: semitones from home's 1 (C ↔ G uses it for the G chord and voicings)
+    const beat=60/+$("tempo").value, cb=it.chordBeats||2;
+    chord((it.chordNotes||[-12,-8,-5,0]).map(x=>b+x),t,beat*cb);
+    uiEvents.push({time:t,type:"line",it,hl:-1});
+    t+=beat*(cb+.5);
+  }
+  let nt=noteTimes(it.line.length);
+  if(it.rhythm){   // a lick keeps its own rhythm, in beats, at the current tempo (swing applied to off-beat eighths)
+    const beat=nt.beat, sw=$("subdiv").value==="0.5s";
+    const times=it.rhythm.map(x=>{ let tb=x.t; const f=tb-Math.floor(tb); if(sw&&Math.abs(f-.5)<.01) tb+=1/6; return tb*beat; });
+    const durs=it.rhythm.map((x,i)=>Math.max(.08,(i<it.rhythm.length-1?Math.min(x.d*beat,times[i+1]-times[i]):x.d*beat)));
+    const last=it.rhythm.length-1;
+    nt={times,durs,total:times[last]+durs[last],beat};
+  }
+  if(!(it.chord||it.chordNotes)) uiEvents.push({time:t,type:"line",it,hl:-1});
+  // backing: chords under a line, at beats from its start (the V → I licks)
+  (it.backing||[]).forEach(c=>chord(c.notes.map(x=>b+x),t+c.tb*nt.beat,c.beats*nt.beat));
+  if(!it.noLine) it.line.forEach((x,i)=>{
+    note(b+x.s,t+nt.times[i],nt.durs[i],x.dec?1.05:.95);
+    uiEvents.push({time:t+nt.times[i],type:"hl",it,hl:i});
+  });
+  const len = it.noLine ? 0 : nt.total;
+  t+=len;
+  uiEvents.push({time:t,type:"off",it});
+  t+=nt.beat;  // breath
+  if(it.wait){ uiEvents.push({time:t,type:"you",it}); t+=it.wait*nt.beat; return t; }   // answer window (Home or away?)
+  const gap = !it.noGap && gapMode!=="off" && (it.gap || gapMode==="all" || (gapMode==="dep" && (it.kind==="dep"||it.kind==="away")));
+  if(gap){ uiEvents.push({time:t,type:"you",it}); t+=(it.noLine?(it.chordBeats||2)*nt.beat:len)+nt.beat; }
+  return t;
+}
+// Every line that gets scheduled, with its start time, so the arrows can go back to it
+let played=[], fileEvents=[];
+function sched(it,t){ played.push({it,start:t}); return scheduleItem(it,t); }
+function tick(){
+  if(!playing) return;
+  const mins=+$("session").value;
+  while(nextTime<ctx.currentTime+1.2){
+    if(mins && nextTime-startTime>mins*60){ uiEvents.push({time:nextTime,type:"end"}); playing=false; break; }
+    if(!queue.length){ if(oneShot){ uiEvents.push({time:nextTime,type:"end"}); playing=false; break; } planT=nextTime-startTime; refill(); }
+    nextTime=sched(queue.shift(),nextTime);
+    const c=ctx.currentTime; voices=voices.filter(v=>v.end>c);
+  }
+}
+const KINDNAME={global:"Global home",home:"Home",dep:"Departure",ret:"Return",you:"Your turn",away:"Away",quiz:"Home or away?",tone:"Over the bass"};
+COLORS.tone="var(--home)";
+let shownKey=null;
+let revealed=new Set(), shown=null;
+function render(it,hl,mode){
+  const c=COLORS[mode]; $("stage").style.setProperty("--glow",c); $("stage").style.setProperty("--c",c); $("stage").style.borderColor=mode==="dep"?"#5a3027":"var(--line)";
+  $("status").firstChild.textContent=KINDNAME[mode]||"";
+  if(it.key!=null&&it.key!==shownKey){ shownKey=it.key; ivLabels(it.key); keyTag(it.key); }
+  $("where").textContent= it.where || (it.kind==="global" ? `Round ${it.cycle}` : `Round ${it.cycle} · shape ${it.pair}/${it.P}`);
+  const hideDep = state.hide && it.kind==="dep";
+  if(it.revealOf && !it.scored) ivReveal(it);
+  if(it.kind==="quiz" && mode!=="you") ivAsk(it);
+  $("triName").textContent = it.hideAll ? "?" : (it.triName||"");
+  $("chips").innerHTML = it.line.map((x,i)=>{
+    const h = (hideDep && x.dec) || it.hideAll;
+    return `<div class="chip${x.cell&&!h?" cn":""}${x.dec&&!h?" dec":""}${x.aw&&!h?" aw":""}${i===hl?" on":""}${h?" hid":""}">${h?"?":lab(x.s)}</div>`;
+  }).join("");
+  $("desc").textContent = hideDep ? "What got added? Answer comes on the return." : it.desc;
+  $("srcLine").textContent = it.lickSrc || "";
+  if(mode!=="you") showFav(it.L||null);
+  document.querySelectorAll(".cell").forEach(c=>c.classList.remove("on"));
+  if(hl>=0 && !it.hideAll && !(hideDep && it.line[hl].dec)){ const el=$("cell"+(((it.line[hl].s%12)+12)%12)); el && el.classList.add("on"); }
+}
+let lastDep=null;
+function loop(){
+  if(!ctx){return}
+  const now= fileRun ? player.currentTime : ctx.currentTime-(ctx.outputLatency||ctx.baseLatency||0);
+  while(uiEvents.length && uiEvents[0].time<=now){
+    const e=uiEvents.shift();
+    if(e.type==="end"){ stop(true); return; }
+    if(e.type==="key"){ render(e.it,-1,"global"); $("status").firstChild.textContent="New key"; $("desc").textContent=e.it.keyIntro||""; document.querySelectorAll(".chip").forEach(c=>c.classList.add("hid")); continue; }
+    if(e.type==="line"||e.type==="hl"){ render(e.it,e.hl,e.it.kind); if(e.it.kind==="dep") lastDep=e.it; if(e.it.kind==="ret"&&lastDep&&state.hide) $("desc").textContent="It was: "+lastDep.desc; }
+    if(e.type==="off"){ document.querySelectorAll(".chip.on").forEach(c=>c.classList.remove("on")); document.querySelectorAll(".cell.on").forEach(c=>c.classList.remove("on")); }
+    if(e.type==="you"){ render(e.it,-1,e.it.kind==="quiz"?"quiz":"you"); $("desc").textContent=(e.pre&&e.it.preText)||e.it.youText||"Sing it or play it back"; }
+  }
+  if(playing||uiEvents.length){
+    const s=Math.max(0,Math.floor(now-startTime)); $("clock").textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+    $("count").textContent=`Round ${cycle}`;
+  }
+  raf=requestAnimationFrame(loop);
+}
+// ---------- Screen-off mode: render the session to a normal audio file ----------
+let fileMode=false, player=null, fileURL=null, fileRun=false;   // fileRun: the session playing now is the prepared audio file
+try{ fileMode = localStorage.getItem("thb.screenOff")==="1"; }catch(e){ fileMode=false; }
+$("offT").classList.toggle("on",fileMode);
+$("offT").onclick=()=>{ if(playing||loading) return; fileMode=!fileMode; $("offT").classList.toggle("on",fileMode); try{localStorage.setItem("thb.screenOff",fileMode?"1":"0")}catch(e){} };
+const SILENT="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+function wav16(int16,sr){
+  const b=new ArrayBuffer(44+int16.length*2), v=new DataView(b), w=(o,str)=>{for(let i=0;i<str.length;i++)v.setUint8(o+i,str.charCodeAt(i))};
+  w(0,"RIFF"); v.setUint32(4,36+int16.length*2,true); w(8,"WAVE"); w(12,"fmt "); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,"data"); v.setUint32(40,int16.length*2,true);
+  new Int16Array(b,44).set(int16); return new Blob([b],{type:"audio/wav"});
+}
+async function renderFile(onProgress){
+  const live=ctx, mins=(+$("session").value)||20, SR=32000;
+  // 1. plan the whole session (notes + screen events) without making sound
+  queue=[]; cycle=0; uiEvents=[]; played=[]; lastShape=lastDeco=null; REC=[];
+  keyReset(); droneKey=curKey; KEYREC=[[0,curKey]];
+  let t=2.2; while(t<mins*60){ if(!queue.length){ planT=t; refill(); } t=sched(queue.shift(),t); }
+  const notes=REC, keyrec=KEYREC; REC=null; KEYREC=null;
+  const endT=t, total=endT+3, N=Math.ceil(total*SR), out=new Int16Array(N);
+  uiEvents.push({time:endT+1,type:"end"}); fileEvents=uiEvents.slice();
+  // 2. render it in 1-minute pieces, each with a few seconds of lead-in so tails and reverb carry across the joins
+  const SEG=60, PRE=4, segs=Math.ceil(total/SEG);
+  // one drone stretch per key: [start, end, key]; each fades in as the one before fades out
+  const spans=keyrec.map(([t0,k],i)=>({t0,k,t1:i<keyrec.length-1?keyrec[i+1][0]:endT,first:i===0,last:i===keyrec.length-1}));
+  try{
+    for(let s=0;s<segs;s++){
+      const o=s*SEG-PRE, len=Math.ceil((PRE+SEG)*SR), W=PRE+SEG;
+      ctx=new OfflineAudioContext(1,len,SR); buildGraph();
+      if(droneBuf) spans.forEach(sp=>{
+        const fin=sp.first?2:1.6, fout=sp.last?2.5:1.6;
+        if(sp.t0-o>=W || sp.t1+fout-o<=0) return;
+        const rate=droneRate(sp.k);
+        const pts=[[sp.t0,0],[sp.t0+fin,1],[sp.t1,1],[sp.t1+fout,0]].map(([x,v])=>[x-o,v]);
+        const at=x=>{ if(x<=pts[0][0]) return 0; for(let i=1;i<pts.length;i++) if(x<=pts[i][0]){ const [a,va]=pts[i-1],[b,vb]=pts[i]; return b===a?vb:va+(vb-va)*(x-a)/(b-a); } return 0; };
+        const g=ctx.createGain(), src=ctx.createBufferSource(); src.buffer=droneBuf; src.loop=true; src.playbackRate.value=rate;
+        src.connect(g); g.connect(droneBus);
+        const st=Math.max(0,pts[0][0]);
+        g.gain.setValueAtTime(at(st),st);
+        pts.forEach(([x,v])=>{ if(x>st) g.gain.linearRampToValueAtTime(v,x); });
+        const pos=Math.max(0,o-sp.t0);   // seconds into this stretch, so the loop carries on across the 1-minute pieces
+        src.start(st,(pos*rate)%droneBuf.duration);
+        if(pts[3][0]<W) src.stop(pts[3][0]+.05);
+      });
+      notes.forEach(([m,nt,d,v])=>{ const rt=nt-o; if(rt>=0 && rt<PRE+SEG) note(m,rt,d,v); });
+      const buf=await ctx.startRendering(), d=buf.getChannelData(0);
+      const from=Math.round(Math.max(0,s*SEG)*SR), skip=Math.round((from/SR-o)*SR), n=Math.min(N-from, Math.round(SEG*SR));
+      for(let i=0;i<n;i++){ let x=d[skip+i]*32767; out[from+i]= x>32767?32767:x<-32768?-32768:x|0; }
+      onProgress((s+1)/segs);
+    }
+  } finally { ctx=live; voices=[]; }
+  return wav16(out,SR);
+}
+async function startFile(){
+  fileRun=true;
+  if(!player){ player=new Audio(); player.preload="auto"; player.addEventListener("ended",()=>{ if(playing) stop(true); }); }
+  player.src=SILENT; player.play().catch(()=>{});   // unlock playback while we still have your tap
+  loading=true; $("play").textContent="Loading sounds…";
+  await initAudio();
+  $("status").firstChild.textContent="Preparing";
+  const blob=await renderFile(f=>{ $("play").textContent=`Preparing session… ${Math.round(f*100)}%`; });
+  loading=false; ctx.suspend();
+  if(fileURL) URL.revokeObjectURL(fileURL); fileURL=URL.createObjectURL(blob);
+  player.src=fileURL; player.currentTime=0;
+  try{ await player.play(); }catch(e){ $("play").textContent="▶ Tap to start"; $("play").classList.remove("stop"); readyToTap=true; return; }
+  beginFileUI();
+}
+let readyToTap=false;
+function beginFileUI(){
+  shownKey=null; playing=true; startTime=0; setNav(true);
+  if("mediaSession" in navigator){
+    try{
+      navigator.mediaSession.metadata=new MediaMetadata({title:"Triad Home Base",artist:KEYMOVE.mode!=="stay"?"All keys":`${KEYS[+$("key").value]} major`});
+      navigator.mediaSession.setActionHandler("pause",()=>pause());
+      navigator.mediaSession.setActionHandler("play",()=>resume());
+      navigator.mediaSession.setActionHandler("stop",()=>stop(false));
+    }catch(e){}
+  }
+  $("key").disabled=true;
+  $("play").textContent="❚❚ Pause"; $("play").classList.add("stop");
+  $("status").firstChild.textContent="Drone"; $("desc").textContent="Settle into the sound of the chord…";
+  $("stage").style.setProperty("--glow","var(--home)");
+  cancelAnimationFrame(raf); loop();
+}
+
+let loading=false;
+let oneShot=false, favOnly=false;
+async function start(preset){
+  oneShot=!!preset;
+  if(MODE()==="iv"){ ivScoreReset(); if(!preset&&iv.drill!=="3"&&!VLICKS){ $("play").textContent="Finding licks…"; await loadVLicks(); } }
+  else if(MODE()==="tri"&&!preset&&!favOnly&&(triDrill==="2"||(triDrill==="A"&&state.src.has("lick")))&&!LICKS){ $("play").textContent="Finding licks…"; await loadLicks(); }
+  if(fileMode&&!preset) return startFile();
+  if(loading) return; loading=true;
+  $("play").textContent="Loading sounds…";
+  await initAudio(); loading=false; fileRun=false;
+  if(ctx.state==="suspended") ctx.resume();
+  $("where").textContent=""; $("triName").textContent="";
+  queue=preset?preset.slice():[]; cycle=preset?1:0; uiEvents=[]; played=[]; voices=[]; lastShape=lastDeco=null; favPos=0;
+  keyReset(); shownKey=null; startDrone(); playing=true; setNav(true); keyTag(curKey);
+  startTime=ctx.currentTime; nextTime=ctx.currentTime+(preset?0.9:2.2);   // let the drone settle first
+  $("key").disabled=true;
+  $("play").textContent="❚❚ Pause"; $("play").classList.add("stop");
+  $("status").firstChild.textContent="Drone"; $("desc").textContent="Settle into the sound of the chord…";
+  $("stage").style.setProperty("--glow","var(--home)");
+  tick(); timer=setInterval(tick,150); cancelAnimationFrame(raf); loop();
+}
+function stop(done){
+  setNav(false); oneShot=false; favOnly=false; favUI(); ivQ=null; ivAnsUI();
+  if(paused){ paused=false; if(!(fileRun)) ctx.resume(); }
+  if(fileRun){
+    playing=false; uiEvents=[]; readyToTap=false; player.pause();
+    $("key").disabled=false; $("play").textContent="▶ Play"; $("play").classList.remove("stop");
+    $("status").firstChild.textContent=done?"Session done":"Stopped";
+    $("desc").textContent=done?"Nice work. Sit with 1-3-5 for a moment.":"Press play to go again"; $("srcLine").textContent="";
+    document.querySelectorAll(".chip.on,.cell.on").forEach(c=>c.classList.remove("on"));
+    keyBack(); return;
+  }
+  playing=false; clearInterval(timer); uiEvents=[]; stopDrone();
+  try{ melBus.gain.cancelScheduledValues(ctx.currentTime); melBus.gain.setTargetAtTime(0,ctx.currentTime,.05); setTimeout(()=>{ if(!playing){ melBus.disconnect(); const nb=ctx.createGain(); nb.connect(master); nb.connect(verbSend); melBus=nb; applyMix(); } },400);}catch(e){}
+  $("key").disabled=false;
+  $("play").textContent="▶ Play"; $("play").classList.remove("stop");
+  $("status").firstChild.textContent=done?"Session done":"Stopped";
+  $("desc").textContent=done?"Nice work. Sit with 1-3-5 for a moment.":"Press play to go again"; $("srcLine").textContent="";
+  document.querySelectorAll(".chip.on,.cell.on").forEach(c=>c.classList.remove("on"));
+  if(done&&previewL){ $("desc").textContent="That was one of your favorites"; showFav(previewL); }
+  previewL=null;  keyBack();
+}
+// after a session the screen goes back to the key you picked
+function keyBack(){ curKey=+$("key").value||0; shownKey=null; ivLabels(); keyTag(curKey); }
+function setNav(on){ $("prev").disabled=!on; $("next").disabled=!on; $("stopB").disabled=!on; }
+// Pause freezes everything exactly where it is: the live engine is suspended (drone and queued notes included), or the track is paused
+let paused=false;
+function pause(){
+  if(!playing||paused) return; paused=true;
+  if(fileRun) player.pause(); else ctx.suspend();
+  $("play").textContent="▶ Resume"; $("status").firstChild.textContent="Paused";
+}
+function resume(){
+  if(!paused) return; paused=false;
+  if(fileRun) player.play().catch(()=>{}); else ctx.resume();
+  $("play").textContent="❚❚ Pause";
+}
+$("stopB").onclick=()=>{ if(playing) stop(false); };
+function heardNow(){ return fileRun ? player.currentTime : ctx.currentTime-(ctx.outputLatency||ctx.baseLatency||0); }
+// ← goes back to the line you just heard (or the one before, if the current line only just started); → skips ahead
+function step(dir){
+  if(!playing||!played.length) return;
+  resume();
+  const now=heardNow(); let i=0;
+  for(let k=0;k<played.length;k++){ if(played[k].start<=now) i=k; else break; }
+  let j = dir<0 ? (now-played[i].start>1 ? i : Math.max(0,i-1)) : i+1;
+  document.querySelectorAll(".chip.on,.cell.on").forEach(c=>c.classList.remove("on"));
+  if(fileRun){
+    if(j>=played.length) return;
+    const t0=played[j].start; player.currentTime=t0;
+    uiEvents=fileEvents.filter(e=>e.time>=t0-.001);
+    return;
+  }
+  const t=ctx.currentTime;
+  cancelVoices(t);
+  queue=played.slice(j).map(p=>p.it).concat(queue);
+  played.length=Math.min(j,played.length);
+  uiEvents=[]; nextTime=t+.2; tick();
+}
+$("prev").onclick=()=>step(-1);
+$("next").onclick=()=>step(1);
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT") return;
+  if(e.key===" "){ e.preventDefault(); $("play").click(); }
+  if(MODE()==="iv"&&iv.drill==="3"&&(e.key==="h"||e.key==="H")) ivAnswer("I");
+  if(MODE()==="iv"&&iv.drill==="3"&&(e.key==="a"||e.key==="A")) ivAnswer("V");
+  if(e.key==="ArrowLeft"){ e.preventDefault(); step(-1); }
+  if(e.key==="ArrowRight"){ e.preventDefault(); step(1); }
+});
+$("play").onclick=()=>{
+  if(loading) return;
+  if(readyToTap){ readyToTap=false; player.play().then(beginFileUI).catch(()=>{}); return; }
+  if(!playing) start(); else if(paused) resume(); else pause();
+};
+
+// ---------- Favorite licks ----------
+// Kept by Music Lab (this browser and your account), shared with the Favorite licks page and Blues Vocab.
+let FAVS=[], favPos=0, curL=null, previewL=null;
+const favKey=L=>L.src+"|"+L.concept+"|"+L.notes.map(n=>n.midi+"@"+(+n.t).toFixed(3)).join(",");
+const favId=k=>{ let h=2166136261; for(let i=0;i<k.length;i++){ h^=k.charCodeAt(i); h=Math.imul(h,16777619); } return "f"+(h>>>0).toString(36); };
+const isFav=L=>{ const st=favStore(); return !!L&&!!st&&st.has(favId(favKey(L))); };
+const favStore=()=>window.MusicLab&&MusicLab.favs;
+function favPull(){ const st=favStore(); if(!st) return; FAVS=st.list("home").filter(f=>f.kind!=="iv"); favUI(); }   // C ↔ G licks are saved too, but tab 1 only replays its own
+// Music Lab's script loads after this one
+function favHook(){ const st=favStore(); if(!st) return false; st.onChange(favPull); favPull(); return true; }
+if(!favHook()) window.addEventListener("load",favHook);
+function toggleFav(L){
+  const st=favStore(); if(!L||!st) return;
+  const id=favId(favKey(L));
+  if(st.has(id)) st.remove(id);
+  else if(L.concept==="iv"){   // a V → I lick from the C ↔ G tab: shown on the shared Favorite licks page
+    st.add({id,app:"home",kind:"iv",title:"V → I lick",r:L.r,landQ:L.landQ,notes:L.notes.map(n=>({midi:n.midi,t:n.t,d:n.d,tone:n.role!=="p",role:n.role})),
+      skel:L.notes.filter(n=>n.role!=="p").map(n=>n.midi),concept:"iv",ideas:["V → I lick"],solo:L.solo,src:L.src});
+  }
+  else{
+    const name=(L.ideas||[]).join(", ");
+    st.add({id,app:"home",title:name,r:L.r,notes:L.notes.map(n=>({midi:n.midi,t:n.t,d:n.d,tone:n.tone})),skel:L.skel.slice(),concept:L.concept,ideas:(L.ideas||[]).slice(),solo:L.solo,src:L.src});
+  }
+}
+function nextFav(){ const L=FAVS[favPos%FAVS.length]; favPos++; return L; }
+function showFav(L){
+  curL=L; const b=$("favBtn"), on=isFav(L);
+  b.classList.toggle("show",!!L); $("stage").classList.toggle("haslick",!!L);
+  b.classList.toggle("on",on); b.textContent=on?"★ Saved":"☆ Save lick";
+  b.setAttribute("aria-label",on?"Remove this lick from favorites":"Save this lick to favorites");
+  document.querySelectorAll(".fav").forEach(r=>r.classList.toggle("now",!!L&&r.dataset.id===favId(favKey(L))));
+}
+$("favBtn").onclick=()=>toggleFav(curL);
+const escH=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function favUI(){
+  $("favN").textContent=FAVS.length?`(${FAVS.length})`:"";
+  $("favPlay").disabled=!FAVS.length;
+  $("favPlay").textContent=favOnly&&playing?"■ Stop favorites":"▶ Play my favorites";
+  $("favHow").style.display=FAVS.length?"":"none";
+  $("favList").innerHTML = FAVS.length ? FAVS.map(f=>{
+    const dg=f.notes.map(n=>{ const l=lab(n.midi-f.r); return n.tone?l:`<i>${l}</i>`; }).join(" ");
+    return `<div class="fav" data-id="${f.id}"><div class="tx"><div class="dg">${dg}</div><div class="wh">${escH(f.ideas.join(", "))} · ${escH(f.src)}</div></div>`+
+      `<button class="pl" aria-label="Play this lick">▶</button><button class="rm" aria-label="Remove from favorites">✕</button></div>`;
+  }).join("") : `<div class="how" style="font-size:13px">No favorites yet. While a lick plays, tap <b>☆ Save lick</b> on the screen above to keep it here.</div>`;
+  showFav(curL);
+}
+$("favList").addEventListener("click",async e=>{
+  const row=e.target.closest(".fav"); if(!row) return;
+  const f=FAVS.find(x=>x.id===row.dataset.id); if(!f) return;
+  if(e.target.closest(".rm")){ const st=favStore(); if(st) st.remove(f.id); return; }
+  if(e.target.closest(".pl")){
+    if(loading) return;
+    if(playing){ stop(false); await new Promise(r=>setTimeout(r,450)); }
+    previewL=f; start(lickItems(f,1,1,1));
+  }
+});
+$("favPlay").onclick=async()=>{
+  if(!FAVS.length||loading) return;
+  if(playing){ const was=favOnly; stop(false); if(was) return; await new Promise(r=>setTimeout(r,450)); }
+  favOnly=true; favPos=0; await start(); favUI();
+};
+favUI();
+</script>
+<script src="cell-library.js"></script>
+<script src="cell-licks.js"></script>
+<script>
+// ♪ Cells tab: the same player as tab 1, fed with lines that carry the cell of the week (cell-licks.js, cell-library.js)
+(function(){
+  const CP=window.CellsPlayer; if(!CP) return;
+  const S={ix:-1,src:"all",rep:2,early:true,bag:[]};
+  try{ Object.assign(S,JSON.parse(localStorage.getItem("thb.cells")||"{}")); }catch(e){}
+  // a new week starts on the new week's cell; after that your own pick sticks until the next week
+  const WK=Math.floor(Date.now()/(7*864e5));
+  if(S.wk!==WK){ const w=CP.cells.findIndex(c=>c.ix===CP.thisWeek()); if(w>=0) S.ix=w; S.wk=WK; }
+  if(!(S.ix>=0&&S.ix<CP.cells.length)){ const w=CP.cells.findIndex(c=>c.ix===CP.thisWeek()); S.ix=w>=0?w:CP.cells.length-1; }
+  const keep=()=>{ try{ localStorage.setItem("thb.cells",JSON.stringify({ix:S.ix,src:S.src,rep:S.rep,early:S.early,wk:S.wk})); }catch(e){} };
+  const pool=()=>CP.lickList(S.ix,S.src);
+  window.cellsOn=()=>document.body.dataset.cells==="1";
+  window.cellRep=()=>S.rep;
+  window.cellIx=()=>S.ix;
+  window.cellNext=()=>{
+    if(!S.bag.length){ const a=pool().slice().sort(()=>Math.random()-.5); if(S.early) a.sort((x,y)=>(x.era0?1:0)-(y.era0?1:0)); S.bag=a; }   // pop() takes from the end, so early-era lines come first
+    return S.bag.pop();
+  };
+  const SRC=[["all","Built + real"],["real","Real lines only"],["built","Built lines only"]];
+  function ui(){
+    document.getElementById("cellChips").innerHTML=CP.cells.map((c,i)=>`<span class="tg${i===S.ix?" on":""}" data-i="${i}">${c.deg}${c.ix===CP.thisWeek()?" · this week":""}</span>`).join("");
+    document.getElementById("cellSrcT").innerHTML=SRC.map(([k,n])=>`<span class="tg${S.src===k?" on":""}" data-s="${k}">${n}</span>`).join("");
+    document.getElementById("cellEraT").classList.toggle("on",S.early);
+    document.getElementById("cellRep").value=String(S.rep);
+    document.getElementById("cellN").textContent=`(${pool().length} lines)`;
+  }
+  function changed(){ S.bag=[]; keep(); ui(); try{ if(playing) queue=[]; }catch(e){} window.dispatchEvent(new CustomEvent("thb:cell")); }
+  document.getElementById("cellChips").onclick=e=>{ const b=e.target.closest("[data-i]"); if(!b) return; S.ix=+b.dataset.i; changed(); };
+  document.getElementById("cellSrcT").onclick=e=>{ const b=e.target.closest("[data-s]"); if(!b) return; S.src=b.dataset.s; changed(); };
+  document.getElementById("cellEraT").onclick=()=>{ S.early=!S.early; changed(); };
+  document.getElementById("cellRep").onchange=e=>{ S.rep=+e.target.value; changed(); };
+  ui();
+})();
+</script>
+<script>
+// ♩ Chord tones tab: one note over the bass, then the cell of the week, on tab 1's player.
+// Lines are in semitones from home's 1, so the global key setting moves every one of them.
+(function(){
+  const CT={stage:"auto",rep:2,hide:false};
+  try{ Object.assign(CT,JSON.parse(localStorage.getItem("thb.ct")||"{}")); }catch(e){}
+  const keep=()=>{ try{ localStorage.setItem("thb.ct",JSON.stringify(CT)); }catch(e){} };
+  const STAGES=[["auto","1 3 5 → cell"],["tones","Only 1 3 5"],["cell","Only the cell"]];
+  const HOW={auto:"Each round: home, then 1, 3 and 5 one at a time over the bass, then each note of the cell alone, then the cell as a shape, then three lines that use it.",
+    tones:"Each round: home, then 1, 3 and 5 one at a time over the bass, in a new order every time.",
+    cell:"Each round: home, then each note of the cell alone over the bass, then the cell as a shape, then three lines that use it."};
+  const CTONE=[0,4,7];
+  const cellNow=()=>{ const C=window.CellsPlayer; if(!C||!window.cellIx) return null; return C.cells[cellIx()]||null; };
+  function ui(){
+    document.getElementById("ctStageT").innerHTML=STAGES.map(([k,n])=>`<span class="tg${CT.stage===k?" on":""}" data-s="${k}">${n}</span>`).join("");
+    document.getElementById("ctHow").textContent=HOW[CT.stage];
+    document.getElementById("ctHideT").classList.toggle("on",CT.hide);
+    document.getElementById("ctRep").value=String(CT.rep);
+    const c=cellNow(), C=window.CellsPlayer;
+    document.getElementById("ctCell").innerHTML=c?`Cell: <b>${c.deg}</b>${C&&c.ix===C.thisWeek()?" (this week)":""}. Pick another in the ♪ Cells tab.`:"";
+  }
+  function changed(){ keep(); ui(); try{ if(playing) queue=[]; }catch(e){} }
+  document.getElementById("ctStageT").onclick=e=>{ const b=e.target.closest("[data-s]"); if(!b) return; CT.stage=b.dataset.s; changed(); };
+  document.getElementById("ctHideT").onclick=()=>{ CT.hide=!CT.hide; changed(); };
+  document.getElementById("ctRep").onchange=e=>{ CT.rep=+e.target.value; changed(); };
+  window.addEventListener("thb:cell",ui);
+  ui();
+
+  const BASS=[{notes:[-12],tb:0,beats:3.6}];
+  let lastPc=null;
+  // one note over the bass: bass first, the note half a beat later, both held
+  function tone(s,where,list){
+    const pc=((s%12)+12)%12, dec=!CTONE.includes(pc), name=lab(s);
+    const base={kind:"tone",line:[{s,dec}],rhythm:[{t:.5,d:2.6}],backing:BASS,cycle,where};
+    if(CT.hide){
+      list.push(Object.assign({},base,{hideAll:true,desc:"Which number is it?",gap:true,youText:"Sing it and name it"}));
+      list.push(Object.assign({},base,{desc:`It was ${name}`,noGap:true}));
+    } else list.push(Object.assign({},base,{desc:`${name} over the bass`,gap:true,youText:`Sing the ${name} over the bass`}));
+  }
+  // every note of a set once, in a fresh order (never the same note twice in a row across sets), each heard rep times
+  function toneSet(pcs,label,list){
+    let o=pcs.slice().sort(()=>Math.random()-.5);
+    if(o.length>1&&o[0]===lastPc) o.push(o.shift());
+    o.forEach((pc,i)=>{
+      const s=pc===0&&Math.random()<.4?12:pc;   // home sometimes up an octave: same 1, different height
+      for(let r=0;r<CT.rep;r++) tone(s,`Round ${cycle} · ${label} ${i+1}/${o.length}`,list);
+      lastPc=pc;
+    });
+  }
+  function cellShape(c,list){
+    const fw=c.pcs.slice(), bw=fw.slice().reverse();
+    const mk=(pcs,label)=>({kind:"tone",line:pcs.map(s=>({s,dec:!CTONE.includes(s)})),rhythm:[{t:.5,d:1},{t:1.5,d:1},{t:2.5,d:2}],
+      backing:[{notes:[-12],tb:0,beats:4.6}],desc:`${label}: ${pcs.map(lab).join(" ")}`,gap:true,youText:"Sing the cell back",cycle,where:`Round ${cycle} · the cell`});
+    for(let r=0;r<CT.rep;r++) list.push(mk(fw,"The cell"));
+    list.push(mk(bw,"The cell backwards"));
+  }
+  window.refillCT=function(){
+    cycle++;
+    const list=[];
+    list.push({kind:"global",line:CTONE.map(s=>({s})),desc:"Home: the chord, then 1-3-5",chord:true,cycle,where:`Round ${cycle} · home`});
+    const c=cellNow();
+    if(CT.stage!=="cell"||!c) toneSet(CTONE,"chord tone",list);
+    if(CT.stage!=="tones"&&c){
+      toneSet([...new Set(c.pcs)],"cell note",list);
+      cellShape(c,list);
+      for(let i=0;i<3;i++){ const L=window.cellNext&&cellNext(); if(L) list.push(...lickItems(L,cycle,i+1,3)); }
+    }
+    queue.push(...list);
+  };
+})();
+</script>
+<script src="lab.js"></script>
+</body>
+</html>
+

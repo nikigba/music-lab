@@ -1,0 +1,1032 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Triad Color Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: tune + key pickers → control bar → rounded frame holding the bars (4 per row) → status → add-a-tune panel → color key.
+   Deliberately dark-only, same card language as the other harmony apps. */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #f2f2f2;
+  --muted: #a3a3a8;
+  --dim: #6e6e73;
+  --line: #2c2c2e;
+  --card-line: #3a3a3c;
+  --strip-ink: #1c1c1e;
+  --panel: #111113;
+  --field: #1a1a1d;
+  --gold: hsl(50 68% 74%);
+  --warn: #F1A15C;
+  --focus: hsl(205 60% 70%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h1 .by { color: var(--dim); font-weight: 400; font-size: .55em; margin-left: 10px; letter-spacing: 0; white-space: nowrap; }
+
+/* Pickers */
+.pickers { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.sel { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.sel select {
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--fg); background: var(--field);
+  border: 1px solid var(--card-line); border-radius: 10px; padding: 8px 32px 8px 12px; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size: 5px 5px; background-repeat: no-repeat;
+  max-width: 64vw;
+}
+.btn {
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--fg);
+  background: #1e1e20; border: 1px solid var(--card-line); border-radius: 999px;
+  padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover { background: #26262a; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn[aria-pressed="true"] { background: var(--gold); color: var(--strip-ink); border-color: var(--gold); }
+.btn.ghost { background: transparent; }
+.btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.btn[aria-pressed="true"] .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
+
+/* Controls */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
+}
+.ctl { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctl input[type=range] { width: 100px; accent-color: var(--gold); }
+.ctl output { color: var(--fg); font-variant-numeric: tabular-nums; min-width: 3ch; }
+.seg { display: inline-flex; border: 1px solid var(--card-line); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+.seg button { font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: #2c2c2f; color: var(--fg); }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { accent-color: var(--gold); width: 15px; height: 15px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; width: 100%; }
+.row .lbl { font-size: 13px; color: var(--dim); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Frame + grid */
+.frame { border: 1.5px solid var(--line); border-radius: 26px; padding: clamp(12px, 2.6vw, 26px); }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(8px, 2vw, 18px); }
+.card {
+  font: inherit; color: inherit; text-align: left; padding: 0; cursor: pointer;
+  background: #000; border: 1.5px solid var(--card-line); border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; min-width: 0; touch-action: manipulation;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.card:hover { border-color: #5a5a5e; }
+.card:active { transform: scale(.98); }
+.card.picked { border-color: #fff; box-shadow: 0 0 0 1.5px #fff; }
+.card.picked:active, .grid.selecting .card:active { transform: none; }
+.strip .num { font-size: .68em; font-weight: 500; opacity: .4; margin-left: .3em; }
+.grid.selecting { user-select: none; -webkit-user-select: none; }
+.card { touch-action: pan-y; }
+.card.playing { border-color: #fff; box-shadow: 0 0 0 3px var(--glow, #fff), 0 0 28px -4px var(--glow, #fff); }
+.strip {
+  height: clamp(58px, 8.5vw, 80px); display: grid; place-items: center;
+  color: var(--strip-ink); font-size: clamp(14px, 2.3vw, 21px); font-weight: 600;
+  text-align: center; padding-inline: 6px; line-height: 1.2; font-variant-numeric: tabular-nums;
+}
+.body { padding: clamp(8px, 1.6vw, 14px); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.fn { font-size: clamp(11px, 1.5vw, 13px); color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deg { font-size: clamp(12px, 1.7vw, 15px); color: var(--muted); line-height: 1.45; font-variant-numeric: tabular-nums; }
+.deg .n { transition: color .08s; }
+.deg .n.sev { display: none; }
+.show7 .deg .n.sev { display: inline; }
+.deg .n.on { color: #fff; font-weight: 700; text-shadow: 0 0 10px var(--glow, #fff); }
+
+.status { font-size: 13px; color: var(--muted); min-height: 2.8em; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.status b { color: var(--fg); font-weight: 600; }
+
+/* Add a tune */
+.add { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.add h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.add p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 70ch; }
+.drop {
+  border: 1.5px dashed var(--card-line); border-radius: 14px; padding: 18px; text-align: center;
+  font-size: 13.5px; color: var(--muted); cursor: pointer; display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.drop.over { border-color: var(--gold); color: var(--fg); }
+.drop img { max-height: 160px; border-radius: 8px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.fld { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--dim); min-width: 0; }
+.fld input, .fld textarea {
+  font: inherit; font-size: 14px; color: var(--fg); background: var(--field); border: 1px solid var(--card-line);
+  border-radius: 10px; padding: 9px 11px; width: 100%;
+}
+.fld textarea { min-height: 96px; font-variant-numeric: tabular-nums; line-height: 1.6; resize: vertical; }
+.msg { font-size: 13px; color: var(--muted); min-height: 1.3em; }
+.msg.err { color: var(--warn); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* Key */
+.key { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; }
+.scale { overflow-x: auto; }
+.key svg { width: 100%; max-width: 640px; min-width: 360px; display: block; }
+.keytext { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.keytext h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.keytext p { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin: 0; max-width: 70ch; }
+.keytext b { color: var(--fg); font-weight: 600; }
+.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 18px; }
+.lg { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--muted); line-height: 1.4; }
+.sw { width: 16px; height: 16px; border-radius: 4px; flex: none; margin-top: 1px; }
+.lg b { color: var(--fg); font-weight: 600; }
+
+@media (max-width: 560px) {
+  .ctl input[type=range] { width: 80px; }
+  .grid { gap: 8px; }
+  .strip { font-size: 13px; }
+}
+@media (max-width: 380px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <h1 id="title">12-bar blues <span class="by" id="by"></span></h1>
+
+  <div class="pickers">
+    <label class="sel">Tune <select id="tuneSel"></select></label>
+    <label class="sel">Key <select id="keySel"></select></label>
+    <button class="btn ghost" id="addBtn" aria-expanded="false">+ Add a tune from a screenshot</button>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <button class="btn" id="droneBtn" aria-pressed="false"><span class="dot"></span><span id="droneLbl">C drone</span></button>
+      <label class="ctl">Drone vol <input type="range" id="droneVol" min="0" max="100" value="10"></label>
+      <label class="ctl">Piano vol <input type="range" id="keysVol" min="0" max="100" value="70"></label>
+      <button class="btn" id="playAll">▶ Play all</button>
+      <label class="ctl">Tempo <input type="range" id="tempo" min="40" max="180" value="84"><output id="tempoOut">84</output></label>
+    </div>
+    <div class="row">
+      <span class="lbl">Route</span>
+      <div class="seg" role="group" aria-label="Voice-leading route">
+        <button data-route="root" aria-pressed="false">Root position</button>
+        <button data-route="closest" aria-pressed="true">Closest note</button>
+        <button data-route="alt">Closest, alternating</button>
+        <button data-route="up">Step up</button>
+        <button data-route="down">Step down</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="Arpeggio direction">
+        <button id="dirUp" aria-pressed="true">Up</button>
+        <button id="dirUpDown" aria-pressed="false">Up &amp; down</button>
+      </div>
+      <label class="check"><input type="checkbox" id="block"> Play as chord</label>
+      <label class="check"><input type="checkbox" id="add7"> Add 7th</label>
+      <label class="check"><input type="checkbox" id="autoDrone"> Drone on with bars</label>
+      <label class="check"><input type="checkbox" id="loop"> Loop</label>
+    </div>
+  </div>
+
+  <div class="frame"><div class="grid" id="grid"></div></div>
+
+  <div class="status" id="status">Turn on the drone, then tap any bar.</div>
+
+  <section class="add" id="addPanel" hidden>
+    <h2>Add a tune</h2>
+    <p>Drop a screenshot of a chord chart (numbers or letter names). Claude reads it and writes the changes as numbers from the tonic, so the tune works in every key. Check the result below before saving; you can fix any chord by hand.</p>
+    <label class="drop" id="drop" for="file">
+      <span id="dropTxt">Drop a screenshot here, or tap to choose one</span>
+      <img id="thumb" alt="" hidden>
+    </label>
+    <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+    <div class="actions">
+      <button class="btn" id="readBtn" disabled>Read chords</button>
+      <button class="btn ghost" id="stopRead" hidden>Stop</button>
+      <span class="msg" id="readMsg"></span>
+    </div>
+    <div class="fields">
+      <label class="fld">Name <input id="fName" autocomplete="off"></label>
+      <label class="fld">Composer <input id="fBy" autocomplete="off"></label>
+    </div>
+    <label class="fld">Changes: one bar between bars | , chords inside a bar separated by spaces, % repeats the bar before
+      <textarea id="fBars" spellcheck="false" placeholder="2m7 | 57 | 1maj7 | % | ..."></textarea>
+    </label>
+    <div class="actions">
+      <button class="btn" id="previewBtn">Preview</button>
+      <button class="btn" id="saveBtn" aria-pressed="true">Save tune</button>
+      <button class="btn ghost" id="delBtn" hidden>Delete this tune</button>
+      <span class="msg" id="saveMsg"></span>
+    </div>
+  </section>
+
+  <section class="key">
+    <div class="scale"><svg id="wheel" viewBox="0 0 520 172" role="img" aria-label="Each triad placed by its distance from the tonic"></svg></div>
+    <div class="keytext">
+      <h2>How it works</h2>
+      <p>Gold is home (the tonic). The farther a chord is from home, the more its color cools and dims, ending in blue at the tritone. Distance is the number of steps around the circle of fifths to the chord's root, plus half a step for each note outside the major scale. Sharp side cools through amber, coral and mauve; flat side through lime, sage and teal. Colors and numbers stay the same in every key; only the pitch moves.</p>
+      <p><b>Routes</b> decide where each triad starts after the last note you heard. <b>Closest note</b> starts on the nearest chord tone and plays the other two in random order. <b>Alternating</b> does the same but switches direction each chord, up then down. <b>Step up</b> and <b>Step down</b> force the next triad to start just above or just below the last note, so the line keeps climbing or falling until it hits the edge of the piano range and turns back. Esc starts fresh from root position.</p>
+      <p><b>Looping a few bars:</b> drag across bars (or tap one, then Shift-click another) to select them. Space or the play button loops just those bars, ignoring the Loop checkbox. Click anywhere outside the selection to stop and clear it; the control panel doesn't count, so you can change tempo or route while it loops.</p>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+</div>
+
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+// Acoustic piano samples (MIT, github.com/Leethring/piano-sound-samples), mono, keyed by MIDI note
+// Drone: user-supplied Indian drone in C (myNoise), crossfaded into a seamless 24.25s loop; pitch-shifted for other keys
+const DRONE_LOOP = 24.2548125;
+
+/* ---------- Tunes: chords written as numbers from the tonic ---------- */
+const BUILTIN = [
+  { id: 'blues', name: '12-bar blues', by: 'jazz blues', bars:
+    '17 | 47 | 17 | 5m7 17 | 47 | #4dim7 | 17 | 67 | 2m7 | 57 | 17 67 | 2m7 57' },
+  { id: 'pent-up-house', name: 'Pent Up House', by: 'Sonny Rollins', bars:
+    '2m7 | 57 | 1maj7 | % | 2m7 | 57 | 1maj7 | % | 5m7 | 17 | 4m7 | b77 | 2m7 | 57 | 1maj7 | %' },
+  { id: 'there-will-never', name: 'There Will Never Be Another You', by: 'Harry Warren · A B A C, from your iReal Pro chart', bars:
+    '1maj7 | % | 7m7b5 | 37b9 | 6m7 | % | 5m7 | 17 | 4maj7 | b77#11 | 1maj7 | 6m7 | 27 | % | 2m7 | 57 | ' +
+    '1maj7 | % | 7m7b5 | 37b9 | 6m7 | % | 5m7 | 17 | 4maj7 | b77#11 | 1maj7 | #4m7b5 77 | 1maj7 47 | 3m7 67 | 2m7 57 | 16 57' },
+  // minor tunes are written from their minor tonic (1m), so home is the minor chord
+  { id: 'autumn-leaves', name: 'Autumn Leaves', by: 'Joseph Kosma · minor, from the i chord', bars:
+    '4m7 | b77 | b3maj7 | b6maj7 | 2m7b5 | 57 | 1m6 | % | 4m7 | b77 | b3maj7 | b6maj7 | 2m7b5 | 57 | 1m6 | % | ' +
+    '2m7b5 | 57 | 1m6 | % | 4m7 | b77 | b3maj7 | b6maj7 | 2m7b5 | 57 | 1m7 47 | b7m7 b37 | 2m7b5 | 57 | 1m6 | %' },
+  { id: 'all-the-things', name: 'All the Things You Are', by: 'Jerome Kern', bars:
+    '6m7 | 2m7 | 57 | 1maj7 | 4maj7 | 77 | 3maj7 | % | 3m7 | 6m7 | 27 | 5maj7 | 1maj7 | #47 | 7maj7 | % | ' +
+    '#1m7 | #47 | 7maj7 | % | #6m7b5 | #27 | #5maj7 | 37b9 | ' +
+    '6m7 | 2m7 | 57 | 1maj7 | 4maj7 | 4m7 | 3m7 | #2dim7 | 2m7 | 57 | 1maj7 | 7m7b5 37b9' },
+  { id: 'rhythm-changes', name: 'Rhythm changes', by: 'I Got Rhythm · Anthropology, Oleo, Moose the Mooche', bars:
+    '1maj7 6m7 | 2m7 57 | 1maj7 6m7 | 2m7 57 | 17 | 4maj7 4m6 | 1 67 | 2m7 57 | ' +
+    '1maj7 6m7 | 2m7 57 | 1maj7 6m7 | 2m7 57 | 17 | 4maj7 4m6 | 1 57 | 16 | ' +
+    '37 | % | 67 | % | 27 | % | 57 | % | ' +
+    '1maj7 6m7 | 2m7 57 | 1maj7 6m7 | 2m7 57 | 17 | 4maj7 4m6 | 1 57 | 16' },
+  { id: 'lady-bird', name: 'Lady Bird', by: 'Tadd Dameron', bars:
+    '1maj7 | % | 4m7 | b77 | 1maj7 | % | b7m7 | b37 | b6maj7 | % | 6m7 | 27 | 2m7 | 57 | 1maj7 b37 | b6maj7 b27' },
+  { id: 'satin-doll', name: 'Satin Doll', by: 'Duke Ellington', bars:
+    '2m7 57 | 2m7 57 | 3m7 67 | 3m7 67 | 6m7 27 | b6m7 b27 | 16 | % | ' +
+    '2m7 57 | 2m7 57 | 3m7 67 | 3m7 67 | 6m7 27 | b6m7 b27 | 16 | % | ' +
+    '5m7 17 | 5m7 17 | 4maj7 | % | 6m7 27 | 6m7 27 | 2m7 57 | 2m7 57 | ' +
+    '2m7 57 | 2m7 57 | 3m7 67 | 3m7 67 | 6m7 27 | b6m7 b27 | 16 | %' },
+  { id: 'a-train', name: 'Take the A Train', by: 'Billy Strayhorn', bars:
+    '16 | % | 27 | % | 2m7 | 57 | 16 | 2m7 57 | 16 | % | 27 | % | 2m7 | 57 | 16 | % | ' +
+    '4maj7 | % | % | % | 27 | % | 2m7 | 57 | 16 | % | 27 | % | 2m7 | 57 | 16 | 2m7 57' },
+  { id: 'solar', name: 'Solar', by: 'Miles Davis · minor, from the i chord', bars:
+    '1mmaj7 | % | 5m7 | 17 | 4maj7 | % | 4m7 | b77 | b3maj7 | b3m7 b67 | b2maj7 | 2m7b5 57' },
+  { id: 'cherokee', name: 'Cherokee', by: 'Ray Noble · checked against the Parker, Ko-Ko and Marsalis transcriptions', bars:
+    '1maj7 | % | 5m7 | 17 | 4maj7 | % | b77 | % | 1maj7 | % | 27 | % | 2m7 | 67 | 2m7 | 57 | ' +
+    '1maj7 | % | 5m7 | 17 | 4maj7 | % | b77 | % | 1maj7 | % | 27 | % | 2m7 | 57 | 16 | % | ' +
+    '#2m7 | #57 | #1maj7 | % | #1m7 | #47 | 7maj7 | % | 7m7 | 37 | 6maj7 | % | 6m7 | 27 | 2m7 | 57 | ' +
+    '1maj7 | % | 5m7 | 17 | 4maj7 | % | b77 | % | 1maj7 | % | 27 | % | 2m7 | 57 | 16 | %' },
+  // Charlie Parker's own Cherokee: the changes written in his transcription (Music Lab's solo library), bar by bar,
+  // taking what his three choruses agree on. Major chords are plain triads there, so they are here.
+  { id: 'cherokee-parker', name: 'Cherokee (Parker)', by: 'Charlie Parker · from his transcription in your library', bars:
+    '1 | % | 5m7 | 17 | 4 | % | b77 | % | 1 | % | 27 | % | 2m7 | 67 | 2m7 | 57 | ' +
+    '1 | % | 5m7 | 17 | 4 | % | b77 | % | 1 | % | 27 | % | 2m7 | 57 | 1 | % | ' +
+    'b3m7 | #57 | #1 | % | #1m7 | #47 | 7 | % | 7m7 | 37 | 6 | % | 6m7 | 27 | 2m7 | 57 | ' +
+    '1 | % | 5m7 | 17 | 4 | % | b77 | % | 1 | % | 27 | % | 2m7 | 57 | 1 | %' },
+  { id: 'blue-bossa', name: 'Blue Bossa', by: 'Kenny Dorham · minor, from the i chord', bars:
+    '1m7 | % | 4m7 | % | 2m7b5 | 57alt | 1m7 | % | b3m7 | b67 | b2maj7 | % | 2m7b5 | 57alt | 1m7 | 2m7b5 57alt' },
+];
+let userTunes = [];               // from the shared store (or this browser if the store is unavailable)
+const allTunes = () => [...BUILTIN, ...userTunes];
+
+const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+const LETTERS = ['C','D','E','F','G','A','B'];
+const acc = n => n === 0 ? '' : n > 0 ? '♯'.repeat(n) : n === -2 ? '𝄫' : '♭'.repeat(-n);
+const KEYS = [['C',0,0],['D♭',1,1],['D',1,2],['E♭',2,3],['E',2,4],['F',3,5],['F♯',3,6],['G',4,7],['A♭',5,8],['A',5,9],['B♭',6,10],['B',6,11]];
+
+/* "b77" → {acc:-1, deg:7, q:'7'} ; returns null on nonsense */
+function parseChord(tok) {
+  const t = tok.trim().replace(/♭/g, 'b').replace(/♯/g, '#').replace(/Δ/g, 'maj').replace(/–|−/g, '-');
+  const m = t.match(/^([b#]?)([1-7])(.*)$/);
+  if (!m) return null;
+  return { acc: m[1] === 'b' ? -1 : m[1] === '#' ? 1 : 0, deg: +m[2], q: m[3] };
+}
+/* quality → triad shape (+ the 7th or 6th for "Add 7th") */
+function shapeOf(q) {
+  if (/^(maj|Maj|MA|M7|M9|M$|ma7)/.test(q)) return { tri: 'maj', iv: [0,4,7], lt: [0,2,4], sev: [11,6] };
+  const s = q.toLowerCase();
+  if (/^(m7b5|mi7b5|min7b5|ø|h)/.test(s)) return { tri: 'dim', iv: [0,3,6], lt: [0,2,4], sev: [10,6] };
+  if (/^(dim7|o7|°7)/.test(s)) return { tri: 'dim', iv: [0,3,6], lt: [0,2,4], sev: [9,6] };
+  if (/^(dim|o|°)/.test(s)) return { tri: 'dim', iv: [0,3,6], lt: [0,2,4], sev: null };
+  if (/^(aug|\+)/.test(s)) return { tri: 'aug', iv: [0,4,8], lt: [0,2,4], sev: /7/.test(s) ? [10,6] : null };
+  if (/^(m|min|mi|-)(?!aj)/.test(s)) {
+    const sev = /maj7/.test(s) ? [11,6] : /6/.test(s) ? [9,5] : /(7|9|11|13)/.test(s) ? [10,6] : null;
+    return { tri: 'min', iv: [0,3,7], lt: [0,2,4], sev };
+  }
+  if (/sus/.test(s)) return { tri: 'sus', iv: [0,5,7], lt: [0,3,4], sev: /(7|9|13)/.test(s) ? [10,6] : null };
+  if (/^6/.test(s)) return { tri: 'maj', iv: [0,4,7], lt: [0,2,4], sev: [9,5] };
+  if (/^(7|9|11|13|alt)/.test(s)) return { tri: 'maj', iv: [0,4,7], lt: [0,2,4], sev: [10,6] };
+  return { tri: 'maj', iv: [0,4,7], lt: [0,2,4], sev: null };
+}
+/* parse "2m7 | 57 | ..." into bars of chords; throws a readable error */
+function parseBars(text) {
+  const bars = text.split('|').map(s => s.trim()).filter(Boolean);
+  if (!bars.length) throw new Error('The changes box is empty. The grey text is only an example. Read a screenshot first, or type the changes in.');
+  const out = [];
+  bars.forEach((b, i) => {
+    if (b === '%' || b === '/' || b === '⁒') {
+      if (!out.length) throw new Error('Bar 1 can’t be a repeat (%).');
+      out.push(out[out.length - 1].slice()); return;
+    }
+    const chords = b.split(/\s+/).map(tok => { const c = parseChord(tok); if (!c) throw new Error(`Bar ${i + 1}: “${tok}” isn’t a chord number like 2m7, 57 or b7maj7.`); return c; });
+    if (chords.length > 4) throw new Error(`Bar ${i + 1} has more than 4 chords.`);
+    out.push(chords);
+  });
+  return out;
+}
+const qDisplay = q => q.replace(/^mmaj7$/, 'm(maj7)').replace(/b5/g, '♭5').replace(/b9/g, '♭9').replace(/#/g, '♯').replace(/^maj7$/, 'maj7');
+const numName = c => acc(c.acc) + c.deg + qDisplay(c.q);
+
+/* A chord becomes a triad over the tonic: semitones from tonic, spelled degree labels (1, ♭3, ♯4…), colors. */
+function triadOf(c) {
+  const sh = shapeOf(c.q);
+  const rootRel = ((MAJOR[c.deg - 1] + c.acc) % 12 + 12) % 12;
+  const tone = (iv, lt) => {
+    const rel = (rootRel + iv) % 12, letter = (c.deg - 1 + lt) % 7;
+    let a = rel - MAJOR[letter]; a = ((a + 6) % 12 + 12) % 12 - 6;
+    return { rel, letter, lab: acc(a) + (letter + 1) };
+  };
+  const notes = sh.iv.map((iv, i) => tone(iv, sh.lt[i]));
+  const sev = sh.sev ? tone(sh.sev[0], sh.sev[1]) : null;
+  const key = rootRel + ':' + sh.tri;
+  return { key, rootRel, tri: sh.tri, notes, sev, c };
+}
+
+/* ---------- Color = relationship to the tonic ---------- */
+const fifthsFrom = pc => { const k = (pc * 7) % 12; return k > 6 ? k - 12 : k; };
+const IN_MAJOR = new Set(MAJOR);
+const distOf = t => Math.abs(fifthsFrom(t.rootRel)) + 0.5 * t.notes.filter(n => !IN_MAJOR.has(n.rel)).length;
+const sideOf = t => fifthsFrom(t.rootRel) < 0 ? 'flat' : 'sharp';
+const RAMP = {
+  sharp: ['#EED27A','#F1B56C','#EA937A','#CB8DB1','#958FD2','#6F86C8'],
+  flat:  ['#EED27A','#D2D879','#A2CC8C','#7DC0AF','#7DA7D0','#6F86C8'],
+};
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+function rampColor(side, d) {
+  const stops = RAMP[side], x = Math.min(d, 6) / 6 * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2), f = x - i;
+  const [a, b] = [hex(stops[i]), hex(stops[i+1])];
+  return `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * f)).join(' ')})`;
+}
+const colorOf = t => rampColor(sideOf(t), distOf(t));
+const relText = t => { const d = distOf(t); return d === 0 ? 'home' : `${d} step${d === 1 ? '' : 's'} from home, ${sideOf(t)} side`; };
+const triSuffix = { maj: '', min: 'm', dim: '°', aug: '+', sus: 'sus4' };
+
+/* ---------- Current tune + key ---------- */
+let tune = null, BARS = [], keyIdx = 0;
+const keyPc = () => KEYS[keyIdx][2];
+function noteName(n) {           // spelled letter name of a triad tone in the chosen key
+  const [, kl, kpc] = KEYS[keyIdx];
+  const letter = (kl + n.letter) % 7, pc = (kpc + n.rel) % 12;
+  let a = pc - MAJOR[letter]; a = ((a + 6) % 12 + 12) % 12 - 6;
+  return LETTERS[letter] + acc(a);
+}
+const chordName = t => noteName(t.notes[0]) + qDisplay(t.c.q);
+/* root-position placement: root between G3 (55) and F♯4 (66), same as the original C app */
+const rootMidi = t => 55 + (((keyPc() + t.rootRel) % 12) - 7 + 12) % 12;
+function rootPos(t) {
+  const r = rootMidi(t);
+  const ms = t.notes.map(n => r + ((n.rel - t.rootRel + 12) % 12));
+  if (add7.checked && t.sev) ms.push(r + ((t.sev.rel - t.rootRel + 12) % 12));
+  return ms;
+}
+
+/* ---------- Render ---------- */
+const $ = id => document.getElementById(id);
+const grid = $('grid'), status = $('status');
+let cards = [];
+function render() {
+  BARS = parseBars(tune.bars).map(bar => bar.map(triadOf));
+  BARS.forEach(bar => bar.forEach(t => t.color = colorOf(t)));
+  $('title').firstChild.textContent = `${tune.name} in ${KEYS[keyIdx][0]} `;
+  $('by').textContent = tune.by || '';
+  sel = null; drag = null;
+  grid.innerHTML = '';
+  cards = BARS.map((bar, i) => {
+    const cols = bar.map(t => t.color), n = cols.length;
+    const strip = n === 1 ? cols[0] : `linear-gradient(90deg, ${cols.map((c, k) => `${c} ${k / n * 100}% ${(k + 1) / n * 100}%`).join(', ')})`;
+    const el = document.createElement('button');
+    el.className = 'card';
+    el.style.setProperty('--glow', cols[0]);
+    el.setAttribute('aria-label', `Bar ${i + 1}: ${bar.map(t => numName(t.c)).join(' to ')}`);
+    el.innerHTML = `
+      <div class="strip" style="background:${strip}"><span>${bar.map(t => `${numName(t.c)}<span class="num">${chordName(t)}</span>`).join(' → ')}</span></div>
+      <div class="body">
+        <div class="deg">${bar.map((t, ci) =>
+          t.notes.map(nn => `<span class="n" data-c="${ci}" data-r="${nn.rel}">${nn.lab}</span>`).join('–')
+          + (t.sev ? `<span class="n sev" data-c="${ci}" data-r="${t.sev.rel}">–${t.sev.lab}</span>` : '')
+        ).join(' → ')}</div>
+      </div>`;
+    el.addEventListener('pointerdown', e => { if (e.button === 0) cardDown(e, i); });
+    el.addEventListener('click', e => { if (e.detail === 0) playBars([i]); });
+    grid.appendChild(el);
+    return el;
+  });
+  grid.classList.toggle('show7', add7.checked);
+  // legend: each distinct triad in this tune
+  const seen = new Map();
+  BARS.flat().forEach(t => { if (!seen.has(t.key)) seen.set(t.key, t); });
+  const uniq = [...seen.values()].sort((a, b) => distOf(a) - distOf(b));
+  $('legend').innerHTML = uniq.map(t =>
+    `<div class="lg"><span class="sw" style="background:${t.color}"></span><span><b>${t.notes[0].lab}${triSuffix[t.tri]}</b> · ${t.notes.map(n => n.lab).join('–')} <span style="opacity:.5">(${noteName(t.notes[0])}${triSuffix[t.tri]})</span><br>${relText(t)}</span></div>`
+  ).join('');
+  drawScale(uniq);
+  $('droneLbl').textContent = `${KEYS[keyIdx][0]} drone${drone ? ' on' : ''}`;
+  $('delBtn').hidden = !tune.user;
+}
+function drawScale(list) {
+  const W = 520, X0 = 34, X1 = W - 30, x = d => X0 + (Math.min(d, 6) / 6) * (X1 - X0);
+  const lanes = [['sharp', 'Sharp side ♯', 26], ['flat', 'Flat side ♭', 96]];
+  let out = '<defs>' + lanes.map(([side]) => `<linearGradient id="g-${side}">${RAMP[side].map((c, i) => `<stop offset="${i / 5}" stop-color="${c}"/>`).join('')}</linearGradient>`).join('') + '</defs>';
+  for (let d = 0; d <= 6; d++) out += `<text x="${x(d)}" y="150" text-anchor="middle" font-size="11" fill="#6e6e73">${d}</text>`;
+  out += `<text x="${X0}" y="166" font-size="11" fill="#a3a3a8" text-anchor="middle">home</text><text x="${X1}" y="166" font-size="11" fill="#a3a3a8" text-anchor="end">farthest</text>`;
+  lanes.forEach(([side, label, y]) => {
+    out += `<text x="${X0 - 6}" y="${y - 8}" font-size="11" fill="#a3a3a8">${label}</text>`;
+    out += `<rect x="${X0}" y="${y}" width="${X1 - X0}" height="8" rx="4" fill="url(#g-${side})" opacity=".55"/>`;
+    const here = list.filter(t => distOf(t) === 0 || sideOf(t) === side);
+    const used = {};
+    here.forEach(t => {
+      const d = distOf(t); const k = used[d] = (used[d] || 0) + 1;
+      const cx = x(d) + (k - 1) * 14, cy = y + 4 - (k - 1) * 10;
+      const lab = t.notes[0].lab + (t.tri === 'min' ? 'm' : t.tri === 'dim' ? '°' : t.tri === 'aug' ? '+' : '');
+      out += `<circle cx="${cx}" cy="${cy}" r="15" fill="${t.color}" stroke="#000" stroke-width="2"/>`;
+      out += `<text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="${lab.length > 2 ? 10 : 12}" font-weight="600" fill="#1c1c1e">${lab}</text>`;
+    });
+  });
+  $('wheel').innerHTML = out;
+}
+
+/* ---------- Audio ---------- */
+let live = [];
+let ctx, master;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  loadPiano(); loadDrone();
+  return ctx;
+}
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+function b64ToBuf(url) {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+/* Drone: the C recording, shifted to the chosen key (never more than 6 semitones) */
+let drone = null;
+const droneVol = $('droneVol');
+const droneLevel = () => (droneVol.value / 100) * 0.9;
+const droneRate = () => { const k = keyPc(); return Math.pow(2, (k > 5 ? k - 12 : k) / 12); };
+let droneBuf = null, droneStart = 0, droneLoad = null;
+function loadDrone() {
+  if (droneLoad) return droneLoad;
+  droneLoad = new Promise(res => ctx.decodeAudioData(b64ToBuf(DRONE_URL), b => {
+    droneBuf = b;
+    const d = b.getChannelData(0); let i = 0;
+    while (i < d.length && Math.abs(d[i]) < 0.002) i++;
+    droneStart = i / b.sampleRate; res();
+  }, () => res()));
+  return droneLoad;
+}
+async function startDrone() {
+  if (drone) return;
+  audio();
+  const g = ctx.createGain(); g.gain.setValueAtTime(0, ctx.currentTime);
+  drone = { g, src: null };
+  setDroneUI(true);
+  await loadDrone();
+  if (!drone || drone.g !== g || !droneBuf) return;
+  const src = ctx.createBufferSource(); src.buffer = droneBuf;
+  src.loop = true; src.loopStart = droneStart; src.loopEnd = droneStart + DRONE_LOOP;
+  src.playbackRate.value = droneRate();
+  src.connect(g); g.connect(master);
+  src.start(ctx.currentTime, droneStart);
+  g.gain.linearRampToValueAtTime(droneLevel(), ctx.currentTime + 1.2);
+  drone.src = src;
+}
+function stopDrone() {
+  if (!drone) return;
+  const { g, src } = drone; const t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.4);
+  if (src) src.stop(t + 0.45);
+  drone = null; setDroneUI(false);
+}
+function retuneDrone() {
+  if (!drone) return;
+  // fade out, change pitch, fade back in, so the slide isn't heard
+  const { g, src } = drone; if (!src) return;
+  const t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.25);
+  src.playbackRate.setValueAtTime(droneRate(), t + 0.26);
+  g.gain.linearRampToValueAtTime(droneLevel(), t + 1.2);
+}
+droneVol.addEventListener('input', () => { if (drone) drone.g.gain.setTargetAtTime(droneLevel(), ctx.currentTime, 0.05); });
+const droneBtn = $('droneBtn');
+function setDroneUI(on) {
+  droneBtn.setAttribute('aria-pressed', on);
+  $('droneLbl').textContent = `${KEYS[keyIdx][0]} drone${on ? ' on' : ''}`;
+}
+droneBtn.addEventListener('click', () => drone ? stopDrone() : startDrone());
+
+/* Sampled piano; synth tone only as a fallback while samples decode */
+const buffers = {}; let pianoLoad = null;
+function loadPiano() {
+  if (pianoLoad) return pianoLoad;
+  pianoLoad = Promise.all(Object.entries(PIANO).map(([m, url]) =>
+    new Promise(res => ctx.decodeAudioData(b64ToBuf(url), b => { buffers[m] = b; res(); }, () => res()))
+  ));
+  return pianoLoad;
+}
+const keysVol = $('keysVol');
+const keysLevel = () => (keysVol.value / 100) * 1.0;
+function piano(m, t, dur) {
+  const buf = buffers[m];
+  if (!buf) return synth(m, t, dur);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const g = ctx.createGain();
+  const end = Math.min(t + dur, t + buf.duration);
+  const v = keysLevel();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.004);
+  g.gain.setValueAtTime(v, Math.max(t + 0.01, end - 0.25));
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  src.connect(g); g.connect(master);
+  src.start(t); src.stop(end + 0.02);
+  live.push({ srcs: [src], g, end: end + 0.02 });
+}
+function synth(m, t, dur) {
+  const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+  o1.type = 'triangle'; o2.type = 'sine';
+  o1.frequency.value = hz(m); o2.frequency.value = hz(m) * 2; o2.detune.value = 3;
+  const g2 = ctx.createGain(); g2.gain.value = 0.18;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(1100, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.14, t + 0.18);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(master);
+  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+  live.push({ srcs: [o1, o2], g });
+}
+
+/* ---------- Voice-leading routes ----------
+   root     every triad in root position
+   closest  start on the chord tone nearest the last note (ties go up), the rest in random order
+   alt      same start, the rest go up the stack on one chord and down on the next
+   up/down  start on the nearest chord tone strictly above / below the last note;
+            when that would leave the piano range, turn around */
+const LO = 52, HI = 84;
+let route = 'closest', lastNote = null, flip = false;
+function nearest(pc, target, dir = 0) {
+  let best = null;
+  for (let m = LO; m <= HI; m++) if (((m % 12) + 12) % 12 === pc) {
+    if (dir > 0 && m <= target) continue;
+    if (dir < 0 && m >= target) continue;
+    const d = Math.abs(m - target), bd = best === null ? Infinity : Math.abs(best - target);
+    if (d < bd || (d === bd && m > best)) best = m;
+  }
+  return best;
+}
+function voiced(t) {
+  const base = rootPos(t);
+  if (route === 'root' || lastNote === null) return { seq: base, first: null };
+  const pcs = base.map(m => ((m % 12) + 12) % 12);
+  let dir = route === 'up' ? 1 : route === 'down' ? -1 : 0;
+  let cands = pcs.map((pc, i) => ({ i, m: nearest(pc, lastNote.m, dir) })).filter(c => c.m !== null);
+  // near the top/bottom of the range there may be nothing further that way: fall back to the closest note
+  if (cands.length < pcs.length && dir !== 0 && (lastNote.m > HI - 7 || lastNote.m < LO + 7)) {
+    cands = pcs.map((pc, i) => ({ i, m: nearest(pc, lastNote.m, -dir) }));
+  } else if (!cands.length) cands = pcs.map((pc, i) => ({ i, m: nearest(pc, lastNote.m) }));
+  cands.sort((a, b) => Math.abs(a.m - lastNote.m) - Math.abs(b.m - lastNote.m) || b.m - a.m);
+  const first = cands[0];
+  let rest = pcs.map((_, i) => i).filter(i => i !== first.i);
+  if (route === 'alt') {
+    // the rest in stack order after the first, reversed every other chord
+    const k = first.i, n = pcs.length;
+    rest = [...Array(n - 1).keys()].map(j => (k + 1 + j) % n);
+    if (flip) rest.reverse();
+    flip = !flip;
+  } else {
+    for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+  }
+  // the other notes sit as close as possible to the first one (a triad can come out as an inversion)
+  const seq = [first.m, ...rest.map(i => { const m = nearest(pcs[i], first.m); return m; })];
+  return { seq, first: first.m };
+}
+/* Block chords: the close-position inversion, in range, whose voices move least from the previous chord */
+let lastChord = null;
+function closeVoicing(root, prev) {
+  const pcs = root.map(m => ((m % 12) + 12) % 12), n = pcs.length, ps = [...prev].sort((a, b) => a - b);
+  let best = null, bestCost = Infinity;
+  for (let r = 0; r < n; r++) for (let lo = LO; lo <= HI; lo++) {
+    if (((lo % 12) + 12) % 12 !== pcs[r]) continue;
+    const v = [lo]; for (let k = 1; k < n; k++) { let m = v[k - 1] + 1; while (((m % 12) + 12) % 12 !== pcs[(r + k) % n]) m++; v.push(m); }
+    if (v[n - 1] > HI) continue;
+    const cost = (ps.length === n ? v.reduce((c, m, k) => c + Math.abs(m - ps[k]), 0)
+      : Math.abs(v.reduce((a, b) => a + b) / n - ps.reduce((a, b) => a + b) / ps.length) * n)
+      + 4 * Math.max(0, Math.abs(v.reduce((a, b) => a + b) / n - 66) - 5);   // gentle pull back to the middle so loops don't creep upward
+    if (cost < bestCost) { bestCost = cost; best = v; }
+  }
+  return best || root;
+}
+const relLabel = (t, m) => {
+  const rel = (((m - keyPc()) % 12) + 12) % 12;
+  const n = t.notes.find(x => x.rel === rel) || (t.sev && t.sev.rel === rel ? t.sev : null);
+  return n ? n.lab : '?';
+};
+
+/* ---------- Sequencing ---------- */
+const tempo = $('tempo'), tempoOut = $('tempoOut');
+try { const v = +localStorage.getItem('tcm.tempo'); if (v >= 40 && v <= 180) { tempo.value = v; tempoOut.textContent = v; } } catch (e) {}
+tempo.addEventListener('input', () => { tempoOut.textContent = tempo.value; try { localStorage.setItem('tcm.tempo', tempo.value); } catch (e) {} });
+let upDown = false;
+const dirUp = $('dirUp'), dirUpDown = $('dirUpDown');
+function setDir(v) { upDown = v; dirUp.setAttribute('aria-pressed', !v); dirUpDown.setAttribute('aria-pressed', v); }
+dirUp.onclick = () => setDir(false); dirUpDown.onclick = () => setDir(true);
+const add7 = $('add7');
+add7.addEventListener('change', () => grid.classList.toggle('show7', add7.checked));
+const autoDrone = $('autoDrone'), loopBox = $('loop'), blockBox = $('block');
+try { blockBox.checked = localStorage.getItem('tcm.block') === '1'; } catch (e) {}
+blockBox.addEventListener('change', () => { try { localStorage.setItem('tcm.block', blockBox.checked ? '1' : '0'); } catch (e) {} });
+try { loopBox.checked = localStorage.getItem('tcm.loop') === '1'; } catch (e) {}
+loopBox.addEventListener('change', () => { try { localStorage.setItem('tcm.loop', loopBox.checked ? '1' : '0'); } catch (e) {} });
+document.querySelectorAll('[data-route]').forEach(b => b.addEventListener('click', () => {
+  route = b.dataset.route;
+  document.querySelectorAll('[data-route]').forEach(x => x.setAttribute('aria-pressed', x === b));
+}));
+
+let timers = [], playingAll = false;
+function stopPlayback() {
+  timers.forEach(clearTimeout); timers = [];
+  if (seq) { clearInterval(seq.timer); seq = null; }
+  if (ctx) {
+    const now = ctx.currentTime;
+    live.forEach(({ srcs, g }) => {
+      try {
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.03);
+        srcs.forEach(o => o.stop(now + 0.04));
+      } catch (e) {}
+    });
+  }
+  live = [];
+  cards.forEach(c => c.classList.remove('playing'));
+  document.querySelectorAll('.n.on').forEach(n => n.classList.remove('on'));
+  playingAll = false; selLoop = false; playLabel();
+}
+
+async function playBars(barIdx, all = false, loopSel = false) {
+  audio(); stopPlayback(); selLoop = loopSel;
+  if (Object.keys(buffers).length < Object.keys(PIANO).length) await loadPiano();
+  if (autoDrone.checked) startDrone();
+  if (all) { playingAll = true; playLabel(); }
+  seq = { list: barIdx, i: 0, all, t: ctx.currentTime + 0.05, ev: [], k: 0, prevB: 0, len: 0 };
+  loadBar();
+  pump();
+  seq.timer = setInterval(pump, 25);
+}
+/* Live-tempo scheduler. Each bar is written out in beats, not seconds, just before it plays.
+   A small look-ahead loop turns beats into audio-clock times using the tempo slider's value
+   at that moment, so moving the slider changes the speed within a beat or two, no restart needed. */
+let seq = null;
+const at = (time, fn) => { if (timers.length > 600) timers = timers.slice(-200); timers.push(setTimeout(fn, Math.max(0, (time - ctx.currentTime) * 1000))); };
+function loadBar() { const r = barEvents(seq.list[seq.i], seq.list.length > 1); seq.ev = r.ev; seq.len = r.len; seq.k = 0; seq.prevB = 0; }
+function pump() {
+  const ahead = document.hidden ? 1.3 : 0.12;   // background tabs only wake about once a second
+  while (seq && seq.t < ctx.currentTime + ahead) {
+    const step = 60 / tempo.value;
+    if (seq.k < seq.ev.length) {
+      const e = seq.ev[seq.k++];
+      seq.t += (e.b - seq.prevB) * step; seq.prevB = e.b;
+      if (e.notes) e.notes.forEach(([m, d, x]) => piano(m, seq.t, d * step + x));
+      if (e.ui) at(seq.t, e.ui);
+      continue;
+    }
+    seq.t += (seq.len - seq.prevB) * step;
+    seq.i++;
+    if (seq.i >= seq.list.length) {
+      if (seq.all && playingAll && (loopBox.checked || selLoop)) seq.i = 0;
+      else { finish(seq.t + step * 0.5); return; }
+    }
+    loadBar();
+  }
+}
+function finish(tEnd) {
+  clearInterval(seq.timer); seq = null;
+  at(tEnd, () => {
+    cards.forEach(c => c.classList.remove('playing'));
+    document.querySelectorAll('.n.on').forEach(n => n.classList.remove('on'));
+    playingAll = false; selLoop = false; playLabel();
+    status.innerHTML = drone ? 'Drone still sounding. Tap another bar.' : 'Tap any bar to hear it.';
+  });
+}
+/* One bar as events at beat positions: b = beats from the bar's start; notes = [midi, length in beats, extra seconds].
+   Every bar lasts the same: with two chords in a bar, each gets half the time. */
+function barEvents(bi, multi) {
+  const card = cards[bi], bar = BARS[bi], ev = [];
+  const ns = 1 / bar.length;
+  ev.push({ b: 0, ui: () => {
+    cards.forEach(c => c.classList.remove('playing'));
+    card.classList.add('playing');
+    card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  } });
+  let b = 0;
+  bar.forEach((tr, ci) => {
+    const from = lastNote;
+    const { seq: base, first } = voiced(tr);
+    const notes = upDown ? base.concat(base.slice(0, -1).reverse()) : base;
+    const line = from && first !== null
+      ? `<br>Last note → first note: ${from.lab} → <b>${relLabel(tr, first)}</b>` +
+        (from.m === first ? ' (common tone)' : ` (${Math.abs(first - from.m)} semitone${Math.abs(first - from.m) === 1 ? '' : 's'} ${first > from.m ? 'up' : 'down'})`)
+      : (route === 'root' ? '<br>Root position' : '<br>Starting fresh from root position');
+    ev.push({ b, ui: () => {
+      card.style.setProperty('--glow', tr.color);
+      status.innerHTML = `Bar <b>${bi + 1}</b> · <b>${numName(tr.c)}</b> (${chordName(tr)}) → ${tr.notes[0].lab}${triSuffix[tr.tri]} triad, ${tr.notes.map(n => n.lab).join('–')} from the tonic${line}`;
+    } });
+    const light = rels => () => {
+      card.querySelectorAll('.n.on').forEach(n => n.classList.remove('on'));
+      rels.forEach(rel => card.querySelectorAll(`.n[data-c="${ci}"][data-r="${rel}"]`).forEach(n => n.classList.add('on')));
+    };
+    const relOf = m => (((m - keyPc()) % 12) + 12) % 12;
+    if (blockBox.checked) {
+      if ((route === 'closest' || route === 'alt') && lastChord) base.splice(0, base.length, ...closeVoicing(rootPos(tr), lastChord));
+      lastChord = base.slice();
+      const len = base.length;
+      ev.push({ b, notes: base.map(m => [m, ns * len, 0.3]), ui: light(base.map(relOf)) });
+      b += ns * len;
+      const top = Math.max(...base);
+      lastNote = { m: top, lab: relLabel(tr, top) };
+    } else {
+      notes.forEach(m => { ev.push({ b, notes: [[m, 2.4, 0.4]], ui: light([relOf(m)]) }); b += ns; });
+      lastChord = base.slice();
+      const end = notes[notes.length - 1];
+      lastNote = { m: end, lab: relLabel(tr, end) };
+    }
+    if (ci === bar.length - 1) b += 0.75;   // breath only between bars, not between chords in a bar
+  });
+  if (multi) b += 0.25;
+  ev.push({ b, ui: () => card.style.setProperty('--glow', bar[0].color) });
+  return { ev, len: b };
+}
+$('playAll').addEventListener('click', () => playingAll ? stopPlayback() : playMain());
+
+/* ---------- Selecting bars to loop ----------
+   Drag across bars (or Shift-click a second bar) to select a run of bars. Space or the play button loops them.
+   Clicking anywhere outside the selection (except the control panel) stops the loop and clears it. */
+let sel = null, drag = null, anchor = null, selLoop = false;
+const selRange = () => sel ? [...Array(sel[1] - sel[0] + 1).keys()].map(k => k + sel[0]) : [];
+function playLabel() {
+  $('playAll').textContent = playingAll ? '■ Stop' : sel ? `▶ Loop bars ${sel[0] + 1}–${sel[1] + 1}` : '▶ Play all';
+}
+function showSel() {
+  cards.forEach((c, k) => c.classList.toggle('picked', !!sel && k >= sel[0] && k <= sel[1]));
+  playLabel();
+}
+function setSel(a, b) {
+  sel = [Math.min(a, b), Math.max(a, b)]; showSel();
+  if (!playingAll) status.innerHTML = `Bars <b>${sel[0] + 1}–${sel[1] + 1}</b> selected. Press Space (or ▶) to loop them; click outside the selection to clear it.`;
+}
+function clearSel() {
+  if (!sel) return;
+  if (selLoop) stopPlayback();
+  sel = null; showSel();
+}
+function playMain() {
+  if (sel) playBars(selRange(), true, true);
+  else playBars([...BARS.keys()], true);
+}
+function cardDown(e, i) {
+  if (sel && i >= sel[0] && i <= sel[1]) return;            // inside the selection: leave the loop alone
+  if (e.shiftKey && anchor !== null && anchor !== i) { if (selLoop) stopPlayback(); setSel(anchor, i); return; }
+  clearSel();
+  anchor = i; drag = { start: i, moved: false };
+  grid.classList.add('selecting');
+  playBars([i]);
+}
+document.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const c = el && el.closest('.card'); if (!c) return;
+  const k = cards.indexOf(c); if (k < 0) return;
+  if (k !== drag.start || drag.moved) {
+    if (!drag.moved) { drag.moved = true; stopPlayback(); }
+    setSel(drag.start, k);
+  }
+});
+['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, () => { drag = null; grid.classList.remove('selecting'); }));
+document.addEventListener('pointerdown', e => {
+  if (!sel || e.button !== 0) return;
+  if (e.target.closest('.card, .controls, .pickers')) return;   // cards handle themselves; controls stay usable while looping
+  clearSel();
+  status.innerHTML = 'Selection cleared.';
+});
+['pointerdown','keydown'].forEach(ev => document.addEventListener(ev, () => { if (ctx && ctx.state === 'suspended') ctx.resume(); }, { capture: true }));
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select')) return;
+  if (e.key === 'Escape') { stopPlayback(); sel = null; showSel(); lastNote = null; lastChord = null; flip = false; status.innerHTML = 'Stopped. Next triad starts from root position.'; }
+});
+/* Space: if anything is sounding (bars or drone), stop all of it; otherwise play all.
+   Handled before buttons see it, so a focused bar card can't restart itself on Space. */
+const sounding = () => playingAll || !!seq || !!drone || (ctx && live.some(x => !(x.end < ctx.currentTime)));
+document.addEventListener('keydown', e => {
+  if (e.key !== ' ' || e.target.closest('input, textarea, select')) return;
+  e.preventDefault(); e.stopPropagation();
+  if (document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur();
+  if (e.repeat) return;
+  if (playingAll || (!sel && sounding())) { stopPlayback(); stopDrone(); status.innerHTML = sel ? `Stopped. Space loops bars ${sel[0] + 1}–${sel[1] + 1} again.` : 'Stopped. Space plays all again.'; }
+  else playMain();
+}, { capture: true });
+document.addEventListener('keyup', e => { if (e.key === ' ' && !e.target.closest('input, textarea, select')) e.preventDefault(); }, { capture: true });
+
+/* ---------- Pickers ---------- */
+const tuneSel = $('tuneSel'), keySel = $('keySel');
+KEYS.forEach(([n], i) => keySel.add(new Option(n, i)));
+function fillTunes(selectId) {
+  tuneSel.innerHTML = '';
+  const g1 = document.createElement('optgroup'); g1.label = 'Built in';
+  BUILTIN.forEach(t => g1.appendChild(new Option(t.name, t.id)));
+  tuneSel.appendChild(g1);
+  if (userTunes.length) {
+    const g2 = document.createElement('optgroup'); g2.label = 'Added';
+    userTunes.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(t => g2.appendChild(new Option(t.name, t.id)));
+    tuneSel.appendChild(g2);
+  }
+  tuneSel.value = selectId && allTunes().some(t => t.id === selectId) ? selectId : (tune ? tune.id : BUILTIN[0].id);
+}
+function selectTune(id) {
+  const t = allTunes().find(x => x.id === id) || BUILTIN[0];
+  try { parseBars(t.bars); } catch (e) { status.textContent = `“${t.name}” couldn’t be read: ${e.message}`; return; }
+  stopPlayback(); lastNote = null; lastChord = null; flip = false;
+  tune = t; tuneSel.value = t.id;
+  render();
+  try { localStorage.setItem('tcm.tune', t.id); } catch (e) {}
+}
+tuneSel.addEventListener('change', () => selectTune(tuneSel.value));
+keySel.addEventListener('change', () => {
+  keyIdx = +keySel.value; stopPlayback(); lastNote = null; lastChord = null; flip = false;
+  render(); retuneDrone();
+  try { localStorage.setItem('tcm.key', keyIdx); } catch (e) {}
+});
+
+/* ---------- Saved tunes: the shared store, or this browser if it isn't available ---------- */
+let db = null;
+function loadLocal() { try { return JSON.parse(localStorage.getItem('tcm.tunes') || '[]'); } catch (e) { return []; } }
+function saveLocal() { try { localStorage.setItem('tcm.tunes', JSON.stringify(userTunes.map(({ user, ...r }) => r))); } catch (e) {} }
+const cleanTune = (id, d) => ({ id, name: String(d.name || 'Untitled'), by: String(d.by || ''), bars: String(d.bars || ''), user: true });
+async function initStore() {
+  try { db = await window.claude?.use?.('db'); } catch (e) { db = null; }
+  if (!db) { userTunes = loadLocal().map(t => cleanTune(t.id, t)); fillTunes(); return; }
+  db.collection('tunes').onSnapshot(snap => {
+    userTunes = snap.docs.filter(d => d.exists).map(d => cleanTune(d.id, d.data()));
+    const want = tune ? tune.id : null;
+    fillTunes(want);
+    if (want && tune.user && !userTunes.some(t => t.id === want)) selectTune(BUILTIN[0].id);
+    else if (pendingSelect && userTunes.some(t => t.id === pendingSelect)) { selectTune(pendingSelect); pendingSelect = null; }
+  }, () => { db = null; userTunes = loadLocal().map(t => cleanTune(t.id, t)); fillTunes(); });
+}
+let pendingSelect = null;
+try { pendingSelect = localStorage.getItem('tcm.tune'); } catch (e) {}
+
+/* ---------- Add a tune ---------- */
+const addPanel = $('addPanel'), fileIn = $('file'), drop = $('drop'), readBtn = $('readBtn'), readMsg = $('readMsg'), saveMsg = $('saveMsg');
+let img = null, readCtl = null, sample = null;
+$('addBtn').addEventListener('click', () => {
+  addPanel.hidden = !addPanel.hidden;
+  $('addBtn').setAttribute('aria-expanded', !addPanel.hidden);
+  if (!addPanel.hidden) addPanel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+});
+function takeFile(f) {
+  if (!f || !/^image\//.test(f.type)) { readMsg.textContent = 'That isn’t an image. Use a PNG, JPEG, WebP or GIF screenshot.'; readMsg.className = 'msg err'; return; }
+  img = f;
+  const th = $('thumb'); th.src = URL.createObjectURL(f); th.hidden = false;
+  $('dropTxt').textContent = f.name || 'Screenshot ready';
+  readBtn.disabled = !sample; readMsg.className = 'msg';
+  readMsg.textContent = sample ? 'Ready to read.' : 'Reading screenshots isn’t available in this view. You can still type the changes below.';
+}
+fileIn.addEventListener('change', () => takeFile(fileIn.files[0]));
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => takeFile(e.dataTransfer.files[0]));
+document.addEventListener('paste', e => {
+  if (addPanel.hidden) return;
+  const f = [...(e.clipboardData?.files || [])].find(f => /^image\//.test(f.type));
+  if (f) takeFile(f);
+});
+
+const READ_PROMPT = `The image is a jazz chord chart (a lead sheet, an iReal Pro screen, or similar).
+Write out its chord changes as numbers from the tonic (Nashville-style scale degrees in the tune's key), so the tune can be played in any key.
+
+Rules:
+- Each chord is: optional accidental (b or #), a scale degree 1-7, then the quality. Examples: 2m7, 57, 1maj7, 1, b77, #4dim7, 7m7b5, 37, 6m7, 4m6, 1sus7, b6maj7.
+- Qualities to use: maj7, 6, 7, m7, m6, m, m7b5, dim7, dim, 7alt, 9, 13, sus7, aug. A plain major triad is just the degree.
+- If the chart uses letter names (Dm7, G7, Cmaj7...), work out the key of the tune and convert every chord to degrees in that key.
+- If the chart is already in numbers, copy them exactly (a triangle means maj7, a minus sign means minor, ø means m7b5, ° means dim).
+- Read bars left to right, top to bottom. Write % for a bar that repeats the bar before (the ⁒ or % symbol). Write out repeats and 1st/2nd endings in playing order, once through the form.
+- Several chords in one bar go in that bar, in order.
+
+Reply with only this JSON:
+{"name": "tune title or empty", "by": "composer or empty", "key": "original key if the chart shows letter names, else empty", "bars": ["2m7", "57", "1maj7", "%", "2m7 57"]}`;
+
+readBtn.addEventListener('click', async () => {
+  if (!img || !sample) return;
+  readCtl = new AbortController();
+  readBtn.disabled = true; $('stopRead').hidden = false;
+  readMsg.className = 'msg'; readMsg.textContent = 'Reading the chart… (this can take up to a minute)';
+  try {
+    const r = await sample.json(READ_PROMPT, { images: [img], signal: readCtl.signal, modelTier: 'default' });
+    const bars = Array.isArray(r?.bars) ? r.bars.map(b => String(b).trim()).filter(Boolean) : [];
+    if (!bars.length) throw { code: 'empty' };
+    $('fName').value = String(r.name || '').trim() || $('fName').value;
+    $('fBy').value = String(r.by || '').trim() || $('fBy').value;
+    $('fBars').value = bars.map((b, i) => b + ((i + 1) % 4 === 0 ? ' |\n' : ' | ')).join('').replace(/\s*\|\s*$/, '');
+    let note = `Found ${bars.length} bars${r.key ? `, converted from ${r.key}` : ''}. Check them against the screenshot, then Preview or Save.`;
+    try { parseBars($('fBars').value); } catch (e) { note = `Read ${bars.length} bars, but something needs fixing: ${e.message}`; readMsg.className = 'msg err'; }
+    readMsg.textContent = note;
+  } catch (e) {
+    readMsg.className = 'msg err';
+    const code = e && e.code;
+    readMsg.textContent =
+      code === 'cancelled' ? 'Stopped.' :
+      code === 'not_granted' || code === 'sampling_disabled' ? 'Reading screenshots needs permission to use Claude. You can still type the changes below.' :
+      code === 'image_rejected' ? 'That image couldn’t be used. Try a smaller PNG or JPEG screenshot.' :
+      code === 'rate_limited' ? 'Too many requests right now. Try again in a minute.' :
+      code === 'invalid_json' || code === 'empty' ? 'Couldn’t find chord changes in that image. Try a tighter crop of just the chart.' :
+      'Reading failed. Try again.';
+  } finally {
+    readBtn.disabled = !img; $('stopRead').hidden = true;
+  }
+});
+$('stopRead').addEventListener('click', () => readCtl?.abort());
+
+$('previewBtn').addEventListener('click', () => {
+  saveMsg.className = 'msg';
+  try {
+    parseBars($('fBars').value);
+    tune = { id: '__preview', name: $('fName').value.trim() || 'Preview', by: $('fBy').value.trim(), bars: $('fBars').value, user: false };
+    stopPlayback(); lastNote = null; render();
+    saveMsg.textContent = 'Showing the preview above. Save to keep it in the Tune list.';
+    grid.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  } catch (e) { saveMsg.className = 'msg err'; saveMsg.textContent = e.message; }
+});
+const slug = s => (s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tune').slice(0, 60);
+$('saveBtn').addEventListener('click', async () => {
+  saveMsg.className = 'msg';
+  const name = $('fName').value.trim(), bars = $('fBars').value.trim();
+  if (!name) { saveMsg.className = 'msg err'; saveMsg.textContent = 'Give the tune a name.'; return; }
+  try { parseBars(bars); } catch (e) { saveMsg.className = 'msg err'; saveMsg.textContent = e.message; return; }
+  let id = slug(name);
+  const clash = allTunes().find(t => t.id === id);
+  if (clash && !clash.user) id += '-2';
+  const body = { name, by: $('fBy').value.trim(), bars };
+  if (db) {
+    try { await db.collection('tunes').doc(id).set(body); }
+    catch (e) { saveMsg.className = 'msg err'; saveMsg.textContent = e.code === 'invalid_argument' ? 'You don’t have permission to add tunes to this page.' : 'Saving failed. Try again.'; return; }
+    pendingSelect = id;
+    userTunes = [...userTunes.filter(t => t.id !== id), cleanTune(id, body)];
+  } else {
+    userTunes = [...userTunes.filter(t => t.id !== id), cleanTune(id, body)]; saveLocal();
+  }
+  fillTunes(id); selectTune(id);
+  saveMsg.textContent = db ? `Saved “${name}”.` : `Saved “${name}” in this browser only.`;
+});
+let delArmed = false;
+$('delBtn').addEventListener('click', async () => {
+  if (!tune || !tune.user) return;
+  if (!delArmed) { delArmed = true; $('delBtn').textContent = `Tap again to delete “${tune.name}”`; setTimeout(() => { delArmed = false; $('delBtn').textContent = 'Delete this tune'; }, 4000); return; }
+  delArmed = false; $('delBtn').textContent = 'Delete this tune';
+  const id = tune.id, name = tune.name;
+  if (db) { try { await db.collection('tunes').doc(id).delete(); } catch (e) { saveMsg.className = 'msg err'; saveMsg.textContent = 'Deleting failed.'; return; } }
+  userTunes = userTunes.filter(t => t.id !== id); saveLocal();
+  fillTunes(BUILTIN[0].id); selectTune(BUILTIN[0].id);
+  saveMsg.className = 'msg'; saveMsg.textContent = `Deleted “${name}”.`;
+});
+
+/* ---------- Boot ---------- */
+try { const k = +localStorage.getItem('tcm.key'); if (k >= 0 && k < 12) keyIdx = k; } catch (e) {}
+keySel.value = keyIdx;
+fillTunes();
+selectTune(pendingSelect && BUILTIN.some(t => t.id === pendingSelect) ? pendingSelect : 'pent-up-house');
+if (BUILTIN.some(t => t.id === pendingSelect)) pendingSelect = null;
+initStore();
+(async () => {
+  try { sample = await window.claude?.use?.('sample'); } catch (e) { sample = null; }
+  if (sample) { try { const l = await sample.limits(); if (!l.images) sample = null; } catch (e) { sample = null; } }
+  if (img) readBtn.disabled = !sample;
+})();
+try { audio(); } catch (e) {}
+</script>
+
+<script src="lab.js"></script>
+</body></html>

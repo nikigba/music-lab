@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Music Lab</title>
+<style>html,body{margin:0;background:#14110f;color:#a3978b;font-family:Inter,system-ui,sans-serif}p{padding:24px}a{color:#e9b96e}</style>
+</head>
+<body>
+<p>Opening Music Lab… If nothing happens, <a href="home-base.html">open Triad Home Base</a>.</p>
+<script>
+  // Open the app this browser tab was on (so an update doesn't move every tab to the same app),
+  // else the app you used last anywhere, else Triad Home Base.
+  (function () {
+    var ok = ['practice.html','baby-solfege.html','baby.html','home-base.html','solo-ear.html','blues.html','triad-trainer.html','ii-v-i.html','home-away.html','iiv-trips.html','stitt-licks.html','color-map.html','triad-palette.html','triad-pairs.html','melody-blocks.html','metronome.html','favorites.html','triads-by-chord.html','triad-glow.html','tune-journey.html'];
+    var valid = function (v) { return !!v && ok.indexOf(String(v).split(/[?#]/)[0]) >= 0; };
+    // #solo-ear → solo-ear.html, #blues-14 → blues.html?focus=14
+    var h = (location.hash || '').slice(1), fromHash = null;
+    if (/^[a-z0-9-]+$/.test(h)) fromHash = h === 'blues-14' ? 'blues.html?focus=14' : h === 'home-glow' ? 'triad-glow.html' : h + '.html';
+    var tab = null, last = null;
+    try { tab = sessionStorage.getItem('lab:here'); } catch (e) {}
+    try { last = localStorage.getItem('lab:last'); } catch (e) {}
+    location.replace(valid(fromHash) ? fromHash : valid(tab) ? tab : valid(last) ? last : 'home-base.html');
+  })();
+</script>
+</body>
+</html>

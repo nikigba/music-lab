@@ -1,0 +1,1158 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Stitt Lick Triads</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: title → controls → the lick as a pitch contour on a time grid (Dm7 | G7 | C),
+   with triad cards in two lanes underneath, aligned to the notes they use → status → key.
+   Same dark card language and color-by-distance-from-C as the other harmony apps. */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #f2f2f2;
+  --muted: #a3a3a8;
+  --dim: #6e6e73;
+  --line: #2c2c2e;
+  --card-line: #3a3a3c;
+  --strip-ink: #1c1c1e;
+  --panel: #111113;
+  --gold: #EED27A;
+  --half: #F1A15C;
+  --hidden: #2a2a2d;
+  --focus: hsl(205 60% 70%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.sub { margin: -10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 70ch; }
+
+.controls {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
+}
+.btn {
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--fg);
+  background: #1e1e20; border: 1px solid var(--card-line); border-radius: 999px;
+  padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover { background: #26262a; }
+.btn[aria-pressed="true"] { background: var(--gold); color: var(--strip-ink); border-color: var(--gold); }
+.btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.btn[aria-pressed="true"] .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
+.ctl { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctl input[type=range] { width: 96px; accent-color: var(--gold); }
+.ctl output { color: var(--fg); font-variant-numeric: tabular-nums; min-width: 3ch; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { accent-color: var(--gold); width: 15px; height: 15px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* The lick */
+.lick { border: 1.5px solid var(--line); border-radius: 28px; padding: clamp(12px, 2.4vw, 24px); display: flex; flex-direction: column; gap: 6px; }
+.track { position: relative; width: 100%; }
+.chords { height: 30px; }
+.chord { position: absolute; top: 0; height: 26px; display: flex; align-items: center; padding-left: 8px;
+  border-left: 1.5px solid var(--card-line); font-weight: 600; font-size: clamp(14px, 2vw, 18px); }
+.chord span { font-weight: 400; font-size: 12px; color: var(--dim); margin-left: 6px; }
+svg.contour { display: block; width: 100%; height: auto; overflow: visible; }
+.note { cursor: pointer; }
+.note circle, .note rect { fill: #161618; stroke: var(--card-line); stroke-width: 2; transition: stroke .1s, fill .1s; }
+.note text { fill: var(--fg); font: 600 24px var(--font); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.note text.rn { fill: var(--dim); font: 600 15px var(--font); letter-spacing: .04em; }
+.note.on text.rn { fill: var(--muted); }
+.note.from circle, .note.from rect { stroke: var(--gold); stroke-width: 2.5; }
+.note text.tone { fill: var(--muted); font: 500 18px var(--font); opacity: 0; transition: opacity .2s; }
+.note text.tone.shown { opacity: .4; }
+.note.on text.tone { fill: var(--fg); }
+.roles { display: none; }
+.note:hover circle, .note:hover rect { stroke: #6a6a70; }
+.note.on circle, .note.on rect { stroke: #fff; stroke-width: 3; fill: #2a2a2e; filter: url(#glow); }
+.note.passing circle { stroke-dasharray: 4 4; }
+.marker { fill: none; stroke: var(--gold); stroke-width: 28; stroke-linecap: round; stroke-linejoin: round; opacity: .2; pointer-events: none; }
+.link { stroke: #3a3a3e; stroke-width: 2; fill: none; }
+.link.half.shown { stroke: var(--half); stroke-width: 3; }
+.halflbl { fill: var(--half); font: 600 14px var(--font); text-anchor: middle; opacity: 0; transition: opacity .2s; }
+.halflbl.shown { opacity: 1; }
+.barline { stroke: var(--line); stroke-width: 1.5; }
+
+.roles { height: 22px; }
+.role { position: absolute; top: 0; transform: translateX(-50%); font-size: clamp(10.5px, 1.4vw, 13px); color: var(--dim);
+  font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .2s; white-space: nowrap; }
+.role.shown { opacity: 1; }
+.lanes { height: clamp(70px, 9vw, 84px); margin-top: 4px; }
+.card {
+  position: absolute; font: inherit; color: inherit; text-align: left; padding: 0; cursor: pointer;
+  background: #000; border: 1.5px solid var(--card-line); border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; min-width: 0; height: 100%;
+  transition: transform .12s ease, border-color .15s ease, box-shadow .3s ease;
+  touch-action: manipulation;
+}
+.card:hover { border-color: #5a5a5e; }
+.card:active { transform: scale(.98); }
+.card .strip { height: 44%; display: flex; align-items: center; justify-content: center; color: var(--strip-ink);
+  font-size: clamp(14px, 2vw, 18px); font-weight: 600; background: var(--c); transition: background .3s; padding-inline: 4px; white-space: nowrap; }
+.card .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 clamp(5px, 1vw, 10px); gap: 1px; min-width: 0; }
+.card .deg { font-size: clamp(11.5px, 1.5vw, 14px); color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .sn { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .strip em { font-style: normal; opacity: .5; margin-left: 4px; }
+.card.hid .strip { background: var(--hidden); color: var(--dim); }
+.card.hid .deg, .card.hid .sn { visibility: hidden; }
+.card.playing { border-color: #fff; box-shadow: 0 0 0 3px var(--glow), 0 0 24px -2px var(--glow); }
+
+.status { font-size: 13.5px; color: var(--muted); min-height: 4.4em; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.status b { color: var(--fg); font-weight: 600; }
+
+.key { display: flex; flex-direction: column; gap: 10px; }
+.key h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.key p { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin: 0; max-width: 72ch; }
+.key b { color: var(--fg); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 22px; height: 14px; border-radius: 4px; }
+.hl { width: 22px; height: 0; border-top: 3px solid var(--half); }
+.pd { width: 14px; height: 14px; border-radius: 50%; border: 2px dashed var(--card-line); }
+
+@media (max-width: 560px) {
+  .lick { padding: 12px 10px; border-radius: 22px; }
+  .vcell span, .seam .long { display: none; }
+  .vcell { padding-left: 6px; }
+  .card .sn { display: none; }
+  .card .strip { height: 50%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.picker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.picker .lbl { font-size: 13px; color: var(--dim); margin-right: 4px; }
+.pick { font: inherit; font-size: 15px; font-weight: 600; color: var(--muted); background: transparent;
+  border: 1.5px solid var(--card-line); border-radius: 999px; min-width: 42px; height: 38px; padding: 0 12px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pick:hover { color: var(--fg); border-color: #5a5a5e; }
+.pick[aria-pressed="true"] { color: var(--strip-ink); background: var(--fg); border-color: var(--fg); }
+.notes-line { font-variant-numeric: tabular-nums; }
+.picks { display: contents; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.setpick { display: inline-flex; align-items: center; gap: 8px; }
+.setpick .lbl { font-size: 13px; color: var(--dim); }
+.setpick select { font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); background: #1e1e20;
+  border: 1.5px solid var(--card-line); border-radius: 999px; height: 38px; padding: 0 12px; cursor: pointer; }
+.scroller { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.inner { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.lick .chord { white-space: nowrap; }
+/* Voice leading: the two guide-tone voices under the chord names */
+:root { --v0: hsl(188 62% 62%); --v1: hsl(330 66% 74%); }
+.guides { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 4px; }
+.vrow { position: relative; height: 30px; }
+.vcell { position: absolute; top: 0; height: 30px; display: flex; align-items: center; gap: 6px; padding-left: 10px;
+  border-left: 1.5px solid transparent; white-space: nowrap; transition: background .15s; border-radius: 0 8px 8px 0; }
+.vcell b { font-size: 17px; font-weight: 700; color: var(--vc); font-variant-numeric: tabular-nums; }
+.vcell span { font-size: 11.5px; color: var(--dim); }
+.vcell.hold b { opacity: .45; }
+.vcell.hold::before { content: ''; position: absolute; left: -2px; width: 8px; top: 50%; border-top: 2px solid var(--vc); opacity: .45; }
+.vcell.on { background: color-mix(in srgb, var(--vc) 22%, transparent); }
+.vmove { position: absolute; top: 4px; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: var(--strip-ink);
+  background: var(--vc); border-radius: 999px; padding: 2px 6px; z-index: 1; pointer-events: none; white-space: nowrap; }
+.vbtns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: var(--dim); }
+.vlbl { font: inherit; font-size: 11.5px; font-weight: 600; color: var(--vc); background: #000;
+  border: 1.5px solid var(--vc); border-radius: 999px; height: 24px; padding: 0 9px; cursor: pointer; z-index: 2; white-space: nowrap; }
+.vlbl:hover { background: color-mix(in srgb, var(--vc) 20%, #000); }
+.seams { position: relative; height: 34px; }
+.seam { position: absolute; top: 0; transform: translateX(-50%); font-size: 11.5px; line-height: 1.35; text-align: center; color: var(--muted); white-space: nowrap; }
+.seam b { color: var(--fg); font-weight: 600; }
+.seam.yes b { color: var(--vc); }
+.seam .ok { color: var(--vc); font-weight: 700; }
+.gmark { fill: var(--vc); pointer-events: none; }
+.link.gl { stroke: var(--vc); stroke-width: 5; opacity: .9; }
+.gllbl { fill: var(--vc); font: 700 14px var(--font); text-anchor: middle; pointer-events: none; }
+.lick.vl-off .guides, .lick.vl-off .vbtns, .lick.vl-off .gmark, .lick.vl-off .gllbl { display: none; }
+.lick.vl-off .link.gl { stroke: #3a3a3e; stroke-width: 2; opacity: 1; }
+.seg { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.seg .btn { padding: 6px 11px; font-size: 13px; }
+.pick { position: relative; }
+.pick[data-gl]::after { content: attr(data-gl); position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%);
+  font-size: 8px; letter-spacing: 1px; color: var(--v0); line-height: 1; }
+.legend .vsw { width: 22px; height: 0; border-top: 4px solid var(--v0); border-radius: 2px; }
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <h1 id="title">Stitt lick 1</h1>
+    <label class="setpick"><span class="lbl">Set</span><select id="setSel"></select></label>
+  </div>
+  <p class="sub"><span class="notes-line" id="notesLine"></span> Numbers in the circles are measured from C. The shapes underneath start hidden: listen first, guess what's in there, then tap a card to reveal it.</p>
+
+  <div class="controls">
+    <button class="btn" id="playBtn" aria-pressed="false"><span class="dot"></span><span id="playLbl">Play lick</span></button>
+    <button class="btn" id="revealBtn">Reveal all</button>
+    <button class="btn" id="droneBtn" aria-pressed="false"><span class="dot"></span><span id="droneLbl">C drone</span></button>
+    <label class="ctl">Drone vol <input type="range" id="droneVol" min="0" max="100" value="10"></label>
+    <label class="ctl">Piano vol <input type="range" id="keysVol" min="0" max="100" value="70"></label>
+    <label class="ctl">Tempo <input type="range" id="tempo" min="50" max="220" value="120"><output id="tempoOut">120</output></label>
+    <label class="check"><input type="checkbox" id="swing" checked> Swing</label>
+    <label class="check"><input type="checkbox" id="bass" checked> Bass</label>
+    <label class="check"><input type="checkbox" id="loop"> Loop</label>
+    <label class="check"><input type="checkbox" id="vlBox" checked> Voice leading</label>
+    <span class="seg" role="group" aria-label="What to hear">Hear
+      <button class="btn" data-hear="lick" aria-pressed="true">Lick</button>
+      <button class="btn" data-hear="both" aria-pressed="false">Lick + lines</button>
+      <button class="btn" data-hear="lines" aria-pressed="false">Lines only</button>
+    </span>
+  </div>
+
+  <div class="picker" role="group" aria-label="Choose a lick" id="picker">
+    <span class="lbl">Lick</span><span class="picks" id="picks"></span>
+  </div>
+
+  <div class="lick" id="lickBox">
+    <div class="scroller" id="scroller"><div class="inner" id="inner">
+      <div class="track chords" id="chords"></div>
+      <div class="guides" id="guides"></div>
+      <svg class="contour" id="contour" viewBox="0 0 700 280" role="img" aria-label="The lick drawn as a pitch line, one circle per note"></svg>
+      <div class="track lanes" id="lanes"></div>
+    </div></div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <section class="key">
+    <h2>Reading the lick</h2>
+    <div class="legend">
+      <span><i class="hl"></i>Half step (shown once all are revealed)</span>
+      <span><i class="pd"></i>Passing note, outside the shape</span>
+      <span><i class="vsw"></i><i class="vsw" style="border-color:var(--v1)"></i>The two guide-tone voices (3rds and 7ths)</span>
+      <span><i class="sw" style="background:var(--gold)"></i>Gold is home (C); the farther a shape sits from C, the cooler its color</span>
+    </div>
+    <p>The big number is the note's distance from C. The small number under it shows up when you reveal its card: it's the note's place in that shape. In lick 1, A♭ is ♭6 from C but the <b>♭3</b> of F°. Long circles are long notes.</p>
+    <p><b>Voice leading.</b> The two colored rows under the chord names are the guide-tone voices, in numbers from C: in a ii–V–I that's <b>1 → 7 → 7</b> (♭7 → 3 → 7) and <b>4 → 4 → 3</b> (♭3 → ♭7 → 3). At each change only one voice moves, by a half step (the pill shows it); the faded number with a dash is a voice that holds. Under the rows, each change says what the lick does there: a ✓ means the line steps right onto the moving voice; otherwise it says where it lands instead. Lick notes that sit on a guide tone get a small colored dot, and a lick step that follows the moving voice is drawn thick in that voice's color. Dots under the lick numbers count how many changes follow a voice: start with those.</p>
+    <p><b>Hear</b> picks what plays: the lick, the lick with the two voices held quietly underneath, or the voices alone with the bass. Tap a row's button (▶ 1 → 7 → 7) to hear one voice by itself. Then sing it over the lick.</p>
+    <p>Watch the half steps at the chord changes. The 7th of one chord falling to the 3rd of the next (C → B, F → E) is the guide-tone line, and most of these licks are built around it. When a lick skips it, the card says what replaces it.</p>
+    <p>Not every card is a triad. Some bars are scale runs or neighbor figures, and several G7 bars use a piece of the altered scale (♭9 and ♯9) instead of a triad. In set 1, licks 1–8 use the ♭9 on G7; from lick 9 on it's the natural 9. Colors follow the Triad Palette; diminished shapes are greyed.</p>
+    <p>Set 1 was analyzed by hand. Later sets are analyzed by script, so their card notes are plainer; licks the script couldn't read cleanly (odd chords, very long or very fast lines) are left out until checked. Long or fast licks scroll sideways.</p>
+    <p>Keys: Space plays or stops, 1–9 pick a lick, Esc stops. Tap a note first (it gets a gold ring) and Space plays from that note; Esc clears it. The Play button always starts from the top.</p>
+  </section>
+</div>
+
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+const DRONE_LOOP = 24.2548125;
+// Acoustic piano samples (MIT, github.com/Leethring/piano-sound-samples), mono, keyed by MIDI note
+
+
+/* ---------- Audio ---------- */
+let live = [];
+let ctx, master;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  loadPiano(); loadDrone();
+  return ctx;
+}
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+function b64ToBuf(url) {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+/* Drone */
+let drone = null, droneBuf = null, droneStart = 0, droneLoad = null;
+const droneVol = document.getElementById('droneVol');
+const droneLevel = () => (droneVol.value / 100) * 0.9;
+function loadDrone() {
+  if (droneLoad) return droneLoad;
+  droneLoad = new Promise(res => ctx.decodeAudioData(b64ToBuf(DRONE_URL), b => {
+    droneBuf = b;
+    const d = b.getChannelData(0); let i = 0;
+    while (i < d.length && Math.abs(d[i]) < 0.002) i++;
+    droneStart = i / b.sampleRate; res();
+  }, () => res()));
+  return droneLoad;
+}
+async function startDrone() {
+  if (drone) return;
+  audio();
+  const g = ctx.createGain(); g.gain.setValueAtTime(0, ctx.currentTime);
+  drone = { g, oscs: [] }; setDroneUI(true);
+  await loadDrone();
+  if (!drone || drone.g !== g || !droneBuf) return;
+  const src = ctx.createBufferSource(); src.buffer = droneBuf;
+  src.loop = true; src.loopStart = droneStart; src.loopEnd = droneStart + DRONE_LOOP;
+  src.connect(g); g.connect(master);
+  src.start(ctx.currentTime, droneStart);
+  g.gain.linearRampToValueAtTime(droneLevel(), ctx.currentTime + 1.2);
+  drone.oscs.push(src);
+}
+function stopDrone() {
+  if (!drone) return;
+  const { g, oscs } = drone, t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.4);
+  oscs.forEach(o => o.stop(t + 0.45));
+  drone = null; setDroneUI(false);
+}
+droneVol.addEventListener('input', () => { if (drone) drone.g.gain.setTargetAtTime(droneLevel(), ctx.currentTime, 0.05); });
+const droneBtn = document.getElementById('droneBtn');
+function setDroneUI(on) { droneBtn.setAttribute('aria-pressed', on); document.getElementById('droneLbl').textContent = on ? 'C drone on' : 'C drone'; }
+droneBtn.addEventListener('click', () => drone ? stopDrone() : startDrone());
+
+/* Piano samples */
+const buffers = {}; let pianoLoad = null;
+function loadPiano() {
+  if (pianoLoad) return pianoLoad;
+  pianoLoad = Promise.all(Object.entries(PIANO).map(([m, url]) =>
+    new Promise(res => ctx.decodeAudioData(b64ToBuf(url), b => { buffers[m] = b; res(); }, () => res()))));
+  return pianoLoad;
+}
+const keysVol = document.getElementById('keysVol');
+const keysLevel = () => (keysVol.value / 100);
+function piano(m, t, dur, scale = 1) {
+  const buf = buffers[m];
+  if (!buf) return synth(m, t, dur);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const g = ctx.createGain();
+  const end = Math.min(t + dur, t + buf.duration), v = keysLevel() * scale;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.004);
+  g.gain.setValueAtTime(v, Math.max(t + 0.005, end - 0.12));
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  src.connect(g); g.connect(master);
+  src.start(t); src.stop(end + 0.02);
+  live.push({ srcs: [src], g });
+}
+function synth(m, t, dur) {
+  const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+  o1.type = 'triangle'; o2.type = 'sine';
+  o1.frequency.value = hz(m); o2.frequency.value = hz(m) * 2;
+  const g2 = ctx.createGain(); g2.gain.value = 0.18;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+  live.push({ srcs: [o1, o2], g });
+}
+
+
+/* ---------- Stitt, 251 exercises 1–6, all in C ----------
+   Each note: [MIDI, eighth-note slot from the start, length in slots (default 1)].
+   Slots 0–3 are over Dm7, 4–7 over G7, 8+ over C.
+   Lick 1, bar 2: E read as an eighth (the import had a quarter that overfills the bar). */
+const G_ = () => color('sharp', 1), EM = () => color('sharp', 1.5), F_ = () => color('flat', 1);
+const DM7 = () => color('flat', 1.5), DIM = () => color('sharp', 1, true), HOME = () => color('sharp', 0), ALT = () => color('flat', 3);
+const LICKS = [
+  { notes: [[74,0],[77,1],[81,2],[84,3],[83,4],[80,5],[79,6],[77,7],[76,8],[72,9,5]],
+    cards: [
+      { name: 'Dm7', deg: '2–4–6–1', stack: '1–3–5–7 of Dm7, up', use: [0,1,2,3], labels: ['1','♭3','5','♭7'], color: DM7,
+        about: 'D–F–A–C: Dm7 straight up, root to 7th. The top note matters most: C, the 7th, falls a half step to B on the G7.' },
+      { name: 'F°', tone: '♭7', deg: '4–♭6–7', stack: '1–♭3–♭5 of F°', use: [4,5,6,7], passing: [6], labels: ['♭5','♭3','2','1'], color: DIM,
+        about: 'B–A♭–G–F is the F° triad from the top (♭5–♭3–1), with G, its 2, passing in between. Over the G bass those triad notes are the 3, ♭9 and ♭7 of G7, so F° is the G7♭9 sound without the root.' },
+      { name: 'C', deg: '1–3–5', stack: '3 then 1 of C', use: [8,9], labels: ['3','1'], color: HOME,
+        about: 'Lands on E, the 3rd of C, then drops to the root. Only two notes of the C triad, and the E is the one doing the work.' },
+    ],
+    summary: 'The line climbs <b>Dm7</b> to its 7th, drops a half step from C to B, falls down <b>F°</b> with its 2 (G) passing, and lands F → E on <b>C</b>.' },
+
+  { notes: [[77,0],[76,1],[74,2],[72,3],[71,4],[80,5],[79,6],[77,7],[76,8],[72,9,5]],
+    cards: [
+      { name: 'Dm7 scale', deg: '4–3–2–1', stack: 'scale down from its ♭3', use: [0,1,2,3], labels: ['♭3','2','1','♭7'], color: DM7,
+        about: 'F–E–D–C: steps down the Dm7 scale from its 3rd to its 7th. No arpeggio this time, but it still ends on C, the 7th, ready to drop a half step to B.' },
+      { name: 'F°', tone: '♭7', deg: '4–♭6–7', stack: '1–♭3–♭5 of F°', use: [4,5,6,7], passing: [6], labels: ['♭5','♭3','2','1'], color: DIM,
+        about: 'The same F° as lick 1, but B is taken down an octave: C falls a half step to the low B, then the line jumps up to A♭ and runs down F° with G passing.' },
+      { name: 'C', deg: '1–3–5', stack: '3 then 1 of C', use: [8,9], labels: ['3','1'], color: HOME,
+        about: 'F falls to E, the 3rd of C, then the line drops to the root.' },
+    ],
+    summary: 'Steps down the <b>Dm7</b> scale to C, drops a half step to a low B, jumps up into <b>F°</b> with G passing, and lands F → E on <b>C</b>.' },
+
+  { notes: [[81,0],[77,1],[74,2],[72,3],[71,4],[74,5],[77,6],[80,7],[79,8],[76,9,5]],
+    cards: [
+      { name: 'Dm7', deg: '6–4–2–1', stack: '5–3–1–7 of Dm7, down', use: [0,1,2,3], labels: ['5','♭3','1','♭7'], color: DM7,
+        about: 'A–F–D–C: Dm7 coming down, again ending on C, its 7th, a half step above B.' },
+      { name: 'B°7', tone: '3', deg: '7–2–4–♭6', stack: '1–♭3–♭5–°7 of B°7', use: [4,5,6,7], labels: ['1','♭3','♭5','°7'], color: DIM,
+        about: 'B–D–F–A♭ straight up: the full B°7, which is G7♭9 without its root. It holds lick 1\'s F° (F–A♭–B) plus D. The top note, A♭, falls a half step to G.' },
+      { name: 'C', deg: '1–3–5', stack: '5 then 3 of C', use: [8,9], labels: ['5','3'], color: HOME,
+        about: 'Lands on G, the 5th, as A♭ resolves down a half step, then settles on E. The guide tone here is A♭ → G, not F → E.' },
+    ],
+    summary: 'Down <b>Dm7</b> to C, a half step to B, straight up <b>B°7</b>, then A♭ falls a half step to G on <b>C</b>.' },
+
+  { notes: [[84,0],[81,1],[77,2],[74,3],[83,4],[80,5],[79,6],[77,7],[76,8,2],[67,10],[72,11,3]],
+    cards: [
+      { name: 'Dm7', deg: '1–6–4–2', stack: '7–5–3–1 of Dm7, down', use: [0,1,2,3], labels: ['♭7','5','♭3','1'], color: DM7,
+        about: 'C–A–F–D: Dm7 from its 7th down to the root. Ending on D means there\'s no half step into G7; the line leaps up a 6th to B instead.' },
+      { name: 'F°', tone: '♭7', deg: '4–♭6–7', stack: '1–♭3–♭5 of F°', use: [4,5,6,7], passing: [6], labels: ['♭5','♭3','2','1'], color: DIM,
+        about: 'The same F° run as lick 1: B–A♭–(G)–F, the G7♭9 sound without the root.' },
+      { name: 'C', deg: '1–3–5', stack: '3–5–1 of C', use: [8,9,10], labels: ['3','5','1'], color: HOME,
+        about: 'F falls to E, then the line drops through a low G to C: the C triad, finishing on the root.' },
+    ],
+    summary: 'Down <b>Dm7</b> from its 7th, a leap up to B, down <b>F°</b> with G passing, then F → E and down through the <b>C</b> triad.' },
+
+  { notes: [[74,0],[76,1],[77,2],[79,3],[80,4],[82,5],[79,6],[77,7],[76,8,2],[72,10],[67,11,3]],
+    cards: [
+      { name: 'Dm7 scale', deg: '2–3–4–5', stack: 'scale up from its root', use: [0,1,2,3], labels: ['1','2','♭3','4'], color: DM7,
+        about: 'D–E–F–G: steps up the Dm7 scale. The top note is G, the 11th, which slides up a half step to A♭ as the chord changes.' },
+      { name: 'G7alt', deg: '♭6–♭7–5–4', stack: '♭9–♯9–1–♭7 of G7', use: [4,5,6,7], labels: ['♭9','♯9','1','♭7'], color: ALT,
+        about: 'A♭–B♭–G–F: no triad here. It\'s a piece of the G altered scale: the ♭9 and ♯9 side by side, then the root and the 7th. There\'s no B, so the pull comes from the ♭9 and from F, which still falls to E.' },
+      { name: 'C', deg: '1–3–5', stack: '3–1–5 of C', use: [8,9,10], labels: ['3','1','5'], color: HOME,
+        about: 'F falls to E, then down to C and a low G.' },
+    ],
+    summary: 'Up the <b>Dm7</b> scale, G slides a half step to A♭, the <b>altered</b> ♭9–♯9 pair, then F → E on <b>C</b>.' },
+
+  { notes: [[77,0],[76,1],[74,2],[76,3],[77,4],[79,5],[80,6],[82,7],[79,8],[76,9,5]],
+    cards: [
+      { name: 'Dm7 scale', deg: '4–3–2–3', stack: 'around the root: ♭3–2–1–2', use: [0,1,2,3], labels: ['♭3','2','1','2'], color: DM7,
+        about: 'F–E–D–E: circles the root D from above. E, the 9th, steps up a half step to F as the chord changes.' },
+      { name: 'G7alt', deg: '4–5–♭6–♭7', stack: '♭7–1–♭9–♯9 of G7', use: [4,5,6,7], labels: ['♭7','1','♭9','♯9'], color: ALT,
+        about: 'F–G–A♭–B♭: the same altered piece as lick 5, climbing this time. It tops out on B♭, the ♯9, and drops a minor 3rd to G instead of resolving by half step.' },
+      { name: 'C', deg: '1–3–5', stack: '5 then 3 of C', use: [8,9], labels: ['5','3'], color: HOME,
+        about: 'Lands on G, the 5th, then settles on E, the 3rd. The only lick here with no half step into C.' },
+    ],
+    summary: 'Around D on <b>Dm7</b>, E → F by half step into G7, up the <b>altered</b> piece to B♭, then down a 3rd to G on <b>C</b>.' },
+
+  { notes: [[69,0],[72,1],[77,2],[81,3],[82,4],[80,5],[79,6],[77,7],[76,8],[79,9,5]],
+    cards: [
+      { name: 'F', deg: '6–1–4–6', stack: '3–5–1–3 of F (3–5–7 of Dm7)', use: [0,1,2,3], labels: ['3','5','1','3'], color: F_,
+        about: 'A–C–F–A: an F triad, which is the 3–5–7 of Dm7. It starts low on A and climbs back to A.' },
+      { name: 'G7alt', deg: '♭7–♭6–5–4', stack: '♯9–♭9–1–♭7 of G7, down', use: [4,5,6,7], labels: ['♯9','♭9','1','♭7'], color: ALT,
+        about: 'B♭–A♭–G–F: the four-step run down to the ♭7, starting on the ♯9 instead of the 3rd. There\'s no B anywhere, so the altered notes carry the tension.' },
+      { name: 'C', deg: '1–3–5', stack: '3 then 5 of C', use: [8,9], labels: ['3','5'], color: HOME,
+        about: 'F falls to E, then the line steps up to G and holds it.' },
+    ],
+    summary: 'Up an <b>F</b> triad (Dm7\'s 3–5–7), A steps up a half step to B♭, the <b>altered</b> run down to F, then F → E on <b>C</b>.' },
+
+  { notes: [[84,0],[81,1],[77,2],[74,3],[82,4],[80,5],[79,6],[77,7],[76,8],[72,9,5]],
+    cards: [
+      { name: 'Dm7', deg: '1–6–4–2', stack: '7–5–3–1 of Dm7, down', use: [0,1,2,3], labels: ['♭7','5','♭3','1'], color: DM7,
+        about: 'C–A–F–D: Dm7 from its 7th down to the root, the same as lick 4. Then a leap up to B♭.' },
+      { name: 'G7alt', deg: '♭7–♭6–5–4', stack: '♯9–♭9–1–♭7 of G7, down', use: [4,5,6,7], labels: ['♯9','♭9','1','♭7'], color: ALT,
+        about: 'The same altered run as lick 7: B♭–A♭–G–F, down to the ♭7.' },
+      { name: 'C', deg: '1–3–5', stack: '3 then 1 of C', use: [8,9], labels: ['3','1'], color: HOME,
+        about: 'F falls to E, then down to the root.' },
+    ],
+    summary: 'Down <b>Dm7</b> from its 7th, a leap to B♭, the <b>altered</b> run down to F, then F → E on <b>C</b>. Lick 4 with the ♯9 in place of the 3rd.' },
+
+  { notes: [[74,0],[76,1],[77,2],[79,3],[81,4],[84,5],[83,6],[81,7],[79,8],[76,9,5]],
+    cards: [
+      { name: 'Dm7 scale', deg: '2–3–4–5', stack: 'scale up from its root', use: [0,1,2,3], labels: ['1','2','♭3','4'], color: DM7,
+        about: 'D–E–F–G: the same scale run as lick 5, but this time G steps up a whole step to A.' },
+      { name: 'G7', tone: '9', deg: '6–1–7–6', stack: '9–11–3–9 around the 3rd', use: [4,5,6,7], labels: ['9','11','3','9'], color: G_,
+        about: 'A–C–B–A: no ♭9 from here on. The line circles B, the 3rd: C from above, A from below. C on the beat gives a brief sus sound before it resolves to B.' },
+      { name: 'C', deg: '1–3–5', stack: '5 then 3 of C', use: [8,9], labels: ['5','3'], color: HOME,
+        about: 'A falls a whole step to G, the 5th, then settles on E. No half step into C here.' },
+    ],
+    summary: 'Up the <b>Dm7</b> scale, then the <b>G7</b> bar circles its 3rd (A–C–B–A) and A steps down to G on <b>C</b>. The first lick with a natural 9 instead of the ♭9.' },
+
+  { notes: [[74,0],[72,1],[71,2],[74,3],[77,4],[81,5],[79,6],[77,7],[76,8],[72,9,5]],
+    cards: [
+      { name: 'Dm7 scale', deg: '2–1–7–2', stack: 'around the root: 1–♭7–6–1', use: [0,1,2,3], labels: ['1','♭7','6','1'], color: DM7,
+        about: 'D–C–B–D: dips below the root and comes back. B is the 6th (13th) of Dm7, the Dorian note.' },
+      { name: 'G7', tone: '♭7', deg: '4–6–5–4', stack: '♭7–9–1–♭7 around the root', use: [4,5,6,7], labels: ['♭7','9','1','♭7'], color: G_,
+        about: 'F–A–G–F: circles G from below and above, starting and ending on F, the ♭7. No B at all, so F alone does the pulling.' },
+      { name: 'C', deg: '1–3–5', stack: '3 then 1 of C', use: [8,9], labels: ['3','1'], color: HOME,
+        about: 'F falls to E, then down to the root.' },
+    ],
+    summary: 'Around D on <b>Dm7</b>, a minor 3rd up to F, then the <b>G7</b> bar circles its root from F to F, and F → E on <b>C</b>.' },
+
+  { notes: [[77,0],[79,1],[81,2],[84,3],[83,4],[81,5],[79,6],[77,7],[76,8,2],[72,10],[67,11,3]],
+    cards: [
+      { name: 'F', deg: '4–5–6–1', stack: '1–3–5 of F, with its 2', use: [0,1,2,3], passing: [1], labels: ['1','2','3','5'], color: F_,
+        about: 'F–G–A–C: an F triad (Dm7\'s 3–5–7) with its 2 slipped in. The same "triad + 2" idea as F° on G7, ending on C to drop a half step to B.' },
+      { name: 'G7', tone: '3', deg: '7–6–5–4', stack: '3–9–1–♭7 of G7, down', use: [4,5,6,7], labels: ['3','9','1','♭7'], color: G_,
+        about: 'B–A–G–F: the four-step run down to the ♭7, with a natural 9 (A) where licks 1, 2 and 4 had A♭.' },
+      { name: 'C', deg: '1–3–5', stack: '3–1–5 of C', use: [8,9,10], labels: ['3','1','5'], color: HOME,
+        about: 'F falls to E, then down through C to a low G.' },
+    ],
+    summary: 'Up <b>F + 2</b> to C, a half step to B, the <b>G7</b> run down to F, then F → E on <b>C</b>. Lick 1\'s shape with no ♭9.' },
+
+  { notes: [[77,0],[76,1],[74,2],[72,3],[71,4],[74,5],[77,6],[81,7],[79,8],[76,9,5]],
+    cards: [
+      { name: 'Dm7 scale', deg: '4–3–2–1', stack: 'scale down from its ♭3', use: [0,1,2,3], labels: ['♭3','2','1','♭7'], color: DM7,
+        about: 'F–E–D–C: the same run as lick 2, down to C, the 7th.' },
+      { name: 'Bø7', tone: '3', deg: '7–2–4–6', stack: '1–♭3–♭5–♭7 of Bø7', use: [4,5,6,7], labels: ['1','♭3','♭5','♭7'], color: DIM,
+        about: 'B–D–F–A straight up: B° with A on top, which is G9 without its root. Lick 3 with A in place of A♭. A then falls a whole step to G.' },
+      { name: 'C', deg: '1–3–5', stack: '5 then 3 of C', use: [8,9], labels: ['5','3'], color: HOME,
+        about: 'A falls to G, the 5th, then settles on E.' },
+    ],
+    summary: 'Down the <b>Dm7</b> scale to C, a half step to B, up <b>Bø7</b> (B°+A), then A → G on <b>C</b>. Lick 3 with a natural 9.' },
+
+  { notes: [[69,0],[72,1],[77,2],[81,3],[79,4],[77,5],[76,6],[71,7],[74,8,2],[72,10],[67,11,3]],
+    cards: [
+      { name: 'F', deg: '6–1–4–6', stack: '3–5–1–3 of F (3–5–7 of Dm7)', use: [0,1,2,3], labels: ['3','5','1','3'], color: F_,
+        about: 'A–C–F–A: the same F triad climb as lick 7.' },
+      { name: 'Em', tone: '13', deg: '5–4–3–7', stack: '♭3–(♭2)–1–5 of Em', use: [4,5,6,7], passing: [5], labels: ['♭3','♭2','1','5'], color: EM,
+        about: 'G–F–E–B: an Em triad (E–G–B), which over G7 is the 13, the root and the 3rd, with F passing between G and E. It drops to B, the 3rd, at the bottom.' },
+      { name: 'C', deg: '1–3–5', stack: '9–1–5 of C', use: [8,9,10], labels: ['9','1','5'], color: HOME,
+        about: 'B goes up to D, the 9th of C, not to C. The only lick that lands on the 9.' },
+    ],
+    summary: 'Up an <b>F</b> triad, A steps down to G, down <b>Em</b> with F passing, then B rises to D, the 9th, on <b>C</b>.' },
+
+  { notes: [[81,0],[77,1],[74,2],[72,3],[71,4],[74,5],[77,6],[81,7],[79,8],[76,9,5]],
+    cards: [
+      { name: 'Dm7', deg: '6–4–2–1', stack: '5–3–1–7 of Dm7, down', use: [0,1,2,3], labels: ['5','♭3','1','♭7'], color: DM7,
+        about: 'A–F–D–C: Dm7 coming down to its 7th, the same as lick 3.' },
+      { name: 'Bø7', tone: '3', deg: '7–2–4–6', stack: '1–♭3–♭5–♭7 of Bø7', use: [4,5,6,7], labels: ['1','♭3','♭5','♭7'], color: DIM,
+        about: 'B–D–F–A straight up, the same as lick 12. Lick 3 note for note, except A replaces A♭.' },
+      { name: 'C', deg: '1–3–5', stack: '5 then 3 of C', use: [8,9], labels: ['5','3'], color: HOME,
+        about: 'A falls to G, then settles on E.' },
+    ],
+    summary: 'Lick 3 with a natural 9: down <b>Dm7</b> to C, a half step to B, up <b>Bø7</b>, A → G on <b>C</b>. Play 3 and 14 back to back to hear ♭9 against 9.' },
+
+  { notes: [[84,0],[81,1],[77,2],[74,3],[83,4],[84,5],[83,6],[81,7],[79,8,3],[76,11,3]],
+    cards: [
+      { name: 'Dm7', deg: '1–6–4–2', stack: '7–5–3–1 of Dm7, down', use: [0,1,2,3], labels: ['♭7','5','♭3','1'], color: DM7,
+        about: 'C–A–F–D: Dm7 from its 7th down to the root, then a leap up a 6th to B.' },
+      { name: 'G7', tone: '3', deg: '7–1–7–6', stack: '3–11–3–9 around the 3rd', use: [4,5,6,7], labels: ['3','11','3','9'], color: G_,
+        about: 'B–C–B–A: sits on B, the 3rd, with C as an upper neighbor, then steps down to A.' },
+      { name: 'C', deg: '1–3–5', stack: '5 then 3 of C', use: [8,9], labels: ['5','3'], color: HOME,
+        about: 'A falls to G, held a little longer than usual, then E.' },
+    ],
+    summary: 'Down <b>Dm7</b> from its 7th, a leap to B, the <b>G7</b> bar leans on its 3rd (B–C–B–A), then A → G on <b>C</b>.' },
+
+  { notes: [[72,0],[74,1],[77,2],[81,3],[79,4],[77,5],[74,6],[71,7],[72,8,2],[67,10],[64,11,3]],
+    cards: [
+      { name: 'Dm7', deg: '1–2–4–6', stack: '7–1–3–5 of Dm7, up', use: [0,1,2,3], labels: ['♭7','1','♭3','5'], color: DM7,
+        about: 'C–D–F–A: Dm7 starting from its 7th, below the root. A then steps down to G.' },
+      { name: 'G7', tone: '1', deg: '5–4–2–7', stack: '1–♭7–5–3 of G7, down', use: [4,5,6,7], labels: ['1','♭7','5','3'], color: G_,
+        about: 'G–F–D–B: the plain G7 arpeggio coming down, ending on B, the 3rd. Underneath, F–D–B is B°.' },
+      { name: 'C', deg: '1–3–5', stack: '1–5–3 of C, down', use: [8,9,10], labels: ['1','5','3'], color: HOME,
+        about: 'B rises a half step to C, the root, then the C triad comes down to a low E. The only lick that lands on the root.' },
+    ],
+    summary: 'Up <b>Dm7</b> from its 7th, A → G, straight down the <b>G7</b> arpeggio to B, then B → C, down the <b>C</b> triad. Leading tone to root: the plainest landing in the set.' },
+];
+
+// Set 1 (above) is hand-analyzed; it uses the fixed Dm7 | G7 | C layout. Added sets carry their own chords and grid.
+const SET1_CHORDS = [{ slot: 0, name: 'Dm7', root: 2, q: 'm7' }, { slot: 4, name: 'G7', root: 7, q: '7' }, { slot: 8, name: 'C', root: 0, q: 'maj' }];
+const ADDED_SETS = [{"name":"Stitt 251 · set 2","title":"Stitt set 2 · lick","licks":[{"notes":[[81,0,1],[84,1,1],[81,2,1],[77,3,1],[74,4,1],[76,5,1],[77,6,1],[78,7,1],[79,8,1],[78,9,1],[77,10,1],[79,11,1],[76,12,2],[67,14,1],[72,15,4],[76,19,1]],"names":["A","C","A","F","D","E","F","F♯","G","F♯","F","G","E","G","C","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":15,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":22,"summary":"<b>F</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7</b> · <b>C</b><br>F♯ → G (3 → 1, half step); G → C (1 → 1, 5 semitones up)","bars":[1,2,3],"cards":[{"name":"F","deg":"4–6–1","stack":"3–5–3–1 of F","use":[0,1,2,3],"labels":["3","5","3","1"],"color":{"side":"flat","dist":1,"dim":false},"about":"A–C–A–F: the F triad."},{"name":"Dm7 scale","deg":"2–3–4","stack":"1–2–♭3–3 of Dm7, up","use":[4,5,6,7],"passing":[7],"labels":["1","2","♭3","3"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–F♯: a scale run over Dm7, no full triad. F♯ is a chromatic passing note between F and G."},{"name":"G7","tone":"1","deg":"5–4–5","stack":"1–7–♭7–1 of G7","use":[8,9,10,11],"passing":[9],"labels":["1","7","♭7","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–F♯–F–G: a G7 scale figure, no full triad. F♯ is a chromatic passing note between G and F."},{"name":"G7","tone":"13","deg":"3–5","stack":"13–1 of G7","use":[12,13],"labels":["13","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E–G: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"1–3 of C","use":[14,15],"labels":["1","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–E over C."}]},{"notes":[[77,0,2],[79,2,2],[77,4,2],[73,6,3],[76,9,3],[74,12,3],[76,15,3],[77,18,3],[79,21,3],[75,24,3],[76,27,3],[72,30,3],[69,33,3],[72,36,3],[74,39,3],[72,45,15],[76,60,6]],"names":["F","G","F","C♯","E","D","E","F","G","D♯","E","C","A","C","D","C","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":72,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>Am</b> · <b>G7</b> · <b>C</b><br>G → E♭ (4 → ♭13, 4 semitones down); C → E (11 → 3, 4 semitones up)","bars":[4,5,6],"cards":[{"name":"Dm7 scale","deg":"4–5–4–♭2–3","stack":"♭3–4–♭3–7–2 of Dm7, down","use":[0,1,2,3,4],"labels":["♭3","4","♭3","7","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"F–G–F–D♭–E: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"2–3–4–5","stack":"1–2–♭3–4 of Dm7, up","use":[5,6,7,8],"labels":["1","2","♭3","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–G: a scale run over Dm7, no full triad."},{"name":"Am","tone":"9","deg":"6–1–3","stack":"♭5–5–♭3–1 of Am","use":[9,10,11,12],"passing":[9],"labels":["♭5","5","♭3","1"],"color":{"side":"sharp","dist":0.5,"dim":false},"about":"E♭–E–C–A: the Am triad, with E♭ passing. Built on the 9 of G7."},{"name":"G7","tone":"11","deg":"1–2–1","stack":"11–5–11 of G7","use":[13,14,15],"labels":["11","5","11"],"color":{"side":"sharp","dist":1,"dim":false},"about":"C–D–C: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"3 of C","use":[16],"labels":["3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E over C."}]},{"notes":[[76,0,3],[73,3,3],[74,6,3],[76,9,3],[77,12,2],[79,14,2],[77,16,2],[73,18,3],[76,21,3],[74,24,3],[76,27,3],[77,30,3],[79,33,3],[76,36,6],[67,42,3],[72,45,15],[69,60,6]],"names":["E","C♯","D","E","F","G","F","C♯","E","D","E","F","G","E","G","C","A"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":45,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":72,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7</b> · <b>C</b><br>E → D (2 → 5, 2 semitones down); G → C (1 → 1, 5 semitones up)","bars":[8,9,10],"cards":[{"name":"Dm7 scale","deg":"3–2–3","stack":"2–7–1–2 of Dm7, around","use":[0,1,2,3],"passing":[1],"labels":["2","7","1","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–D♭–D–E: a scale run over Dm7, no full triad. D♭ is a chromatic approach, a half step into D."},{"name":"Dm7 scale","deg":"4–5–4–♭2–3","stack":"♭3–4–♭3–7–2 of Dm7, down","use":[4,5,6,7,8],"labels":["♭3","4","♭3","7","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"F–G–F–D♭–E: a scale run over Dm7, no full triad."},{"name":"G7","tone":"5","deg":"2–3–4–5","stack":"5–13–♭7–1 of G7","use":[9,10,11,12],"labels":["5","13","♭7","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–E–F–G: a G7 scale figure, no full triad."},{"name":"G7","tone":"13","deg":"3–5","stack":"13–1 of G7","use":[13,14],"labels":["13","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E–G: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"1–13 of C","use":[15,16],"labels":["1","13"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–A over C."}]},{"notes":[[62,0,3],[64,3,3],[65,6,3],[67,9,3],[69,12,3],[71,15,3],[72,18,3],[74,21,3],[76,24,2],[77,26,2],[78,28,2],[79,30,2],[78,32,2],[77,34,2],[76,36,3],[72,39,3],[69,42,3],[67,45,3],[72,48,3],[72,51,9]],"names":["D","E","F","G","A","B","C","D","E","F","F♯","G","F♯","F","E","C","A","G","C","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":66,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>Am7</b> · <b>C</b><br>D → E (1 → 13, 2 semitones up); G → C (1 → 1, 5 semitones up)","bars":[11,12,13],"cards":[{"name":"Dm7 scale","deg":"2–3–4–5","stack":"1–2–♭3–4 of Dm7, up","use":[0,1,2,3],"labels":["1","2","♭3","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–G: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"6–7–1–2","stack":"5–6–♭7–1 of Dm7, up","use":[4,5,6,7],"labels":["5","6","♭7","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–B–C–D: a scale run over Dm7, no full triad."},{"name":"G7","tone":"13","deg":"3–4–5–4","stack":"13–♭7–7–1–7–♭7 of G7","use":[8,9,10,11,12,13],"passing":[10,12],"labels":["13","♭7","7","1","7","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E–F–F♯–G–F♯–F: a G7 scale figure, no full triad. F♯ is a chromatic passing note between F and G. F♯ is a chromatic passing note between G and F."},{"name":"Am7","tone":"9","deg":"6–1–3–5","stack":"5–♭3–1–♭7 of Am7, down","use":[14,15,16,17],"labels":["5","♭3","1","♭7"],"color":{"side":"sharp","dist":0.5,"dim":false},"about":"E–C–A–G: a Am7 arpeggio, down. Built on the 9 of G7."},{"name":"C","deg":"1–3–5","stack":"1–1 of C","use":[18,19],"labels":["1","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–C over C."}]},{"notes":[[81,-6,3],[84,-3,3],[83,0,3],[83,3,3],[79,6,3],[83,9,3],[81,12,3],[81,15,3],[77,18,3],[81,21,3],[79,24,3],[79,27,3],[76,30,3],[79,33,3],[77,36,2],[79,38,2],[77,40,2],[75,42,3],[76,45,9],[72,54,3],[67,57,3]],"names":["A","C","B","B","G","B","A","A","F","A","G","G","E","G","F","G","F","D♯","E","C","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":66,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7</b> · <b>C</b><br>A → G (5 → 1, 2 semitones down); E → C (13 → 1, 4 semitones down)","bars":[15,16,17,18],"cards":[{"name":"Dm7 scale","deg":"6–1–7–7–5–7","stack":"5–♭7–6–6–4–6 of Dm7, up","use":[0,1,2,3,4,5],"labels":["5","♭7","6","6","4","6"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–C–B–B–G–B: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"6–6–4–6","stack":"5–5–♭3–5 of Dm7, around","use":[6,7,8,9],"labels":["5","5","♭3","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–A–F–A: a scale run over Dm7, no full triad."},{"name":"G7","tone":"1","deg":"5–5–3–5","stack":"1–1–13–1 of G7","use":[10,11,12,13],"labels":["1","1","13","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–G–E–G: a G7 scale figure, no full triad."},{"name":"G7","tone":"♭7","deg":"4–5–4–♭3–3","stack":"♭7–1–♭7–♭13–13 of G7","use":[14,15,16,17,18],"labels":["♭7","1","♭7","♭13","13"],"color":{"side":"sharp","dist":1,"dim":false},"about":"F–G–F–E♭–E: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"1–5 of C","use":[19,20],"labels":["1","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–G over C."}]},{"notes":[[62,-2,1],[64,-1,1],[65,0,1],[67,1,1],[69,2,1],[71,3,1],[72,4,1],[74,5,1],[76,6,1],[77,7,1],[74,8,1],[76,9,1],[77,10,1],[79,11,1],[76,12,2],[67,14,1],[72,15,5],[69,20,2]],"names":["D","E","F","G","A","B","C","D","E","F","D","E","F","G","E","G","C","A"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":16,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":24,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>C</b> · <b>C</b><br>F → D (♭3 → 5, 3 semitones down); C → A (11 → 13, 3 semitones down)","bars":[19,20,21,22],"cards":[{"name":"Dm7 scale","deg":"2–3–4–5–6–7","stack":"1–2–♭3–4–5–6 of Dm7, up","use":[0,1,2,3,4,5],"labels":["1","2","♭3","4","5","6"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–G–A–B: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"1–2–3–4","stack":"♭7–1–2–♭3 of Dm7, up","use":[6,7,8,9],"labels":["♭7","1","2","♭3"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–D–E–F: a scale run over Dm7, no full triad."},{"name":"G7","tone":"5","deg":"2–3–4–5","stack":"5–13–♭7–1 of G7","use":[10,11,12,13],"labels":["5","13","♭7","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–E–F–G: a G7 scale figure, no full triad."},{"name":"C","tone":"11","deg":"1–3–5","stack":"3–5–1 of C","use":[14,15,16],"labels":["3","5","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–G–C: the C triad. Built on the 11 of G7."},{"name":"C","deg":"1–3–5","stack":"13 of C","use":[17],"labels":["13"],"color":{"side":"sharp","dist":0,"dim":false},"about":"A over C."}]},{"notes":[[67,0,1],[69,1,1],[71,2,1],[72,3,1],[74,4,1],[71,5,1],[72,6,1],[74,7,1],[75,8,1],[76,9,1],[77,10,1],[78,11,1],[79,12,1],[74,13,1],[77,14,1],[79,15,1],[81,16,1],[76,17,1],[74,18,1],[72,19,1],[71,20,1],[74,21,1],[77,22,1],[81,23,1],[79,24,1],[75,25,1],[71,26,1],[67,27,1],[72,28,8]],"names":["G","A","B","C","D","B","C","D","D♯","E","F","F♯","G","D","F","G","A","E","D","C","B","D","F","A","G","E♭","B","G","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":12,"root":7,"q":"7","name":"G7"},{"slot":28,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":40,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>Am</b> · <b>Bø7</b> · <b>G+</b> · <b>C</b><br>F♯ → G (3 → 1, half step); G → C (1 → 1, 5 semitones up)","bars":[23,24,25],"cards":[{"name":"Dm7 scale","deg":"5–6–7–1","stack":"4–5–6–♭7 of Dm7, up","use":[0,1,2,3],"labels":["4","5","6","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"G–A–B–C: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"2–7–1–2","stack":"1–6–♭7–1 of Dm7, around","use":[4,5,6,7],"labels":["1","6","♭7","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–B–C–D: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"3–4","stack":"♭9–2–♭3–3 of Dm7, up","use":[8,9,10,11],"passing":[8,11],"labels":["♭9","2","♭3","3"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E♭–E–F–F♯: a scale run over Dm7, no full triad. E♭ is a chromatic passing note between D and E. F♯ is a chromatic passing note between F and G."},{"name":"G7","tone":"1","deg":"5–2–4–5","stack":"1–5–♭7–1 of G7","use":[12,13,14,15],"labels":["1","5","♭7","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–D–F–G: a G7 scale figure, no full triad."},{"name":"Am","tone":"9","deg":"6–1–3","stack":"1–5–4–♭3 of Am","use":[16,17,18,19],"passing":[18],"labels":["1","5","4","♭3"],"color":{"side":"sharp","dist":0.5,"dim":false},"about":"A–E–D–C: the Am triad, with D passing. Built on the 9 of G7."},{"name":"Bø7","tone":"3","deg":"7–2–4–6","stack":"1–♭3–♭5–♭7 of Bø7, up","use":[20,21,22,23],"labels":["1","♭3","♭5","♭7"],"color":{"side":"sharp","dist":1,"dim":true},"about":"B–D–F–A: a Bø7 arpeggio, up. Built on the 3 of G7."},{"name":"G+","tone":"1","deg":"5–7–♭3","stack":"1–♭6–3–1 of G+","use":[24,25,26,27],"labels":["1","♭6","3","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–E♭–B–G: the G+ triad. Built on the 1 of G7."},{"name":"C","deg":"1–3–5","stack":"1 of C","use":[28],"labels":["1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C over C."}]},{"notes":[[84,0,1],[81,1,1],[83,2,1],[79,3,1],[80,4,1],[81,5,1],[76,6,1],[74,7,1],[79,8,1],[78,9,1],[77,10,1],[76,11,1],[74,12,1],[72,13,1],[71,14,1],[69,15,1],[67,16,1],[72,17,1],[76,18,1],[74,19,1],[69,20,1],[72,21,1],[71,22,1],[67,23,1],[69,24,1],[67,25,1],[66,26,1],[65,27,1],[64,28,1],[67,29,1],[69,30,1],[71,31,1],[72,32,8]],"names":["C","A","B","G","G♯","A","E","D","G","F♯","F","E","D","C","B","A","G","C","E","D","A","C","B","G","A","G","F♯","F","E","G","A","B","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":16,"root":7,"q":"7","name":"G7"},{"slot":32,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":44,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7</b> · <b>G7</b> · <b>Em</b> · <b>C</b><br>A → G (5 → 1, 2 semitones down); B → C (3 → 1, half step)","bars":[27,28,29],"cards":[{"name":"Dm7 scale","deg":"1–6–7–5","stack":"♭7–5–6–4 of Dm7, down","use":[0,1,2,3],"labels":["♭7","5","6","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A–B–G: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"6–3–2","stack":"♭5–5–2–1 of Dm7, down","use":[4,5,6,7],"passing":[4],"labels":["♭5","5","2","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A♭–A–E–D: a scale run over Dm7, no full triad. A♭ is a chromatic passing note between G and A."},{"name":"Dm7 scale","deg":"5–4–3","stack":"4–3–♭3–2 of Dm7, down","use":[8,9,10,11],"passing":[9],"labels":["4","3","♭3","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"G–F♯–F–E: a scale run over Dm7, no full triad. F♯ is a chromatic passing note between G and F."},{"name":"Dm7 scale","deg":"2–1–7–6","stack":"1–♭7–6–5 of Dm7, down","use":[12,13,14,15],"labels":["1","♭7","6","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–C–B–A: a scale run over Dm7, no full triad."},{"name":"G7","tone":"1","deg":"5–1–3–2","stack":"1–11–13–5 of G7","use":[16,17,18,19],"labels":["1","11","13","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–C–E–D: a G7 scale figure, no full triad."},{"name":"G7","tone":"9","deg":"6–1–7–5","stack":"9–11–3–1 of G7","use":[20,21,22,23],"labels":["9","11","3","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–C–B–G: a G7 scale figure, no full triad."},{"name":"G7","tone":"9","deg":"6–5–4","stack":"9–1–7–♭7 of G7","use":[24,25,26,27],"passing":[26],"labels":["9","1","7","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–G–F♯–F: a G7 scale figure, no full triad. F♯ is a chromatic passing note between G and F."},{"name":"Em","tone":"13","deg":"3–5–7","stack":"1–♭3–4–5 of Em","use":[28,29,30,31],"passing":[30],"labels":["1","♭3","4","5"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–A–B: the Em triad, with A passing. Built on the 13 of G7."},{"name":"C","deg":"1–3–5","stack":"1 of C","use":[32],"labels":["1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C over C."}]},{"notes":[[81,0,2],[75,2,2],[76,4,2],[79,6,2],[77,8,1],[69,9,1],[76,10,1],[74,11,1],[69,16,2],[72,18,2],[71,20,2],[67,22,2],[69,24,2],[65,26,2],[64,28,2],[62,30,2],[67,32,2],[72,34,4]],"names":["A","D♯","E","G","F","A","E","D","A","C","B","G","A","F","E","D","G","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":16,"root":7,"q":"7","name":"G7"},{"slot":32,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":44,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>Dm</b> · <b>G7</b> · <b>G7</b> · <b>G7</b> · <b>G7</b> · <b>C</b><br>D → A (1 → 9, 5 semitones down); D → G (5 → 5, 5 semitones up)","bars":[31,32,33],"cards":[{"name":"Dm7 scale","deg":"6","stack":"5–♭9 of Dm7, down","use":[0,1],"passing":[1],"labels":["5","♭9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–E♭: a scale run over Dm7, no full triad. E♭ is a chromatic approach, a half step into E."},{"name":"Dm7 scale","deg":"3–5","stack":"2–4 of Dm7, up","use":[2,3],"labels":["2","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–G: a scale run over Dm7, no full triad."},{"name":"Dm","deg":"2–4–6","stack":"♭3–5–2–1 of Dm","use":[4,5,6,7],"passing":[6],"labels":["♭3","5","2","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"F–A–E–D: the Dm triad, with E passing."},{"name":"G7","tone":"9","deg":"6–1","stack":"9–11 of G7","use":[8,9],"labels":["9","11"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–C: a G7 scale figure, no full triad."},{"name":"G7","tone":"3","deg":"7–5","stack":"3–1 of G7","use":[10,11],"labels":["3","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–G: a G7 scale figure, no full triad."},{"name":"G7","tone":"9","deg":"6–4","stack":"9–♭7 of G7","use":[12,13],"labels":["9","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–F: a G7 scale figure, no full triad."},{"name":"G7","tone":"13","deg":"3–2","stack":"13–5 of G7","use":[14,15],"labels":["13","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E–D: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"5–1 of C","use":[16,17],"labels":["5","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–C over C."}]},{"notes":[[74,0,1],[76,1,1],[77,2,1],[79,3,1],[81,4,1],[80,5,1],[79,6,1],[78,7,1],[77,8,1],[84,9,1],[81,10,1],[77,11,1],[76,12,1],[67,13,1],[71,14,1],[72,15,5]],"names":["D","E","F","G","A","A♭","G","F♯","F","C","A","F","E","G","B","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":16,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":22,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>F</b> · <b>Cmaj7</b><br>F♯ → F (3 → ♭7, half step)","bars":[35,36,37],"cards":[{"name":"Dm7 scale","deg":"2–3–4–5","stack":"1–2–♭3–4 of Dm7, up","use":[0,1,2,3],"labels":["1","2","♭3","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–G: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"6–5","stack":"5–♭5–4–3 of Dm7, down","use":[4,5,6,7],"passing":[5,7],"labels":["5","♭5","4","3"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–A♭–G–F♯: a scale run over Dm7, no full triad. A♭ is a chromatic passing note between A and G. F♯ is a chromatic passing note between G and F."},{"name":"F","tone":"♭7","deg":"4–6–1","stack":"1–5–3–1 of F","use":[8,9,10,11],"labels":["1","5","3","1"],"color":{"side":"flat","dist":1,"dim":false},"about":"F–C–A–F: the F triad. Built on the ♭7 of G7."},{"name":"Cmaj7","tone":"11","deg":"1–3–5–7","stack":"3–5–7–1 of Cmaj7, down","use":[12,13,14,15],"labels":["3","5","7","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–G–B–C: a Cmaj7 arpeggio, down. Built on the 11 of G7."}]},{"notes":[[84,0,1],[83,1,1],[81,2,1],[79,3,1],[77,4,2],[76,6,2],[74,8,2],[72,10,2],[71,12,2],[69,14,2],[68,16,2],[69,18,2],[76,20,4],[67,24,2],[72,26,6],[69,32,4]],"names":["C","B","A","G","F","E","D","C","B","A","G♯","A","E","G","C","A"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":12,"root":7,"q":"7","name":"G7"},{"slot":26,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":40,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7alt</b> · <b>G7</b> · <b>G7</b> · <b>C</b><br>C → B (♭7 → 3, half step); G → C (1 → 1, 5 semitones up)","bars":[39,40,41],"cards":[{"name":"Dm7 scale","deg":"1–7–6–5","stack":"♭7–6–5–4 of Dm7, down","use":[0,1,2,3],"labels":["♭7","6","5","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–B–A–G: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"4–3","stack":"♭3–2 of Dm7, down","use":[4,5],"labels":["♭3","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"F–E: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"2–1","stack":"1–♭7 of Dm7, down","use":[6,7],"labels":["1","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–C: a scale run over Dm7, no full triad."},{"name":"G7","tone":"3","deg":"7–6","stack":"3–9 of G7","use":[8,9],"labels":["3","9"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–A: a G7 scale figure, no full triad."},{"name":"G7alt","deg":"♭6–6","stack":"♭9–9 of G7","use":[10,11],"labels":["♭9","9"],"color":{"side":"flat","dist":3,"dim":false},"about":"A♭–A: a piece of the G altered scale, no triad."},{"name":"G7","tone":"13","deg":"3","stack":"13 of G7","use":[12],"labels":["13"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E: a G7 scale figure, no full triad."},{"name":"G7","tone":"1","deg":"5","stack":"1 of G7","use":[13],"labels":["1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"1–13 of C","use":[14,15],"labels":["1","13"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–A over C."}]},{"notes":[[77,0,3],[69,3,3],[74,6,3],[77,9,3],[76,12,3],[74,15,3],[73,18,3],[69,21,3],[72,24,3],[70,27,3],[71,30,2],[74,32,2],[77,34,2],[80,36,2],[82,38,2],[80,40,2],[79,42,3],[77,45,3],[76,48,6]],"names":["F","A","D","F","E","D","C♯","A","C","A♯","B","D","F","A♭","B♭","A♭","G","F","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":60,"summary":"<b>Dm</b> · <b>A</b> · <b>G7alt</b> · <b>G7alt</b> · <b>C</b><br>A → C (5 → 11, 3 semitones up); F → E (♭7 → 3, half step)","bars":[47,48,49],"cards":[{"name":"Dm","deg":"2–4–6","stack":"♭3–5–1–♭3 of Dm","use":[0,1,2,3],"labels":["♭3","5","1","♭3"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"F–A–D–F: the Dm triad."},{"name":"A","deg":"6–♭2–3","stack":"5–4–3–1 of A","use":[4,5,6,7],"passing":[5],"labels":["5","4","3","1"],"color":{"side":"sharp","dist":3,"dim":false},"about":"E–D–D♭–A: the A triad, with D passing."},{"name":"G7alt","deg":"1–♭7–7–2–4","stack":"11–♯9–3–5–♭7 of G7","use":[8,9,10,11,12],"labels":["11","♯9","3","5","♭7"],"color":{"side":"flat","dist":3,"dim":false},"about":"C–B♭–B–D–F: a piece of the G altered scale, no triad."},{"name":"G7alt","deg":"♭6–♭7–♭6–5–4","stack":"♭9–♯9–♭9–1–♭7 of G7","use":[13,14,15,16,17],"labels":["♭9","♯9","♭9","1","♭7"],"color":{"side":"flat","dist":3,"dim":false},"about":"A♭–B♭–A♭–G–F: a piece of the G altered scale, no triad."},{"name":"C","deg":"1–3–5","stack":"3 of C","use":[18],"labels":["3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E over C."}]},{"notes":[[71,3,3],[72,6,2],[76,8,2],[79,10,2],[83,12,3],[81,15,3],[80,18,3],[81,21,3],[74,24,3],[76,27,3],[77,30,3],[81,33,3],[79,36,3],[75,39,3],[71,42,6],[72,48,6]],"names":["B","C","E","G","B","A","G♯","A","D","E","F","A","G","E♭","B","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":60,"summary":"<b>Cmaj7</b> · <b>Dm7 scale</b> · <b>Dm</b> · <b>G+</b> · <b>C</b><br>A → D (5 → 5, 7 semitones down); B → C (3 → 1, half step)","bars":[66,67,68],"cards":[{"name":"Cmaj7","deg":"1–3–5–7","stack":"7–1–3–5 of Cmaj7, up","use":[0,1,2,3],"labels":["7","1","3","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"B–C–E–G: a Cmaj7 arpeggio, up."},{"name":"Dm7 scale","deg":"7–6–6","stack":"6–5–♭5–5 of Dm7, down","use":[4,5,6,7],"passing":[6],"labels":["6","5","♭5","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"B–A–A♭–A: a scale run over Dm7, no full triad. A♭ is a chromatic passing note between A and A."},{"name":"Dm","tone":"5","deg":"2–4–6","stack":"1–2–♭3–5 of Dm","use":[8,9,10,11],"passing":[9],"labels":["1","2","♭3","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–A: the Dm triad, with E passing. Built on the 5 of G7."},{"name":"G+","tone":"1","deg":"5–7–♭3","stack":"1–♭6–3 of G+","use":[12,13,14],"labels":["1","♭6","3"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–E♭–B: the G+ triad. Built on the 1 of G7."},{"name":"C","deg":"1–3–5","stack":"1 of C","use":[15],"labels":["1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C over C."}]}]},{"name":"Stitt 251 licks - 1 & 3","title":"Stitt 1 & 3 · lick","licks":[{"notes":[[69,0,12],[64,15,3],[65,18,2],[69,20,2],[72,22,2],[76,24,3],[71,27,3],[75,30,2],[76,32,2],[75,34,2],[71,36,3],[69,39,3],[67,42,3],[65,45,3],[64,48,3],[67,51,3],[69,54,3],[67,57,3],[72,60,6],[64,66,3],[68,69,3],[71,72,3],[69,75,3],[68,78,2],[71,80,2],[74,82,2],[77,84,3],[76,87,3],[74,90,3],[71,93,3]],"names":["A","E","F","A","C","E","B","D♯","E","D♯","B","A","G","F","E","G","A","G","C","E","G♯","B","A","G♯","B","D","F","E","D","B"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":96,"summary":"<b>Fmaj7</b> · <b>G7</b> · <b>G+</b> · <b>G7</b> · <b>C</b> · <b>E7</b><br>C → E (♭7 → 13, 4 semitones up); F → E (♭7 → 3, half step)","bars":[21,22,23,24],"cards":[{"name":"Fmaj7","deg":"4–6–1–3","stack":"3–7–1–3–5 of Fmaj7","use":[0,1,2,3,4],"passing":[],"labels":["3","7","1","3","5"],"color":{"side":"flat","dist":1,"dim":false},"about":"A held, then E–F–A–C: the F triad (E below it) over Dm7: ♭3, 5, ♭7. C falls to B across the bar line."},{"name":"G7","tone":"13","deg":"7–3","stack":"13–3 of G7","use":[5,6],"passing":[],"labels":["13","3"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E–B: the 13, then the 3rd."},{"name":"G+","tone":"♯5","deg":"7–♯2","stack":"♯5–♯5–3 of G+","use":[7,8,9,10],"passing":[8],"labels":["♯5","6","♯5","3"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D♯–(E)–D♯–B: G+ notes, the ♯5 with E above it, then B. The same augmented sound as set 3 lick 3."},{"name":"G7","tone":"9","deg":"5–6–4","stack":"9–1–♭7 of G7","use":[11,12,13],"passing":[],"labels":["9","1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–G–F: down to the ♭7, which falls to E."},{"name":"C","deg":"1–3–5–6","stack":"3–5–6–5–1 of C","use":[14,15,16,17,18],"passing":[],"labels":["3","5","6","5","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–G–A–G–C: C6 around the 5th, up to the root."},{"name":"E7","deg":"3–4–♯5–7–2","stack":"1–3–5–3–5–♭7–♭9–1–♭7–5 of E7","use":[19,20,21,22,23,24,25,26,27,28,29],"passing":[22],"labels":["1","3","5","4","3","5","♭7","♭9","1","♭7","5"],"color":{"side":"sharp","dist":4,"dim":false},"about":"E–G♯–B, then B–D–F: an E7♭9 arpeggio in the second C bar. E7 is the V of Am, turning the line back around."}]},{"notes":[[75,2,2],[76,4,2],[79,6,2],[77,8,2],[69,10,2],[76,12,2],[73,14,2],[74,16,2],[76,18,2],[77,20,2],[69,22,2],[76,24,2],[69,26,2],[75,28,1],[77,29,1],[75,30,1],[72,31,1],[68,32,2],[65,34,2],[64,36,4]],"names":["D♯","E","G","F","A","E","C♯","D","E","F","A","E","A","E♭","F","E♭","C","A♭","F","E"],"chords":[{"slot":4,"root":2,"q":"m7","name":"Dm7"},{"slot":20,"root":7,"q":"7","name":"G7"},{"slot":36,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":44,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>Fm7</b> · <b>C</b><br>E → F (2 → ♭7, half step); F → E (♭7 → 3, half step)","bars":[25,26,27,28],"cards":[{"name":"Dm7 scale","deg":"3–4–5–6","stack":"9–11–♭3–5 of Dm7","use":[0,1,2,3,4],"passing":[0],"labels":["♯1","9","11","♭3","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D♯–E, then G–F–A: up around F and A."},{"name":"Dm7 scale","deg":"2–3","stack":"9–1–9 of Dm7","use":[5,6,7,8],"passing":[6],"labels":["9","7","1","9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–C♯–D–E: D closed in by E above and C♯ below."},{"name":"G7","tone":"♭7","deg":"6–3–4","stack":"♭7–9–13–9 of G7","use":[9,10,11,12],"passing":[],"labels":["♭7","9","13","9"],"color":{"side":"sharp","dist":1,"dim":false},"about":"F–A–E–A: ♭7, 9, 13, bouncing off A."},{"name":"Fm7","tone":"♭13","deg":"4–♭6–1–♭3","stack":"♭7–1–♭7–5–♭3–1 of Fm7","use":[13,14,15,16,17,18],"passing":[],"labels":["♭7","1","♭7","5","♭3","1"],"color":{"side":"flat","dist":4.5,"dim":false},"about":"E♭–F–E♭–C–A♭–F: Fm7 down over G7: ♭13, ♭7, 11, ♭9, ♭7. The altered top of G7 (A♭ and E♭) inside a plain minor 7th. F falls to E."},{"name":"C","deg":"3","stack":"3 of C","use":[19],"passing":[],"labels":["3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E: the 3rd of C."}]},{"notes":[[77,0,1],[69,1,1],[72,2,1],[69,3,1],[76,4,1],[74,5,1],[72,6,1],[69,7,1],[71,8,1],[85,9,1],[83,10,1],[75,11,1],[82,12,1],[80,13,1],[75,14,1],[77,15,1],[79,16,1],[72,17,2],[76,19,1]],"names":["F","A","C","A","E","D","C","A","B","C♯","B","D♯","A♯","G♯","D♯","F","G","C","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":16,"root":0,"q":"maj","name":"C"}],"spb":2,"length":22,"summary":"<b>F</b> · <b>Dm7 scale</b> · <b>G7alt</b> · <b>C</b><br>A → B (5 → 3, 2 semitones up); F → G (♭7 → 5, 2 semitones up)","bars":[29,30,31],"cards":[{"name":"F","deg":"4–6–1","stack":"1–3–5–3 of F","use":[0,1,2,3],"passing":[],"labels":["1","3","5","3"],"color":{"side":"flat","dist":1,"dim":false},"about":"F–A–C–A: the F triad over Dm7."},{"name":"Dm7 scale","deg":"2–3–6–1","stack":"9–1–♭7–5 of Dm7","use":[4,5,6,7],"passing":[],"labels":["9","1","♭7","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–D–C–A: down the scale to A."},{"name":"G7alt","tone":"3","deg":"♯5–♯6–7–♯1–♯2–4","stack":"3–♯11–3–♯5–♯9–♭9–♯5–♭7 of G7alt","use":[8,9,10,11,12,13,14,15],"passing":[],"labels":["3","♯11","3","♯5","♯9","♭9","♯5","♭7"],"color":{"side":"flat","dist":3,"dim":false},"about":"B–C♯–B–D♯–A♯–G♯–D♯–F: the G altered scale in wide leaps (♯11, ♯5, ♯9, ♭9), landing on F."},{"name":"C","deg":"1–3–5","stack":"5–1–3 of C","use":[16,17,18],"passing":[],"labels":["5","1","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–C–E: the C triad up."}]},{"notes":[[76,0,3],[77,3,3],[74,6,3],[69,9,3],[72,12,2],[74,14,2],[72,16,2],[71,18,3],[69,21,3],[67,24,6],[69,30,3],[65,33,3],[64,36,3],[62,39,3],[67,42,3],[63,45,3],[64,48,2],[67,50,2],[71,52,2],[74,54,3],[72,57,3],[71,60,3],[69,63,3],[68,66,3],[76,69,9]],"names":["E","F","D","A","C","D","C","B","A","G","A","F","E","D","G","D♯","E","G","B","D","C","B","A","A♭","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":18,"root":7,"q":"7","name":"G7"},{"slot":42,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":84,"summary":"<b>Dm7 scale</b> · <b>G7</b> · <b>Dm</b> · <b>Em7</b> · <b>C</b><br>C → B (♭7 → 3, half step); D → G (5 → 5, 5 semitones up)","bars":[35,36,37,38],"cards":[{"name":"Dm7 scale","deg":"2–3–4–6–1","stack":"9–♭3–1–5–♭7–1–♭7 of Dm7","use":[0,1,2,3,4,5,6],"passing":[],"labels":["9","♭3","1","5","♭7","1","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–F–D–A, then C–D–C: around the root, ending on C (the ♭7), which falls to B."},{"name":"G7","tone":"3","deg":"5–6–7","stack":"3–9–1 of G7","use":[7,8,9],"passing":[],"labels":["3","9","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–A–G: from the 3rd down to the root."},{"name":"Dm","tone":"9","deg":"2–4–6","stack":"5–♭3–1 of Dm","use":[10,11,12,13],"passing":[12],"labels":["5","♭3","2","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–F–(E)–D: the Dm triad down over G7 (9, ♭7, 5), E passing."},{"name":"Em7","deg":"3–5–7–2","stack":"♭3–1–♭3–5–♭7 of Em7","use":[14,15,16,17,18,19],"passing":[15],"labels":["♭3","7","1","♭3","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"G, then D♯–E–G–B–D: Em7 up from E with D♯ leaning in. The 3–5–7–9 of Cmaj7."},{"name":"C","deg":"1–3–6–7","stack":"1–7–6–3 of C","use":[20,21,22,23,24],"passing":[23],"labels":["1","7","6","♭6","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–B–A–A♭, then up to E."}]},{"notes":[[81,0,2],[84,2,2],[81,4,1],[77,5,1],[74,6,1],[77,7,1],[81,8,1],[84,9,1],[83,10,3],[81,13,1],[79,14,1],[77,15,1],[76,16,1],[74,17,1],[72,18,2],[79,20,2],[84,22,4]],"names":["A","C","A","F","D","F","A","C","B","A","G","F","E","D","C","G","C"],"chords":[{"slot":0,"root":9,"q":"7","name":"A7","sub":"V/ii"},{"slot":2,"root":2,"q":"m7","name":"Dm7"},{"slot":10,"root":7,"q":"7","name":"G7"},{"slot":18,"root":0,"q":"maj","name":"C"}],"spb":2,"length":26,"summary":"<b>A7</b> · <b>Dm7</b> · <b>G7</b> · <b>C</b><br>A → C (1 → ♭7, 3 semitones up); C → B (♭7 → 3, half step); D → C (5 → 1, 2 semitones down)","bars":[1,2,3,4],"cards":[{"name":"A7","tone":"1","deg":"6","stack":"1 of A7","use":[0],"passing":[],"labels":["1"],"color":{"side":"sharp","dist":3,"dim":false},"about":"A, the root of A7 (VI7 of C), as a one-note pickup into Dm7. A is also the 5th of Dm, so it slides straight in."},{"name":"Dm7","deg":"2–4–6–1","stack":"♭7–5–♭3–1–♭3–5–♭7 of Dm7, down and back up","use":[1,2,3,4,5,6,7],"passing":[],"labels":["♭7","5","♭3","1","♭3","5","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A–F–D–F–A–C: the Dm7 arpeggio down to the root and straight back up. One shape, rocking — Stitt plays this exact bar in every long phrase of the set."},{"name":"G7","tone":"3","deg":"7–6–5–4–3–2","stack":"3–9–1–♭7–13–5 of G7","use":[8,9,10,11,12,13],"passing":[],"labels":["3","9","1","♭7","13","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–A–G–F–E–D: B held a dotted quarter, then the G7 scale walks down to D, the 5th. C (♭7 of Dm7) → B (3 of G7) is the half step across the bar line."},{"name":"C","deg":"1–5","stack":"1–5–1 of C","use":[14,15,16],"passing":[],"labels":["1","5","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–G–C: root, 5th, root — just the frame of C, no 3rd."}]},{"notes":[[83,0,3],[81,3,3],[80,6,3],[81,9,3],[84,12,6],[81,18,3],[77,21,3],[74,24,3],[77,27,3],[81,30,3],[84,33,3],[81,36,3],[82,39,3],[83,42,3],[81,45,3],[79,48,3],[77,51,3],[76,54,3],[74,57,3],[72,60,3],[71,63,3],[72,66,3],[79,69,3],[78,72,4],[79,76,4],[84,80,4]],"names":["B","A","G♯","A","C","A","F","D","F","A","C","A","B♭","B","A","G","F","E","D","C","B","C","G","F♯","G","C"],"chords":[{"slot":0,"root":9,"q":"7","name":"A7","sub":"V/ii"},{"slot":12,"root":2,"q":"m7","name":"Dm7"},{"slot":36,"root":7,"q":"7","name":"G7"},{"slot":60,"root":0,"q":"maj","name":"C"}],"spb":6,"length":84,"summary":"<b>A7</b> · <b>Dm7</b> · <b>G7</b> · <b>C</b><br>A → C (1 → ♭7, 3 semitones up); C → A (♭7 → 9, 3 semitones down); D → C (5 → 1, 2 semitones down)","bars":[5,6,7,8],"cards":[{"name":"A7","tone":"9","deg":"7–6–♯5","stack":"9–1–7–1 around A","use":[0,1,2,3],"passing":[2],"labels":["9","1","7","1"],"color":{"side":"sharp","dist":3,"dim":false},"about":"B–A–G♯–A: A circled by the notes above and a half step below — a pickup bar on A7 (VI7) that lands on C, the ♭7 of Dm7."},{"name":"Dm7","deg":"2–4–6–1","stack":"♭7–5–♭3–1–♭3–5–♭7 of Dm7, down and back up","use":[4,5,6,7,8,9,10],"passing":[],"labels":["♭7","5","♭3","1","♭3","5","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A–F–D–F–A–C: the Dm7 arpeggio down to the root and straight back up. One shape, rocking — Stitt plays this exact bar in every long phrase of the set."},{"name":"G7","tone":"9","deg":"6–♭7–7–6–5–4–3–2","stack":"9–♯9–3–9–1–♭7–13–5 of G7","use":[11,12,13,14,15,16,17,18],"passing":[12],"labels":["9","♯9","3","9","1","♭7","13","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–B♭–B: a chromatic climb from the 9 to the 3 (B♭ passing), then straight down the G7 scale A–G–F–E–D. C → A across the bar line, then D → C into the I."},{"name":"C","deg":"1–7–♯4–5","stack":"1–7–1–5, then ♯11–5–1 of C","use":[19,20,21,22,23,24,25],"passing":[20,23],"labels":["1","7","1","5","♯11","5","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–B–C–G: C with its lower neighbor B, then a triplet F♯–G–C — F♯ leans into G from a half step below and the line ends on the root."}]},{"notes":[[81,1,1],[77,2,1],[74,3,1],[75,4,1],[83,5,1],[81,7,1],[79,8,2],[84,10,2],[88,12,1],[89,13,1],[88,15,1]],"names":["A","F","D","D♯","B","A","G","C","E","F","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":4,"root":7,"q":"7","name":"G7"},{"slot":8,"root":0,"q":"maj","name":"C"}],"spb":2,"length":16,"summary":"<b>Dm</b> · <b>G+</b> · <b>C</b><br>D → D♯ (1 → ♯5, half step); A → G (9 → 5, 2 semitones down)","bars":[9,10],"cards":[{"name":"Dm","deg":"2–4–6","stack":"5–♭3–1 of Dm","use":[0,1,2],"passing":[],"labels":["5","♭3","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–F–D: the Dm triad straight down, half a bar of ii — the whole ii–V fits in one bar here."},{"name":"G+","tone":"♯5","deg":"♯2–7","stack":"♯5–3, then 2 of G+","use":[3,4,5],"passing":[5],"labels":["♯5","3","2"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D♯–B: two notes of G+ (G–B–D♯), the augmented G7. D♯ is the ♯5, a half step above D. A passes down to G, the 5th of C. This is the G+ from lesson 8 in Ear Lessons."},{"name":"C","deg":"1–3–5","stack":"5–1–3, then 4–3 of C","use":[6,7,8,9,10],"passing":[9],"labels":["5","1","3","4","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–C–E–F–E: the C triad up from the 5th, then F as an upper neighbor of E."}]}]},{"name":"20 Charlie Parker licks in 2-5-1","title":"Parker lick","licks":[{"notes":[[67,0,2],[69,2,2],[71,4,2],[74,6,3],[72,9,3],[71,12,3],[69,15,3],[72,18,9],[69,27,3],[65,30,3],[64,33,3],[63,36,3],[71,39,9],[69,48,3],[68,51,3],[67,54,3],[65,57,3],[64,60,2],[67,62,2],[71,64,2],[74,66,3],[71,69,3],[72,72,2],[74,74,2],[76,76,2],[81,78,3],[79,81,3]],"names":["G","A","B","D","C","B","A","C","A","F","E","E♭","B","A","A♭","G","F","E","G","B","D","B","C","D","E","A","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":18,"root":7,"q":"7","name":"G7"},{"slot":42,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":90,"summary":"<b>Dm7 scale</b> · <b>F</b> · <b>G7</b> · <b>C</b> · <b>Em7</b> · <b>C</b><br>A → C (5 → 11, 3 semitones up); B → A (3 → 13, 2 semitones down)","bars":[1,2,3,4],"num":1,"cards":[{"name":"Dm7 scale","deg":"2–5–6–7–1","stack":"11–5–13–1–♭7–13–5 of Dm7","use":[0,1,2,3,4,5,6],"passing":[],"labels":["11","5","13","1","♭7","13","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"G–A–B in triplets up to D, then D–C–B–A down: the D Dorian scale, no triad. B is the 13, the Dorian note."},{"name":"F","tone":"11","deg":"4–6–1","stack":"5–3–1 of F","use":[7,8,9],"passing":[],"labels":["5","3","1"],"color":{"side":"flat","dist":1,"dim":false},"about":"C–A–F: the F triad from the top over G7: 11, 9, ♭7. G7 with no 3rd, a sus sound. Parker holds the C a dotted quarter."},{"name":"G7","tone":"13","deg":"7–3","stack":"13–3 of G7","use":[10,11,12],"passing":[11],"labels":["13","♭13","3"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E–E♭–B: the 13 slides to the ♭13, then drops to B, the 3rd, held into the C bar."},{"name":"C","deg":"4–5–6","stack":"6–5–4 of C","use":[13,14,15,16],"passing":[14],"labels":["6","♭6","5","4"],"color":{"side":"sharp","dist":0,"dim":false},"about":"A–A♭–G–F: down from the 6th, A♭ passing."},{"name":"Em7","deg":"3–5–7–2","stack":"1–♭3–5–♭7 of Em7","use":[17,18,19,20],"passing":[],"labels":["1","♭3","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–B–D: Em7 straight up, the 3–5–7–9 of Cmaj7."},{"name":"C","deg":"1–2–3–5–6–7","stack":"7–1–2–3–6–5 of C","use":[21,22,23,24,25,26],"passing":[],"labels":["7","1","2","3","6","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"B–C–D–E, then A–G: up the scale and down to the 5th."}]},{"notes":[[59,3,3],[62,6,1],[64,7,1],[62,8,1],[60,9,3],[59,12,3],[57,15,3],[60,18,3],[57,21,3],[53,24,3],[50,27,3],[51,30,3],[59,33,3],[57,36,3],[56,39,3],[55,42,3],[53,45,3],[57,48,2],[60,50,2],[64,52,2],[69,54,3],[68,57,3],[67,60,6]],"names":["B","D","E","D","C","B","A","C","A","F","D","E♭","B","A","A♭","G","F","A","C","E","A","A♭","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":18,"root":7,"q":"7","name":"G7"},{"slot":42,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":66,"summary":"<b>Dm7 scale</b> · <b>Dm7</b> · <b>G7alt</b> · <b>C</b> · <b>Am</b> · <b>C</b><br>A → C (5 → 11, 3 semitones up); A♭ → G (♭9 → 5, half step)","bars":[5,6,7],"num":2,"cards":[{"name":"Dm7 scale","deg":"2–3–6–7–1","stack":"13–1–9–1–♭7–13–5 of Dm7","use":[0,1,2,3,4,5,6],"passing":[],"labels":["13","1","9","1","♭7","13","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"B–D–E–D–C–B–A: D with the notes either side, then down the D Dorian scale to A."},{"name":"Dm7","tone":"11","deg":"2–4–6–1","stack":"♭7–5–♭3–1 of Dm7","use":[7,8,9,10],"passing":[],"labels":["♭7","5","♭3","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A–F–D: Dm7 from the top, played over G7. That is the ii on the V: 11, 9, ♭7, 5. G7 sounds as G9sus."},{"name":"G7alt","tone":"♭13","deg":"♭6–6–7–♭3","stack":"♭13–3–9–♭9 of G7alt","use":[11,12,13,14],"passing":[],"labels":["♭13","3","9","♭9"],"color":{"side":"flat","dist":3,"dim":false},"about":"E♭–B–A–A♭: the ♭13 down to the 3rd, then 9 to ♭9 just before the I."},{"name":"C","deg":"4–5","stack":"5–4 of C","use":[15,16],"passing":[],"labels":["5","4"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–F: a step down into the next shape."},{"name":"Am","deg":"6–1–3","stack":"1–♭3–5 of Am","use":[17,18,19],"passing":[],"labels":["1","♭3","5"],"color":{"side":"sharp","dist":0.5,"dim":false},"about":"A–C–E in triplets: the Am triad, which over C is 6–1–3 (C6)."},{"name":"C","deg":"5–6","stack":"6–5 of C","use":[20,21,22],"passing":[21],"labels":["6","♭6","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"A–A♭–G: down to the 5th, A♭ passing."}]},{"notes":[[74,6,3],[73,9,3],[72,12,6],[71,18,6],[69,24,6],[67,30,6],[65,36,6],[57,42,6],[60,48,6],[64,54,6],[62,60,6],[60,66,6],[62,72,4],[65,76,4],[68,80,4],[67,84,6],[65,90,6],[64,96,4],[67,100,4],[71,104,4],[74,108,6],[72,114,6],[71,120,6],[69,126,6],[72,132,12]],"names":["D","D♭","C","B","A","G","F","A","C","E","D","C","D","F","A♭","G","F","E","G","B","D","C","B","A","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":36,"root":7,"q":"7","name":"G7"},{"slot":84,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":156,"summary":"<b>Dm7 scale</b> · <b>Fmaj7</b> · <b>G7</b> · <b>D°</b> · <b>C</b> · <b>Em7</b> · <b>C</b><br>G → F (4 → ♭7, 2 semitones down); A♭ → G (♭9 → 5, half step)","bars":[11,12,13,14],"num":4,"cards":[{"name":"Dm7 scale","deg":"2–5–6–7–1","stack":"1–♭7–13–5–11 of Dm7","use":[0,1,2,3,4,5],"passing":[1],"labels":["1","7","♭7","13","5","11"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–D♭–C–B–A–G: down from the root with D♭ passing, the bebop scale."},{"name":"Fmaj7","tone":"♭7","deg":"4–6–1–3","stack":"1–3–5–7 of Fmaj7","use":[6,7,8,9],"passing":[],"labels":["1","3","5","7"],"color":{"side":"flat","dist":1,"dim":false},"about":"F–A–C–E: Fmaj7 straight up over G7: ♭7, 9, 11, 13. The F triad on the V is a sus sound, with E (the 13) on top."},{"name":"G7","tone":"5","deg":"1–2","stack":"5–11 of G7","use":[10,11],"passing":[],"labels":["5","11"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–C: a step down and back up, setting up D°."},{"name":"D°","tone":"5","deg":"2–4–♭6","stack":"1–♭3–♭5 of D°","use":[12,13,14],"passing":[],"labels":["1","♭3","♭5"],"color":{"side":"sharp","dist":1,"dim":true},"about":"D–F–A♭: the D° triad: 5, ♭7, ♭9 of G7, three notes of B°7 without the B. A♭ falls a half step to G."},{"name":"C","deg":"4–5","stack":"5–4 of C","use":[15,16],"passing":[],"labels":["5","4"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–F: stepping down to E."},{"name":"Em7","deg":"3–5–7–2","stack":"1–♭3–5–♭7 of Em7","use":[17,18,19,20],"passing":[],"labels":["1","♭3","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–B–D: Em7 up, the 3–5–7–9 of Cmaj7."},{"name":"C","deg":"1–6–7","stack":"1–7–6–1 of C","use":[21,22,23,24],"passing":[],"labels":["1","7","6","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–B–A–C: a turn around the root."}]},{"notes":[[62,0,3],[64,3,3],[65,6,3],[69,9,3],[72,12,3],[69,15,3],[70,18,3],[71,21,3],[67,24,3],[68,27,3],[69,30,3],[67,33,3],[65,36,3],[64,39,3],[62,42,3],[60,45,3],[59,48,3],[62,51,3],[65,54,3],[69,57,3],[67,60,3],[64,63,3],[65,66,2],[67,68,2],[65,70,2],[64,72,3],[60,75,3],[57,78,3],[53,81,3],[62,84,3],[63,87,3],[59,90,3],[55,93,3],[56,96,3],[57,99,3],[53,102,3],[50,105,3],[55,108,48]],"names":["D","E","F","A","C","A","A♯","B","G","G♯","A","G","F","E","D","C","B","D","F","A","G","E","F","G","F","E","C","A","F","D","E♭","B","G","G♯","A","F","D","G"],"chords":[{"slot":12,"root":2,"q":"m7","name":"Dm7"},{"slot":60,"root":7,"q":"7","name":"G7"},{"slot":108,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":156,"summary":"<b>Dm</b> · <b>Dm7 scale</b> · <b>Bø7</b> · <b>G7</b> · <b>Fmaj7</b> · <b>G+</b> · <b>G7</b> · <b>C</b><br>A → G (5 → 1, 2 semitones down); D → G (5 → 5, 5 semitones up)","bars":[15,16,17,18],"num":5,"cards":[{"name":"Dm","deg":"2–4–6","stack":"1–♭3–5 of Dm","use":[0,1,2,3],"passing":[1],"labels":["1","2","♭3","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–A: a pickup up the Dm triad, E passing."},{"name":"Dm7 scale","deg":"2–3–4–5–6–7–1","stack":"♭7–5–13–11–5–11–♭3–9–1–♭7 of Dm7","use":[4,5,6,7,8,9,10,11,12,13,14,15],"passing":[6,9],"labels":["♭7","5","♯5","13","11","♯11","5","11","♭3","9","1","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A, then A♯–B and G♯–A: A leaned into from both sides, then the scale down from G to C."},{"name":"Bø7","deg":"7–2–4–6","stack":"1–♭3–♭5–♭7 of Bø7","use":[16,17,18,19],"passing":[],"labels":["1","♭3","♭5","♭7"],"color":{"side":"sharp","dist":1,"dim":true},"about":"B–D–F–A: the Dm triad with B (the 6th) underneath. B is also the 3rd of the coming G7."},{"name":"G7","tone":"1","deg":"5–3–4","stack":"1–13–♭7–1–♭7 of G7","use":[20,21,22,23,24],"passing":[],"labels":["1","13","♭7","1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–E–F–G–F: around the root and the ♭7."},{"name":"Fmaj7","tone":"13","deg":"4–6–1–3","stack":"7–5–3–1 of Fmaj7","use":[25,26,27,28],"passing":[],"labels":["7","5","3","1"],"color":{"side":"flat","dist":1,"dim":false},"about":"E–C–A–F: Fmaj7 down: 13, 11, 9, ♭7 of G7. The same sus colour as the F triad."},{"name":"G+","tone":"5","deg":"5–7–♭3","stack":"♯5–3–1 of G+","use":[29,30,31,32],"passing":[29],"labels":["5","♯5","3","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–E♭–B–G: D rises a half step to E♭ (the ♯5), then G+ comes straight down: E♭–B–G. The augmented sound right before C."},{"name":"G7","tone":"♭9","deg":"6–2–4","stack":"9–♭7–5 of G7","use":[33,34,35,36],"passing":[33],"labels":["♭9","9","♭7","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G♯–A–F–D: ♭9 up to 9, then down to the 5th."},{"name":"C","deg":"5","stack":"5 of C","use":[37],"passing":[],"labels":["5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G: lands on the 5th of C."}]},{"notes":[[57,0,6],[52,6,6],[53,12,4],[57,16,4],[60,20,4],[64,24,4],[65,28,4],[66,32,4],[67,36,6],[64,42,6],[65,48,6],[60,54,6],[56,60,6],[53,66,6],[55,72,6],[53,78,6],[52,84,3],[55,87,3],[59,90,3],[62,93,3],[60,96,8],[55,104,8],[55,112,8],[55,120,24]],"names":["A","E","F","A","C","E","F","F♯","G","E","F","C","A♭","F","G","F","E","G","B","D","C","G","G","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":48,"root":7,"q":"7","name":"G7"},{"slot":96,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":144,"summary":"<b>Dm7 scale</b> · <b>Fmaj7</b> · <b>Dm7 scale</b> · <b>Fm</b> · <b>G7</b> · <b>Em7</b> · <b>C</b><br>E → F (2 → ♭7, half step); D → C (5 → 1, 2 semitones down)","bars":[19,20,21],"num":6,"cards":[{"name":"Dm7 scale","deg":"3–6","stack":"5–9 of Dm7","use":[0,1],"passing":[],"labels":["5","9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–E: the 5th, then down to the 9th, a leap into the F arpeggio."},{"name":"Fmaj7","deg":"4–6–1–3","stack":"1–3–5–7 of Fmaj7","use":[2,3,4,5],"passing":[],"labels":["1","3","5","7"],"color":{"side":"flat","dist":1,"dim":false},"about":"F–A–C–E: Fmaj7 up: ♭3, 5, ♭7, 9 of Dm7. The F triad on the ii, with E on top."},{"name":"Dm7 scale","deg":"3–4–5","stack":"♭3–11–9 of Dm7","use":[6,7,8,9],"passing":[7],"labels":["♭3","3","11","9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"F–F♯–G, then E: a chromatic climb to G (the 11), then E, a half step under the next bar's F."},{"name":"Fm","tone":"♭7","deg":"4–♭6–1","stack":"1–5–♭3–1 of Fm","use":[10,11,12,13],"passing":[],"labels":["1","5","♭3","1"],"color":{"side":"flat","dist":4.5,"dim":false},"about":"F–C–A♭–F: the F minor triad over G7: ♭7, 11, ♭9. A sus♭9 sound: G7 with no 3rd and the ♭9 on top."},{"name":"G7","tone":"1","deg":"5–4","stack":"1–♭7 of G7","use":[14,15],"passing":[],"labels":["1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–F: root and ♭7."},{"name":"Em7","tone":"13","deg":"3–5–7–2","stack":"1–♭3–5–♭7 of Em7","use":[16,17,18,19],"passing":[],"labels":["1","♭3","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–B–D: Em7 up: 13, root, 3, 5 of G7. The 3rd (B) only arrives on the last beat."},{"name":"C","deg":"1–5","stack":"1–5–5–5 of C","use":[20,21,22,23],"passing":[],"labels":["1","5","5","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C, then G three times: root and 5th."}]},{"notes":[[62,0,3],[61,3,3],[62,6,3],[64,9,3],[65,12,3],[67,15,3],[68,18,3],[69,21,3],[72,24,3],[69,27,3],[65,30,3],[62,33,3],[70,36,1],[72,37,1],[70,38,1],[68,39,3],[61,42,3],[59,45,3],[60,48,3],[65,51,3],[62,54,2],[63,56,2],[64,58,14]],"names":["D","C♯","D","E","F","G","G♯","A","C","A","F","D","B♭","C","B♭","A♭","C♯","B","C","F","D","D♯","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":72,"summary":"<b>Dm7 scale</b> · <b>Dm7</b> · <b>G7alt</b> · <b>C</b><br>A → C (5 → 11, 3 semitones up); B → C (3 → 1, half step)","bars":[22,23,24],"num":7,"cards":[{"name":"Dm7 scale","deg":"2–3–4–5–6","stack":"1–1–9–♭3–11–5 of Dm7","use":[0,1,2,3,4,5,6,7],"passing":[1,6],"labels":["1","7","1","9","♭3","11","♯11","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–C♯–D, then straight up the scale to A, G♯ leaning in."},{"name":"Dm7","tone":"11","deg":"2–4–6–1","stack":"♭7–5–♭3–1 of Dm7","use":[8,9,10,11],"passing":[],"labels":["♭7","5","♭3","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A–F–D: Dm7 down over G7, the ii on the V (11, 9, ♭7, 5). Same as lick 2."},{"name":"G7alt","tone":"♯9","deg":"♭6–♭7–7","stack":"♯9–♯9–♭9–3 of G7alt","use":[12,13,14,15,16,17],"passing":[13,16],"labels":["♯9","11","♯9","♭9","♯11","3"],"color":{"side":"flat","dist":3,"dim":false},"about":"B♭–C–B♭–A♭: ♯9 and ♭9, then C♯ (the ♯11) drops to B, the 3rd."},{"name":"C","deg":"1–2–3–4","stack":"1–4–2–3 of C","use":[18,19,20,21,22],"passing":[21],"labels":["1","4","2","♯2","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–F–D, then D♯ climbs into E, the 3rd."}]},{"notes":[[62,6,3],[65,9,3],[69,12,4],[72,16,4],[76,20,4],[79,24,6],[78,30,6],[77,36,6],[76,42,6],[74,48,6],[73,54,6],[72,60,6],[71,66,6],[70,72,6],[69,78,6],[67,84,6],[65,90,6],[67,96,6],[62,102,6],[64,108,4],[67,112,4],[71,116,4],[74,120,6],[71,126,6],[67,132,6],[62,138,6],[65,144,6],[62,150,6],[64,156,6],[67,162,6]],"names":["D","F","A","C","E","G","F♯","F","E","D","D♭","C","B","B♭","A","G","F","G","D","E","G","B","D","B","G","D","F","D","E","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":48,"root":7,"q":"7","name":"G7"},{"slot":96,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":180,"summary":"<b>Dm7</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>C</b> · <b>Em7</b> · <b>G</b> · <b>C</b><br>E → D (2 → 5, 2 semitones down); F → G (♭7 → 5, 2 semitones up)","bars":[25,26,27,28],"num":8,"cards":[{"name":"Dm7","deg":"2–3–4–6–1","stack":"1–♭3–5–♭7–9 of Dm7","use":[0,1,2,3,4],"passing":[],"labels":["1","♭3","5","♭7","9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–F–A–C–E: Dm9 straight up. The Dm triad, with F–A–C–E (Fmaj7) on top of it."},{"name":"Dm7 scale","deg":"3–4–5","stack":"11–♭3–9 of Dm7","use":[5,6,7,8],"passing":[6],"labels":["11","3","♭3","9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"G–F♯–F–E: chromatic down from the 11 to the 9."},{"name":"G7","tone":"5","deg":"5–6–7–1–2–4","stack":"5–11–3–9–1–♭7 of G7","use":[9,10,11,12,13,14,15,16],"passing":[10,13],"labels":["5","♭5","11","3","♯9","9","1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–D♭–C–B–B♭–A–G–F: a bebop line down from the 5th to the ♭7, D♭ and B♭ passing."},{"name":"C","deg":"2–5","stack":"5–2 of C","use":[17,18],"passing":[],"labels":["5","2"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–D: down to the 9th."},{"name":"Em7","deg":"3–5–7–2","stack":"1–♭3–5–♭7 of Em7","use":[19,20,21,22],"passing":[],"labels":["1","♭3","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–B–D: Em7 up, the 3–5–7–9 of Cmaj7."},{"name":"G","deg":"5–7–2","stack":"3–1–5 of G","use":[23,24,25],"passing":[],"labels":["3","1","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–G–D: the G triad down, 7–5–9 of Cmaj7."},{"name":"C","deg":"2–3–4–5","stack":"4–2–3–5 of C","use":[26,27,28,29],"passing":[],"labels":["4","2","3","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"F–D–E–G: F and D close in on E (an enclosure), then G."}]},{"notes":[[62,6,3],[65,9,3],[69,12,3],[71,15,3],[72,18,3],[74,21,3],[75,24,6],[72,30,6],[62,54,3],[65,57,3],[68,60,4],[71,64,4],[75,68,4],[82,72,18],[80,90,6],[79,96,6],[78,102,3],[77,105,3],[76,108,6],[77,114,12],[76,126,3],[75,129,3],[74,132,6],[76,138,18]],"names":["D","F","A","B","C","D","E♭","C","D","F","A♭","B","E♭","B♭","A♭","G","F♯","F","E","F","E","E♭","D","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":48,"root":7,"q":"7","name":"G7"},{"slot":96,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":168,"summary":"<b>Dm</b> · <b>Dm7 scale</b> · <b>B°7</b> · <b>G7alt</b> · <b>C</b><br>C → D (♭7 → 5, 10 semitones down); A♭ → G (♭9 → 5, half step)","bars":[29,30,31,32],"num":9,"cards":[{"name":"Dm","deg":"2–4–6","stack":"1–♭3–5 of Dm","use":[0,1,2],"passing":[],"labels":["1","♭3","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–F–A: the Dm triad up."},{"name":"Dm7 scale","deg":"2–7–1","stack":"13–♭7–1–♭7 of Dm7","use":[3,4,5,6,7],"passing":[6],"labels":["13","♭7","1","♭9","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"B–C–D, then E♭, already the ♭13 of the coming G7, and back to C."},{"name":"B°7","tone":"5","deg":"7–2–4–♭6","stack":"♭3–♭5–°7–1 of B°7","use":[8,9,10,11],"passing":[],"labels":["♭3","♭5","°7","1"],"color":{"side":"sharp","dist":1,"dim":true},"about":"D–F–A♭–B: B°7 from D: 5, ♭7, ♭9, 3 of G7. The rootless G7♭9, going up."},{"name":"G7alt","tone":"♭13","deg":"♭6–♭7–♭3","stack":"♭13–♯9–♭9 of G7alt","use":[12,13,14],"passing":[],"labels":["♭13","♯9","♭9"],"color":{"side":"flat","dist":3,"dim":false},"about":"E♭–B♭–A♭: ♭13, then ♯9 held, then ♭9, falling to G on the I."},{"name":"C","deg":"2–3–4–5","stack":"5–4–3–4–3–2–3 of C","use":[15,16,17,18,19,20,21,22,23],"passing":[16,21],"labels":["5","♯4","4","3","4","3","♭3","2","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–F♯–F–E: chromatic down to the 3rd, then around E (F above, E♭ and D below)."}]},{"notes":[[59,6,6],[62,12,4],[65,16,4],[69,20,4],[74,24,6],[73,30,6],[72,36,6],[71,42,6],[69,48,6],[68,54,6],[67,60,6],[64,66,6],[65,72,6],[67,78,3],[65,81,3],[64,84,6],[60,90,6],[62,96,6],[60,102,6],[56,108,6],[53,114,6],[55,120,6],[52,126,18]],"names":["B","D","F","A","D","D♭","C","B","A","A♭","G","E","F","G","F","E","C","D","C","A♭","F","G","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":48,"root":7,"q":"7","name":"G7"},{"slot":96,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":144,"summary":"<b>Bø7</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>C</b><br>B → A (6 → 9, 2 semitones down); C → D (11 → 9, 2 semitones up)","bars":[33,34,35],"num":10,"cards":[{"name":"Bø7","deg":"7–2–4–6","stack":"1–♭3–♭5–♭7 of Bø7","use":[0,1,2,3],"passing":[],"labels":["1","♭3","♭5","♭7"],"color":{"side":"sharp","dist":1,"dim":true},"about":"B–D–F–A: the Dm triad with B (the 6th) underneath: Bø7, the same notes as Dm6."},{"name":"Dm7 scale","deg":"2–7–1","stack":"1–♭7–13 of Dm7","use":[4,5,6,7],"passing":[5],"labels":["1","7","♭7","13"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–D♭–C–B: chromatic down from the root, landing on A."},{"name":"G7","tone":"9","deg":"5–6–1–3–4","stack":"9–1–13–♭7–1–♭7–13–11 of G7","use":[8,9,10,11,12,13,14,15,16],"passing":[9],"labels":["9","♭9","1","13","♭7","1","♭7","13","11"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–A♭–G: 9 down to the root, then E–F–G–F–E–C around the 13 and ♭7. No triad."},{"name":"C","deg":"1–2–3–4–5–♭6","stack":"2–1–♭6–4–5–3 of C","use":[17,18,19,20,21,22],"passing":[],"labels":["2","1","♭6","4","5","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"D–C, then A♭ (the ♭6, from C minor) and F, landing on G and E."}]},{"notes":[[61,0,3],[62,3,3],[65,6,3],[69,9,3],[72,12,3],[69,15,3],[70,18,3],[71,21,3],[67,24,3],[68,27,3],[69,30,3],[67,33,3],[65,36,3],[64,39,3],[62,42,3],[60,45,3],[59,48,3],[62,51,3],[65,54,3],[68,57,3],[67,60,3],[64,63,3],[65,66,2],[67,68,2],[65,70,2],[64,72,3],[60,75,3],[57,78,3],[55,81,3],[60,84,12],[59,102,6],[57,108,6],[55,114,18]],"names":["C♯","D","F","A","C","A","A♯","B","G","G♯","A","G","F","E","D","C","B","D","F","A♭","G","E","F","G","F","E","C","A","G","C","B","A","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":36,"root":7,"q":"7","name":"G7"},{"slot":84,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":132,"summary":"<b>Dm</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>B°7</b> · <b>G7</b> · <b>C</b><br>G → F (4 → ♭7, 2 semitones down); G → C (1 → 1, 5 semitones up)","bars":[36,37,38],"num":11,"cards":[{"name":"Dm","deg":"2–4–6","stack":"1–♭3–5 of Dm","use":[0,1,2,3],"passing":[0],"labels":["7","1","♭3","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C♯–D–F–A: the Dm triad up, C♯ leaning into D."},{"name":"Dm7 scale","deg":"5–6–7–1","stack":"♭7–5–13–11–5–11 of Dm7","use":[4,5,6,7,8,9,10,11],"passing":[6,9],"labels":["♭7","5","♯5","13","11","♯11","5","11"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A, then A♯–B and G♯–A: A circled from both sides, the same bebop move as lick 5."},{"name":"G7","tone":"♭7","deg":"1–2–3–4","stack":"♭7–13–5–11 of G7","use":[12,13,14,15],"passing":[],"labels":["♭7","13","5","11"],"color":{"side":"sharp","dist":1,"dim":false},"about":"F–E–D–C: down the scale from the ♭7."},{"name":"B°7","tone":"3","deg":"7–2–4–♭6","stack":"1–♭3–♭5–°7 of B°7","use":[16,17,18,19],"passing":[],"labels":["1","♭3","♭5","°7"],"color":{"side":"sharp","dist":1,"dim":true},"about":"B–D–F–A♭: B°7 straight up, the rootless G7♭9."},{"name":"G7","tone":"1","deg":"5–6–1–3–4","stack":"1–13–♭7–1–♭7–13–11–9–1 of G7","use":[20,21,22,23,24,25,26,27,28],"passing":[],"labels":["1","13","♭7","1","♭7","13","11","9","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–E–F–G–F–E–C–A–G: back down around the root. The same turn as lick 5's G7 bar."},{"name":"C","deg":"1–5–6–7","stack":"1–7–6–5 of C","use":[29,30,31,32],"passing":[],"labels":["1","7","6","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–B–A–G: down from the root to the 5th."}]},{"notes":[[64,0,6],[67,6,3],[64,9,3],[65,12,2],[67,14,2],[65,16,2],[64,18,3],[63,21,3],[62,24,3],[60,27,3],[59,30,3],[55,33,3],[57,36,3],[53,39,3],[50,42,3],[52,45,3],[55,48,3],[53,51,3],[52,54,2],[55,56,2],[59,58,2],[60,60,3],[55,63,3]],"names":["E","G","E","F","G","F","E","E♭","D","C","B","G","A","F","D","E","G","F","E","G","B","C","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":72,"summary":"<b>Dm7 scale</b> · <b>G</b> · <b>Dm</b> · <b>C</b> · <b>Em</b> · <b>C</b><br>E♭ → D (♭9 → 5, half step); E → G (13 → 5, 3 semitones up)","bars":[39,40,41],"num":12,"cards":[{"name":"Dm7 scale","deg":"3–4–5","stack":"9–11–9–♭3–11–♭3–9 of Dm7","use":[0,1,2,3,4,5,6,7],"passing":[7],"labels":["9","11","9","♭3","11","♭3","9","♭9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–G–E–F–G–F–E: a small figure around the 9 and 11, then E♭ slides down to D."},{"name":"G","tone":"5","deg":"5–7–2","stack":"5–3–1 of G","use":[8,9,10,11],"passing":[9],"labels":["5","4","3","1"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–(C)–B–G: the G triad down, C passing. The plain V."},{"name":"Dm","tone":"9","deg":"2–4–6","stack":"5–♭3–1 of Dm","use":[12,13,14,15],"passing":[15],"labels":["5","♭3","1","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–F–D: the Dm triad down over G7: 9, ♭7, 5. E passes on to G."},{"name":"C","deg":"4–5","stack":"5–4 of C","use":[16,17],"passing":[],"labels":["5","4"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–F: down to E."},{"name":"Em","deg":"3–5–7","stack":"1–♭3–5 of Em","use":[18,19,20],"passing":[],"labels":["1","♭3","5"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–B in triplets: the Em triad, 3–5–7 of Cmaj7."},{"name":"C","deg":"1–5","stack":"1–5 of C","use":[21,22],"passing":[],"labels":["1","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–G: root and 5th."}]},{"notes":[[62,3,3],[65,6,2],[69,8,2],[76,10,2],[79,12,3],[78,15,3],[77,18,3],[76,21,3],[74,24,3],[73,27,3],[72,30,3],[70,33,3],[68,36,1],[70,37,1],[68,38,1],[66,39,3],[63,42,3],[60,45,3],[67,48,1],[69,49,1],[67,50,1],[65,51,3],[62,54,3],[56,57,3],[55,60,3],[64,63,3]],"names":["D","F","A","E","G","F♯","F","E","D","D♭","C","B♭","A♭","B♭","A♭","F♯","E♭","C","G","A","G","F","D","A♭","G","E"],"chords":[{"slot":12,"root":2,"q":"m7","name":"Dm7"},{"slot":36,"root":7,"q":"7","name":"G7"},{"slot":60,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":72,"summary":"<b>Dm</b> · <b>Dm7 scale</b> · <b>A♭7</b> · <b>G7</b> · <b>C</b><br>B♭ → A♭ (♭6 → ♭9, 2 semitones down); A♭ → G (♭9 → 5, half step)","bars":[42,43,44,45],"num":13,"cards":[{"name":"Dm","deg":"2–3–4–6","stack":"1–♭3–5–9 of Dm","use":[0,1,2,3],"passing":[],"labels":["1","♭3","5","9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–F–A, then up to E: a Dm(9) pickup."},{"name":"Dm7 scale","deg":"2–3–4–5–♭7–1","stack":"11–♭3–9–1–♭7–♭13 of Dm7","use":[4,5,6,7,8,9,10,11],"passing":[5,9],"labels":["11","3","♭3","9","1","7","♭7","♭13"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"G–F♯–F–E–D–D♭–C, then B♭: chromatic and scale steps straight down. B♭ (the ♭13) leads into A♭ on the V."},{"name":"A♭7","tone":"♭9","deg":"♭6–1–♭3–♯4","stack":"1–1–♭7–5–3 of A♭7","use":[12,13,14,15,16,17],"passing":[13],"labels":["1","2","1","♭7","5","3"],"color":{"side":"flat","dist":4,"dim":false},"about":"A♭–(B♭)–A♭–G♭–E♭–C: an A♭7 arpeggio down, a half step above G. Parker slides the V up a half step, then back."},{"name":"G7","tone":"1","deg":"5–♭6–6–2–4","stack":"1–9–1–♭7–5–♭9 of G7","use":[18,19,20,21,22,23],"passing":[],"labels":["1","9","1","♭7","5","♭9"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–A–G–F–D, then A♭: back inside G7. The ♭9 at the end falls to G."},{"name":"C","deg":"3–5","stack":"5–3 of C","use":[24,25],"passing":[],"labels":["5","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–E: the 5th and the 3rd."}]},{"notes":[[65,0,2],[60,2,2],[57,4,2],[53,6,2],[64,8,2],[63,10,2],[62,12,2],[61,14,2],[60,16,2],[57,18,1],[53,19,1],[50,20,2],[60,22,4],[56,26,1],[53,27,1],[49,28,2],[59,30,4],[55,34,1],[52,35,1],[48,36,2],[57,38,4],[59,42,4],[55,46,1],[52,47,1],[48,48,2],[57,50,6]],"names":["F","C","A","F","E","E♭","D","D♭","C","A","F","D","C","A♭","F","C♯","B","G","E","C","A","B","G","E","C","A"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":16,"root":7,"q":"7","name":"G7"},{"slot":32,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":60,"summary":"<b>F</b> · <b>Dm7 scale</b> · <b>Dm7</b> · <b>G7alt</b> · <b>C</b> · <b>C</b><br>D♭ → C (7 → 11, half step); B → G (3 → 5, 4 semitones down)","bars":[46,47,48,49],"num":14,"cards":[{"name":"F","deg":"4–6–1","stack":"1–5–3–1 of F","use":[0,1,2,3],"passing":[],"labels":["1","5","3","1"],"color":{"side":"flat","dist":1,"dim":false},"about":"F–C–A–F: the F triad down over Dm7: ♭3, ♭7, 5, ♭3."},{"name":"Dm7 scale","deg":"2–3","stack":"9–1 of Dm7","use":[4,5,6,7],"passing":[5,7],"labels":["9","♭9","1","7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–E♭–D–D♭: chromatic down from the 9th, through the root."},{"name":"Dm7","tone":"11","deg":"2–4–6–1","stack":"♭7–5–♭3–1 of Dm7","use":[8,9,10,11],"passing":[],"labels":["♭7","5","♭3","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A–F–D: Dm7 down again over G7 (11, 9, ♭7, 5)."},{"name":"G7alt","tone":"11","deg":"♭6–7–1–4","stack":"11–♭9–♭7–3 of G7alt","use":[12,13,14,15,16],"passing":[15],"labels":["11","♭9","♭7","♯11","3"],"color":{"side":"flat","dist":3,"dim":false},"about":"C–A♭–F, then C♯ to B: the ♭9 and ♭7 (the F° sound), with C♯ leaning into B, the 3rd."},{"name":"C","deg":"1–3–5","stack":"5–3–1 of C","use":[17,18,19],"passing":[],"labels":["5","3","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–E–C: the C triad down."},{"name":"C","deg":"1–3–5–6–7","stack":"6–7–5–3–1–6 of C","use":[20,21,22,23,24,25],"passing":[],"labels":["6","7","5","3","1","6"],"color":{"side":"sharp","dist":0,"dim":false},"about":"A–B, then G–E–C–A: C6 down. Parker ends on A, the 6th."}]},{"notes":[[57,6,6],[62,12,3],[65,15,3],[69,18,3],[74,21,3],[76,24,6],[75,30,6],[74,36,6],[73,42,6],[72,48,6],[70,54,6],[71,60,6],[74,66,6],[68,72,4],[70,76,4],[68,80,4],[67,84,6],[77,90,6],[76,96,6],[67,102,6],[69,108,6],[71,114,6],[74,120,6],[72,126,6],[71,132,6]],"names":["A","D","F","A","D","E","E♭","D","D♭","C","A♯","B","D","A♭","B♭","A♭","G","F","E","G","A","B","D","C","B"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":48,"root":7,"q":"7","name":"G7"},{"slot":96,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":144,"summary":"<b>Dm</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7alt</b> · <b>C</b><br>D♭ → C (7 → 11, half step); F → E (♭7 → 3, half step)","bars":[50,51,52],"num":15,"cards":[{"name":"Dm","deg":"2–4–6","stack":"5–1–♭3–5–1 of Dm","use":[0,1,2,3,4],"passing":[],"labels":["5","1","♭3","5","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–D–F–A–D: the Dm triad over two octaves."},{"name":"Dm7 scale","deg":"2–3","stack":"9–1 of Dm7","use":[5,6,7,8],"passing":[6,8],"labels":["9","♭9","1","7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–E♭–D–D♭: chromatic down from the 9th. D♭ lands on C."},{"name":"G7","tone":"11","deg":"7–2","stack":"3–5 of G7","use":[9,10,11,12],"passing":[9,10],"labels":["11","♯9","3","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"C–A♯–B: B, the 3rd, closed in from above and below, then D."},{"name":"G7alt","tone":"♭9","deg":"5–♭6–4","stack":"♭9–♭9–1–♭7 of G7alt","use":[13,14,15,16,17],"passing":[14],"labels":["♭9","♯9","♭9","1","♭7"],"color":{"side":"flat","dist":3,"dim":false},"about":"A♭–B♭–A♭–G–F: the ♭9–♯9 pair (Stitt uses it too), then root and ♭7. F falls to E."},{"name":"C","deg":"1–2–3–5–6–7","stack":"3–5–6–7–2–1–7 of C","use":[18,19,20,21,22,23,24],"passing":[],"labels":["3","5","6","7","2","1","7"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–G–A–B–D–C–B: up from the 3rd to the 9th and back, ending on B, the major 7th."}]},{"notes":[[70,3,3],[71,6,3],[74,9,3],[69,12,3],[65,15,3],[62,18,3],[59,21,3],[60,24,3],[58,27,3],[59,30,3],[64,33,3],[63,36,3],[59,39,3],[70,42,3],[69,45,3],[68,48,3],[65,51,3],[62,54,3],[60,57,3],[67,60,6],[63,69,3],[64,72,2],[67,74,2],[71,76,2],[74,78,12]],"names":["A♯","B","D","A","F","D","B","C","A♯","B","E","E♭","B","B♭","A","A♭","F","D","C","G","D♯","E","G","B","D"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":96,"summary":"<b>Dm7 scale</b> · <b>Dm</b> · <b>G7</b> · <b>G7alt</b> · <b>C</b> · <b>Em7</b><br>B → C (6 → 11, half step); A → A♭ (9 → ♭13, half step)","bars":[53,54,55,56],"num":16,"cards":[{"name":"Dm7 scale","deg":"2–7","stack":"13–1 of Dm7","use":[0,1,2],"passing":[0],"labels":["♯5","13","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A♯–B–D: B with A♯ leaning in, then up to D."},{"name":"Dm","deg":"2–4–6–7","stack":"5–♭3–1–6 of Dm","use":[3,4,5,6],"passing":[],"labels":["5","♭3","1","6"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–F–D–B: the Dm triad down, then B (the 6th): Bø7, or Dm6."},{"name":"G7","tone":"11","deg":"7","stack":"3 of G7","use":[7,8,9],"passing":[7,8],"labels":["11","♯9","3"],"color":{"side":"sharp","dist":1,"dim":false},"about":"C–A♯–B: the 3rd closed in from both sides."},{"name":"G7alt","tone":"13","deg":"6–7–3","stack":"13–3–9 of G7alt","use":[10,11,12,13,14],"passing":[11,13],"labels":["13","♭13","3","♯9","9"],"color":{"side":"flat","dist":3,"dim":false},"about":"E–E♭–B, then B♭–A: 13 to ♭13 down to the 3rd, then ♯9 to 9. Two chromatic pairs."},{"name":"C","deg":"1–2–4–5–♭6","stack":"♭6–4–2–1–5 of C","use":[15,16,17,18,19],"passing":[],"labels":["♭6","4","2","1","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"A♭–F–D–C–G: the ♭6 (from C minor) walking down to the root, then G."},{"name":"Em7","deg":"3–5–7–2","stack":"1–♭3–5–♭7 of Em7","use":[20,21,22,23,24],"passing":[20],"labels":["7","1","♭3","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"D♯–E–G–B–D: Em7 up, D♯ leaning in. The 3–5–7–9 of Cmaj7."}]},{"notes":[[62,0,1],[65,1,1],[69,2,1],[72,3,1],[71,4,1],[67,5,1],[68,6,1],[69,7,1],[65,8,1],[57,9,1],[56,10,1],[57,11,1],[64,12,1],[63,13,1],[61,14,1],[55,15,1],[56,16,1],[58,17,1],[53,18,1],[51,19,1],[52,20,1],[53,21,1],[55,22,1],[59,23,1],[62,24,1],[60,25,1],[55,26,1],[52,27,1]],"names":["D","F","A","C","B","G","G♯","A","F","A","G♯","A","E","E♭","C♯","G","A♭","B♭","F","E♭","E","F","G","B","D","C","G","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":4,"root":7,"q":"7","name":"G7"},{"slot":12,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":28,"summary":"<b>Dm7</b> · <b>G7</b> · <b>G7alt</b> · <b>C</b> · <b>G</b> · <b>C</b><br>C → B (♭7 → 3, half step); A → E (9 → 3, 7 semitones up)","bars":[57,58,59,60],"num":17,"cards":[{"name":"Dm7","deg":"2–4–6–1","stack":"1–♭3–5–♭7 of Dm7","use":[0,1,2,3],"passing":[],"labels":["1","♭3","5","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–F–A–C: Dm7 straight up. C falls a half step to B."},{"name":"G7","tone":"3","deg":"5–6–7–4","stack":"3–1–9–♭7–9–9 of G7","use":[4,5,6,7,8,9,10,11],"passing":[6,10],"labels":["3","1","♭9","9","♭7","9","♭9","9"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–G, then G♯–A twice with F in between: the 9 reached from a half step below."},{"name":"G7alt","tone":"13","deg":"5–♭6–♭7–♯1–♭3–3–4","stack":"13–♭13–♯11–1–♭9–♯9–♭7–♭13 of G7alt","use":[12,13,14,15,16,17,18,19],"passing":[],"labels":["13","♭13","♯11","1","♭9","♯9","♭7","♭13"],"color":{"side":"flat","dist":3,"dim":false},"about":"E–E♭–C♯–G–A♭–B♭–F–E♭: the V keeps going over the C bar (♭13, ♯11, ♭9, ♯9) and only resolves on the next downbeat."},{"name":"C","deg":"3–4","stack":"3–4 of C","use":[20,21],"passing":[],"labels":["3","4"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–F: resolved at last."},{"name":"G","deg":"5–7–2","stack":"1–3–5 of G","use":[22,23,24],"passing":[],"labels":["1","3","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–B–D: the G triad up, 5–7–9 of Cmaj7."},{"name":"C","deg":"1–3–5","stack":"1–5–3 of C","use":[25,26,27],"passing":[],"labels":["1","5","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–G–E: the C triad down."}]},{"notes":[[72,0,2],[69,2,1],[67,3,1],[64,4,2],[63,6,2],[62,8,2],[61,10,2],[60,12,2],[57,14,2],[59,16,2],[62,18,2],[65,20,2],[68,22,2],[67,24,2],[65,26,2],[64,28,6],[60,34,1],[57,35,1],[60,36,2],[55,38,2],[60,40,2],[60,42,2],[64,44,2],[60,46,2]],"names":["C","A","G","E","E♭","D","D♭","C","A","B","D","F","A♭","G","F","E","C","A","C","G","C","C","E","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":12,"root":7,"q":"7","name":"G7"},{"slot":28,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":52,"summary":"<b>Dm7 scale</b> · <b>G7</b> · <b>B°7</b> · <b>G7</b> · <b>C</b><br>D♭ → C (7 → 11, half step); F → E (♭7 → 3, half step)","bars":[61,62,63,64],"num":19,"cards":[{"name":"Dm7 scale","deg":"2–3–5–6–1","stack":"♭7–5–11–9–1 of Dm7","use":[0,1,2,3,4,5,6],"passing":[4,6],"labels":["♭7","5","11","9","♭9","1","7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C–A–G–E, then E♭–D–D♭: down to the 9th, then chromatic through the root to C."},{"name":"G7","tone":"11","deg":"6–1","stack":"11–9 of G7","use":[7,8],"passing":[],"labels":["11","9"],"color":{"side":"sharp","dist":1,"dim":false},"about":"C–A: the 11 and the 9, just under B."},{"name":"B°7","tone":"3","deg":"7–2–4–♭6","stack":"1–♭3–♭5–°7 of B°7","use":[9,10,11,12],"passing":[],"labels":["1","♭3","♭5","°7"],"color":{"side":"sharp","dist":1,"dim":true},"about":"B–D–F–A♭: B°7 straight up, the rootless G7♭9."},{"name":"G7","tone":"1","deg":"5–4","stack":"1–♭7 of G7","use":[13,14],"passing":[],"labels":["1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–F: A♭ falls to G, then F (the ♭7) falls to E."},{"name":"C","deg":"1–3–5–6","stack":"3–1–6–1–5–1–1–3–1 of C","use":[15,16,17,18,19,20,21,22,23],"passing":[],"labels":["3","1","6","1","5","1","1","3","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–C–A–C–G–C: the notes of C6 only, circling the root."}]},{"notes":[[61,1,1],[62,2,1],[64,3,1],[65,4,1],[67,5,1],[69,6,1],[72,7,1],[76,8,1],[74,9,1],[73,10,1],[76,11,1],[74,12,2],[76,14,1],[77,15,1],[79,16,1],[78,17,1],[77,18,1],[76,19,1],[75,20,1],[74,21,1],[73,22,1],[72,23,1],[70,24,1],[69,25,1],[68,26,1],[65,27,1],[62,28,1],[60,29,1],[67,30,1],[65,31,1],[64,32,1],[55,33,1],[57,34,1],[59,35,1],[62,36,1],[60,37,1],[59,38,1],[60,39,1],[64,40,1],[67,41,3]],"names":["C♯","D","E","F","G","A","C","E","D","C♯","E","D","E","F","G","F♯","F","E","E♭","D","D♭","C","B♭","A","A♭","F","D","C","G","F","E","G","A","B","D","C","B","C","E","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":12,"root":7,"q":"7","name":"G7"},{"slot":28,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":44,"summary":"<b>Dm7 scale</b> · <b>Am</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>C</b> · <b>Em7</b> · <b>C</b><br>E → D (2 → 5, 2 semitones down); F → D (♭7 → 9, 3 semitones down)","bars":[65,66,67],"num":20,"cards":[{"name":"Dm7 scale","deg":"2–3–4–5","stack":"1–9–♭3–11 of Dm7","use":[0,1,2,3,4],"passing":[0],"labels":["7","1","9","♭3","11"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C♯–D–E–F–G: up the D Dorian scale from C♯."},{"name":"Am","deg":"6–1–3","stack":"1–♭3–5 of Am","use":[5,6,7],"passing":[],"labels":["1","♭3","5"],"color":{"side":"sharp","dist":0.5,"dim":false},"about":"A–C–E: the Am triad on top of Dm7: 5, ♭7, 9 (Dm9 without the root)."},{"name":"Dm7 scale","deg":"2–3","stack":"1–9 of Dm7","use":[8,9,10],"passing":[9],"labels":["1","7","9"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–C♯–E: the root with C♯ below, then E."},{"name":"G7","tone":"5","deg":"5–6–1–2–3–4","stack":"5–13–♭7–1–♭7–13–5–11–9–♭7 of G7","use":[11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],"passing":[15,18,20,22,24],"labels":["5","13","♭7","1","7","♭7","13","♭13","5","♭5","11","♯9","9","♭9","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–E–F–G, then straight down by half steps from G to A♭, landing on F. A bebop line with no triad."},{"name":"C","deg":"1–2–4–5","stack":"2–1–5–4 of C","use":[26,27,28,29],"passing":[],"labels":["2","1","5","4"],"color":{"side":"sharp","dist":0,"dim":false},"about":"D–C, G–F: falling pairs into E."},{"name":"Em7","deg":"3–5–7–2","stack":"1–♭3–5–♭7 of Em7","use":[30,31,32,33,34],"passing":[32],"labels":["1","♭3","4","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–(A)–B–D: Em7 up, A passing."},{"name":"C","deg":"1–3–5","stack":"1–1–3–5 of C","use":[35,36,37,38,39],"passing":[36],"labels":["1","7","1","3","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–B–C–E–G: the C triad up from the root, B below it."}]}]},{"name":"Kellen 251 (from B♭)","title":"Kellen lick","licks":[{"notes":[[69,0,4],[71,4,4],[72,8,4],[71,12,12],[69,24,12],[67,36,12],[65,48,12],[64,60,15],[67,75,3],[71,78,3],[74,81,3],[72,84,6],[67,90,6],[65,96,6],[63,102,6],[64,108,6],[60,114,6]],"names":["A","B","C","B","A","G","F","E","G","B","D","C","G","F","D♯","E","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":12,"root":7,"q":"7","name":"G7"},{"slot":60,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":132,"summary":"<b>Dm7 scale</b> · <b>G7</b> · <b>C</b> · <b>C</b><br>C → B (♭7 → 3, half step); F → E (♭7 → 3, half step)","bars":[1,2,3,4],"cards":[{"name":"Dm7 scale","deg":"6–7–1","stack":"5–6–♭7 of Dm7, up","use":[0,1,2],"labels":["5","6","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–B–C: a scale run over Dm7, no full triad."},{"name":"G7","tone":"3","deg":"7–6–5–4","stack":"3–9–1–♭7 of G7","use":[3,4,5,6],"labels":["3","9","1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–A–G–F: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"3–5–7–9–1–5 of C","use":[7,8,9,10,11,12],"labels":["3","5","7","9","1","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–G–B–D–C–G over C."},{"name":"C","deg":"1–3–5","stack":"11–♯9–3–1 of C","use":[13,14,15,16],"passing":[14],"labels":["11","♯9","3","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"F–D♯–E–C over C. D♯ is a chromatic approach, a half step into E."}]},{"notes":[[62,-2,1],[64,-1,1],[65,0,1],[67,1,1],[64,2,1],[65,3,1],[62,4,1],[64,5,1],[65,6,1],[67,7,1],[68,8,1],[68,9,1],[67,10,1],[65,11,1],[64,12,1],[67,13,1],[71,14,1],[74,15,1],[73,17,1],[71,19,1],[72,20,1],[67,21,1],[65,22,1],[60,23,1],[64,24,1],[67,25,1],[69,26,1],[70,27,1]],"names":["D","E","F","G","E","F","D","E","F","G","A♭","A♭","G","F","E","G","B","D","C♯","B","C","G","F","C","E","G","A","B♭"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":8,"root":7,"q":"7","name":"G7"},{"slot":16,"root":0,"q":"maj","name":"Cmaj7"}],"spb":2,"length":30,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7alt</b> · <b>Em7</b> · <b>C</b> · <b>E°</b><br>G → A♭ (4 → ♭9, half step); D → D♭ (5 → ♭9, half step)","bars":[4,5,6,7,8],"cards":[{"name":"Dm7 scale","deg":"2–3–4–5–3–4","stack":"1–2–♭3–4–2–♭3 of Dm7, up","use":[0,1,2,3,4,5],"labels":["1","2","♭3","4","2","♭3"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–G–E–F: a scale run over Dm7, no full triad."},{"name":"Dm7 scale","deg":"2–3–4–5","stack":"1–2–♭3–4 of Dm7, up","use":[6,7,8,9],"labels":["1","2","♭3","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–E–F–G: a scale run over Dm7, no full triad."},{"name":"G7alt","deg":"♭6–♭6–5–4","stack":"♭9–♭9–1–♭7 of G7","use":[10,11,12,13],"labels":["♭9","♭9","1","♭7"],"color":{"side":"flat","dist":3,"dim":false},"about":"A♭–A♭–G–F: a piece of the G altered scale, no triad."},{"name":"Em7","tone":"13","deg":"3–5–7–2","stack":"1–♭3–5–♭7 of Em7, up","use":[14,15,16,17],"labels":["1","♭3","5","♭7"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–B–D: a Em7 arpeggio, up. Built on the 13 of G7. B and D close in on C♯ from both sides (an enclosure)."},{"name":"C","deg":"1–3–5","stack":"♭9–7–1–5–11–1 of C","use":[18,19,20,21,22,23],"passing":[18],"labels":["♭9","7","1","5","11","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C♯–B–C–G–F–C over C. C♯ is chromatic, a half step from the note before."},{"name":"E°","deg":"3–5–♭7","stack":"1–♭3–4–♭5 of E°","use":[24,25,26,27],"passing":[26],"labels":["1","♭3","4","♭5"],"color":{"side":"sharp","dist":1,"dim":true},"about":"E–G–A–B♭: the E° triad, with A passing."}]},{"notes":[[69,0,3],[72,3,3],[69,6,3],[65,9,3],[64,12,2],[65,14,2],[64,16,2],[62,18,3],[60,21,3],[68,24,3],[66,27,3],[58,30,3],[61,33,3],[65,36,2],[66,38,2],[65,40,2],[63,42,3],[64,45,6],[67,51,3],[69,54,3],[64,57,3],[67,60,3],[69,63,3],[67,66,3],[64,69,3],[63,72,2],[62,74,2],[60,76,2],[57,78,3],[55,81,3],[60,84,6]],"names":["A","C","A","F","E","F","E","D","C","A♭","F♯","B♭","C♯","F","F♯","F","D♯","E","G","A","E","G","A","G","E","E♭","D","C","A","G","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":24,"root":7,"q":"7","name":"G7"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7"}],"spb":6,"length":96,"summary":"<b>F</b> · <b>Dm7 scale</b> · <b>G7alt</b> · <b>G7</b> · <b>C</b> · <b>C</b> · <b>C</b><br>C → A♭ (♭7 → ♭9, 8 semitones up); E → G (13 → 5, 3 semitones up)","bars":[9,10,11,12],"cards":[{"name":"F","deg":"4–6–1","stack":"3–5–3–1 of F","use":[0,1,2,3],"labels":["3","5","3","1"],"color":{"side":"flat","dist":1,"dim":false},"about":"A–C–A–F: the F triad."},{"name":"Dm7 scale","deg":"3–4–3–2–1","stack":"2–♭3–2–1–♭7 of Dm7, down","use":[4,5,6,7,8],"labels":["2","♭3","2","1","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–F–E–D–C: a scale run over Dm7, no full triad."},{"name":"G7alt","deg":"♭6–♭5–♭7–♭2","stack":"♭9–7–♯9–♯11 of G7","use":[9,10,11,12],"labels":["♭9","7","♯9","♯11"],"color":{"side":"flat","dist":3,"dim":false},"about":"A♭–F♯–B♭–C♯: a piece of the G altered scale, no triad."},{"name":"G7","tone":"♭7","deg":"4–4–♭3–3","stack":"♭7–7–♭7–♭13–13 of G7","use":[13,14,15,16,17],"passing":[14],"labels":["♭7","7","♭7","♭13","13"],"color":{"side":"sharp","dist":1,"dim":false},"about":"F–F♯–F–D♯–E: a G7 scale figure, no full triad. F♯ is a chromatic neighbor of F."},{"name":"C","deg":"1–3–5","stack":"5–13–3 of C","use":[18,19,20],"labels":["5","13","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–A–E over C."},{"name":"C","deg":"1–3–5","stack":"5–13–5–3 of C","use":[21,22,23,24],"labels":["5","13","5","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G–A–G–E over C."},{"name":"C","deg":"1–3–5","stack":"♯9–9–1–13–5–1 of C","use":[25,26,27,28,29,30],"passing":[25],"labels":["♯9","9","1","13","5","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E♭–D–C–A–G–C over C. E♭ is a chromatic passing note between E and D."}]},{"notes":[[64,6,6],[65,12,4],[69,16,4],[72,20,4],[76,24,6],[79,30,6],[77,36,6],[73,42,6],[76,48,6],[74,54,6],[68,60,4],[69,64,4],[72,68,4],[71,72,6],[67,78,6],[69,84,6],[71,90,6],[72,96,6],[67,102,6],[65,108,3],[67,111,3],[65,114,3],[63,117,3],[64,120,6],[59,126,6],[60,132,4],[64,136,4],[67,140,4],[71,144,6],[74,150,6],[72,156,6],[69,162,18]],"names":["E","F","A","C","E","G","F","C♯","E","D","G♯","A","C","B","G","A","B","C","G","F","G","F","D♯","E","B","C","E","G","B","D","C","A"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":48,"root":7,"q":"7","name":"G7"},{"slot":96,"root":0,"q":"maj","name":"Cmaj7"}],"spb":12,"length":192,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7</b> · <b>C</b> · <b>Cmaj7</b> · <b>C</b><br>D♭ → E (7 → 13, 3 semitones up); B → C (3 → 1, half step)","bars":[13,14,15,16],"cards":[{"name":"Dm7 scale","deg":"3–4–6–1–3–5","stack":"2–♭3–5–♭7–2–4 of Dm7, up","use":[0,1,2,3,4,5],"labels":["2","♭3","5","♭7","2","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"E–F–A–C–E–G: a scale run over Dm7, no full triad. E and G close in on F from both sides (an enclosure)."},{"name":"Dm7 scale","deg":"4–♭2","stack":"♭3–7 of Dm7, down","use":[6,7],"labels":["♭3","7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"F–C♯: a scale run over Dm7, no full triad."},{"name":"G7","tone":"13","deg":"3–2–6–1","stack":"13–5–♭9–9–11 of G7","use":[8,9,10,11,12],"passing":[10],"labels":["13","5","♭9","9","11"],"color":{"side":"sharp","dist":1,"dim":false},"about":"E–D–G♯–A–C: a G7 scale figure, no full triad. A and C close in on B from both sides (an enclosure). G♯ is a chromatic approach, a half step into A."},{"name":"G7","tone":"3","deg":"7–5–6–7","stack":"3–1–9–3 of G7","use":[13,14,15,16],"labels":["3","1","9","3"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–G–A–B: a G7 scale figure, no full triad."},{"name":"C","deg":"1–3–5","stack":"1–5–11–5–11–♯9 of C","use":[17,18,19,20,21,22],"passing":[22],"labels":["1","5","11","5","11","♯9"],"color":{"side":"sharp","dist":0,"dim":false},"about":"C–G–F–G–F–D♯ over C. F and D♯ close in on E from both sides (an enclosure). D♯ is a chromatic approach, a half step into E."},{"name":"Cmaj7","deg":"1–3–5–7","stack":"3–7–1–3–5 of Cmaj7, up","use":[23,24,25,26,27],"labels":["3","7","1","3","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–B–C–E–G: a Cmaj7 arpeggio, up."},{"name":"C","deg":"1–3–5","stack":"7–9–1–13 of C","use":[28,29,30,31],"labels":["7","9","1","13"],"color":{"side":"sharp","dist":0,"dim":false},"about":"B–D–C–A over C."}]},{"notes":[[73,2,2],[74,4,2],[76,6,2],[77,8,2],[79,10,2],[81,12,2],[84,14,2],[83,16,1],[84,17,1],[83,18,1],[81,19,1],[79,20,2],[78,22,2],[77,24,2],[72,26,2],[73,28,2],[76,30,2],[74,32,2],[69,34,2],[72,36,2],[69,38,2],[71,40,2],[70,42,2],[69,44,2],[68,46,2],[67,48,2],[64,50,2]],"names":["C♯","D","E","F","G","A","C","B","C","B","A","G","F♯","F","C","C♯","E","D","A","C","A","B","B♭","A","A♭","G","E"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7"},{"slot":16,"root":7,"q":"7","name":"G7"},{"slot":32,"root":0,"q":"maj","name":"Cmaj7"}],"spb":4,"length":56,"summary":"<b>Dm7 scale</b> · <b>Dm7 scale</b> · <b>G7</b> · <b>G7</b> · <b>C</b> · <b>C</b><br>C → B (♭7 → 3, half step); E → D (13 → 9, 2 semitones down)","bars":[17,18,19,20],"cards":[{"name":"Dm7 scale","deg":"2–3–4–5","stack":"7–1–2–♭3–4 of Dm7, up","use":[0,1,2,3,4],"passing":[0],"labels":["7","1","2","♭3","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"C♯–D–E–F–G: a scale run over Dm7, no full triad. C♯ is a chromatic approach, a half step into D."},{"name":"Dm7 scale","deg":"6–1","stack":"5–♭7 of Dm7, up","use":[5,6],"labels":["5","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–C: a scale run over Dm7, no full triad. A and C close in on B from both sides (an enclosure)."},{"name":"G7","tone":"3","deg":"7–1–7–6–5","stack":"3–11–3–9–1–7 of G7","use":[7,8,9,10,11,12],"passing":[12],"labels":["3","11","3","9","1","7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"B–C–B–A–G–F♯: a G7 scale figure, no full triad. F♯ is a chromatic passing note between G and F."},{"name":"G7","tone":"♭7","deg":"4–1–♭2–3","stack":"♭7–11–♯11–13 of G7","use":[13,14,15,16],"labels":["♭7","11","♯11","13"],"color":{"side":"sharp","dist":1,"dim":false},"about":"F–C–C♯–E: a G7 scale figure, no full triad. C♯ and E close in on D from both sides (an enclosure)."},{"name":"C","deg":"1–3–5","stack":"9–13–1–13–7–♭7 of C","use":[17,18,19,20,21,22],"passing":[22],"labels":["9","13","1","13","7","♭7"],"color":{"side":"sharp","dist":0,"dim":false},"about":"D–A–C–A–B–B♭ over C. B♭ is a chromatic passing note between B and A."},{"name":"C","deg":"1–3–5","stack":"13–♭13–5–3 of C","use":[23,24,25,26],"passing":[24],"labels":["13","♭13","5","3"],"color":{"side":"sharp","dist":0,"dim":false},"about":"A–A♭–G–E over C. A♭ is a chromatic passing note between A and G."}]}]},{"name":"Lick set 4","title":"Lick set 4 · lick","licks":[{"notes":[[57,3,1],[62,4,2],[65,7,1],[67,8,4],[65,12,2],[67,18,2],[64,20,2],[59,22,6],[62,28,4]],"names":["A","D","F","G","F","G","E","B","D"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm","sub":"ii"},{"slot":12,"root":7,"q":"7","name":"G7","sub":"V"},{"slot":28,"root":0,"q":"maj","name":"C","sub":"I"}],"spb":4,"length":36,"summary":"<b>Dm</b> · <b>Em</b> (13) · <b>C</b><br>G → F (4 → ♭7, 2 semitones down); B → D (3 → 9, 3 semitones up)","bars":[1,2,3],"cards":[{"name":"Dm","deg":"2–4–6","stack":"5–1–♭3, then 4 of Dm","use":[0,1,2,3],"passing":[],"labels":["5","1","♭3","4"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–D–F: the Dm triad, then G, its 4th (the 11 of Dm7), which is also the root of the coming G7."},{"name":"Em","tone":"13","deg":"3–5–7","stack":"♭2–♭3–1–5 of Em","use":[4,5,6,7],"passing":[4],"labels":["♭2","♭3","1","5"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"F–G–E–B: the Em triad (13, root and 3rd of G7) with F, the ♭7, in front. Close to Stitt set 1 lick 13 (G–F–E–B). It lands on D, the 9th of C."},{"name":"C","deg":"1–3–5","stack":"9 of C","use":[8],"labels":["9"],"color":{"side":"sharp","dist":0,"dim":false},"about":"D over C."}]},{"notes":[[69,0,6],[65,6,6],[62,12,4],[57,16,4],[60,20,4],[59,24,6],[70,30,6],[68,36,3],[70,39,3],[68,42,3],[66,45,3],[67,48,6]],"names":["A","F","D","A","C","B","B♭","A♭","B♭","A♭","F♯","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7","sub":"ii"},{"slot":24,"root":7,"q":"7","name":"G7","sub":"V"},{"slot":48,"root":0,"q":"maj","name":"C7","sub":"I"}],"spb":12,"length":72,"summary":"<b>Dm7</b> · <b>G7alt</b> · <b>C</b><br>C → B (♭7 → 3, half step); F♯ → G (7 → 5, half step)","bars":[4,5],"cards":[{"name":"Dm7","deg":"2–4–6–1","stack":"5–♭3–1–5–♭7 of Dm7, down","use":[0,1,2,3,4],"labels":["5","♭3","1","5","♭7"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–F–D–A–C: a Dm7 arpeggio, down. A and C close in on B from both sides (an enclosure)."},{"name":"G7alt","deg":"7–♭7–♭6–♭7–♭6","stack":"3–♯9–♭9–♯9–♭9–7 of G7","use":[5,6,7,8,9,10],"passing":[10],"labels":["3","♯9","♭9","♯9","♭9","7"],"color":{"side":"flat","dist":3,"dim":false},"about":"B–B♭–A♭–B♭–A♭–F♯: a piece of the G altered scale, no triad. A♭ and F♯ close in on G from both sides (an enclosure). F♯ is a chromatic approach, a half step into G."},{"name":"C","deg":"1–3–5","stack":"5 of C","use":[11],"labels":["5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"G over C."}]},{"notes":[[57,1,1],[62,2,1],[65,3,1],[64,4,1],[62,5,1],[61,6,1],[57,7,1],[60,8,1],[57,9,1],[59,10,2],[67,12,2],[65,14,1],[62,15,1],[64,16,1],[67,17,1]],"names":["A","D","F","E","D","C♯","A","C","A","B","G","F","D","E","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7","sub":"ii"},{"slot":8,"root":7,"q":"7","name":"G7","sub":"V"},{"slot":16,"root":4,"q":"m7","name":"Em7","sub":"iii"}],"spb":2,"length":20,"summary":"<b>Dm</b> · <b>A</b> · <b>G7</b> (11) · <b>G7</b> (1) · <b>Em7 scale</b><br>A → C (5 → 11, 3 semitones up); D → E (5 → 1, 2 semitones up)","bars":[6,7,8],"cards":[{"name":"Dm","deg":"2–4–6","stack":"5–1–♭3 of Dm","use":[0,1,2],"labels":["5","1","♭3"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"A–D–F: the Dm triad. D and F close in on E from both sides (an enclosure)."},{"name":"A","deg":"6–♭2–3","stack":"5–4–3–1 of A","use":[3,4,5,6],"passing":[4],"labels":["5","4","3","1"],"color":{"side":"sharp","dist":3,"dim":false},"about":"E–D–C♯–A: the A triad, with D passing."},{"name":"G7","tone":"11","deg":"1–6–7","stack":"11–9–3 of G7","use":[7,8,9],"labels":["11","9","3"],"color":{"side":"sharp","dist":1,"dim":false},"about":"C–A–B: a G7 scale figure, no full triad."},{"name":"G7","tone":"1","deg":"5–4–2","stack":"1–♭7–5 of G7","use":[10,11,12],"labels":["1","♭7","5"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–F–D: a G7 scale figure, no full triad. F and D close in on E from both sides (an enclosure)."},{"name":"Em7 scale","deg":"3–5","stack":"1–♭3 of Em7, up","use":[13,14],"labels":["1","♭3"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G: a scale run over Em7, no full triad."}]},{"notes":[[83,0,3],[81,3,3],[80,6,3],[81,9,3],[84,12,3],[81,15,3],[77,18,3],[76,21,3],[74,24,3],[71,27,3],[74,30,2],[76,32,2],[81,34,2],[79,36,9],[77,45,3],[76,48,3],[72,51,3],[69,54,3],[67,57,3],[72,60,6]],"names":["B","A","G♯","A","C","A","F","E","D","B","D","E","A","G","F","E","C","A","G","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7","sub":"ii"},{"slot":24,"root":7,"q":"7","name":"G7","sub":"V"},{"slot":48,"root":0,"q":"maj","name":"C","sub":"I"}],"spb":6,"length":72,"summary":"<b>Dm7 scale</b> · <b>Fmaj7</b> · <b>G7</b> (5) · <b>G7</b> (1) · <b>Am7</b><br>E → D (2 → 5, 2 semitones down); F → E (♭7 → 3, half step)","bars":[9,10,11],"cards":[{"name":"Dm7 scale","deg":"7–6–6","stack":"6–5–♭5–5 of Dm7, down","use":[0,1,2,3],"passing":[2],"labels":["6","5","♭5","5"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"B–A–G♯–A: a scale run over Dm7, no full triad. G♯ is a chromatic neighbor of A."},{"name":"Fmaj7","deg":"4–6–1–3","stack":"5–3–1–7 of Fmaj7 (the 3–5–7–9 of Dm7)","use":[4,5,6,7],"labels":["5","3","1","7"],"color":{"side":"flat","dist":1,"dim":false},"about":"C–A–F–E: Fmaj7 coming down, which over D is the 3, 5, 7 and 9 of Dm7: Dm9 without its root."},{"name":"G7","tone":"5","deg":"2–7–2–3–6","stack":"5–3–5–13–9 of G7","use":[8,9,10,11,12],"labels":["5","3","5","13","9"],"color":{"side":"sharp","dist":1,"dim":false},"about":"D–B–D–E–A: a G7 scale figure, no full triad."},{"name":"G7","tone":"1","deg":"5–4","stack":"1–♭7 of G7","use":[13,14],"labels":["1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"G–F: a G7 scale figure, no full triad."},{"name":"Am7","deg":"6–1–3–5","stack":"5–♭3–1–♭7–♭3 of Am7 (C6 over C)","use":[15,16,17,18,19],"labels":["5","♭3","1","♭7","♭3"],"color":{"side":"sharp","dist":0.5,"dim":false},"about":"E–C–A–G–C: Am7 coming down. Over C those are the 3, 1, 13 and 5: a C6 sound."}]},{"notes":[[67,2,2],[66,4,2],[65,6,3],[64,9,3],[62,12,3],[57,15,3],[53,18,3],[50,21,3],[60,24,3],[58,27,3],[59,30,2],[62,32,2],[65,34,2],[69,36,3],[68,39,3],[67,42,3],[65,45,3],[64,48,3],[67,51,3],[69,54,3],[71,57,3],[74,60,3],[73,63,3],[72,66,6]],"names":["G","F♯","F","E","D","A","F","D","C","A♯","B","D","F","A","A♭","G","F","E","G","A","B","D","D♭","C"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7","sub":"ii"},{"slot":24,"root":7,"q":"7","name":"G7","sub":"V"},{"slot":48,"root":0,"q":"maj","name":"Cmaj7","sub":"I"}],"spb":6,"length":72,"summary":"<b>Dm7 scale</b> · <b>Dm</b> · <b>B°</b> (3) · <b>G7</b> (9) · <b>Em</b> · <b>C</b><br>D → C (1 → 11, 10 semitones up); F → E (♭7 → 3, half step)","bars":[12,13,14],"cards":[{"name":"Dm7 scale","deg":"5–4–3","stack":"4–3–♭3–2 of Dm7, down","use":[0,1,2,3],"passing":[1],"labels":["4","3","♭3","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"G–F♯–F–E: a scale run over Dm7, no full triad. F♯ is a chromatic passing note between G and F."},{"name":"Dm","deg":"2–4–6","stack":"1–5–♭3–1 of Dm","use":[4,5,6,7],"labels":["1","5","♭3","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–A–F–D: the Dm triad."},{"name":"B°","tone":"3","deg":"7–2–4","stack":"1–♭3–♭5 of B°","use":[8,9,10,11,12],"passing":[8,9],"labels":["♭2","7","1","♭3","♭5"],"color":{"side":"sharp","dist":1,"dim":true},"about":"C and A♯ close in on B from both sides, then B–D–F: the B° triad, G7 without its root. The same opening as Stitt set 2 lick 12."},{"name":"G7","tone":"9","deg":"6–♭6–5–4","stack":"9–♭9–1–♭7 of G7, down","use":[13,14,15,16],"passing":[14],"labels":["9","♭9","1","♭7"],"color":{"side":"sharp","dist":1,"dim":false},"about":"A–A♭–G–F: a chromatic walk down from the 9 to the ♭7. A♭ is a passing note, not altered harmony. F then falls to E on C."},{"name":"Em","deg":"3–5–7","stack":"1–♭3–4–5 of Em","use":[17,18,19,20],"passing":[19],"labels":["1","♭3","4","5"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"E–G–A–B: the Em triad, with A passing."},{"name":"C","deg":"1–3–5","stack":"9–♭9–1 of C","use":[21,22,23],"passing":[22],"labels":["9","♭9","1"],"color":{"side":"sharp","dist":0,"dim":false},"about":"D–D♭–C over C. D♭ is a chromatic passing note between D and C."}]},{"notes":[[62,0,6],[69,6,6],[65,12,3],[67,15,3],[65,18,3],[64,21,3],[62,24,6],[57,30,6],[53,36,6],[50,42,6],[60,48,12],[59,60,6],[67,66,24],[64,90,6],[62,96,4],[60,100,4],[62,104,4],[60,108,6],[62,114,6],[64,120,6],[67,126,18]],"names":["D","A","F","G","F","E","D","A","F","D","C","B","G","E","D","C","D","C","D","E","G"],"chords":[{"slot":0,"root":2,"q":"m7","name":"Dm7","sub":"ii"},{"slot":48,"root":7,"q":"7","name":"G7","sub":"V"},{"slot":96,"root":0,"q":"maj","name":"Cmaj7","sub":"I"}],"spb":12,"length":144,"summary":"<b>Dm7 scale</b> · <b>Dm</b> · <b>Em</b> (13) · <b>C</b> · <b>C</b><br>D → C (1 → 11, 10 semitones up); E → D (13 → 9, 2 semitones down)","bars":[15,16,17],"cards":[{"name":"Dm7 scale","deg":"2–6–4–5–4–3","stack":"1–5–♭3–4–♭3–2 of Dm7, up","use":[0,1,2,3,4,5],"labels":["1","5","♭3","4","♭3","2"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–A–F–G–F–E: a scale run over Dm7, no full triad."},{"name":"Dm","deg":"2–4–6","stack":"1–5–♭3–1 of Dm","use":[6,7,8,9],"labels":["1","5","♭3","1"],"color":{"side":"flat","dist":1.5,"dim":false},"about":"D–A–F–D: the Dm triad."},{"name":"Em","tone":"13","deg":"3–5–7","stack":"(C)–5–♭3–1 of Em","use":[10,11,12,13],"passing":[10],"labels":["♭6","5","♭3","1"],"color":{"side":"sharp","dist":1.5,"dim":false},"about":"C–B–G–E: C, the 11, falls to B, the 3rd (a sus 4 resolving), then the Em triad comes down: 3, root and 13 of G7."},{"name":"C","deg":"1–3–5","stack":"9–1–9–1–9 of C","use":[14,15,16,17,18],"labels":["9","1","9","1","9"],"color":{"side":"sharp","dist":0,"dim":false},"about":"D–C–D–C–D over C."},{"name":"C","deg":"1–3–5","stack":"3–5 of C","use":[19,20],"labels":["3","5"],"color":{"side":"sharp","dist":0,"dim":false},"about":"E–G over C."}]}]}];
+const SETS = [{ name: 'Stitt 251 · set 1', title: 'Stitt lick',
+  licks: LICKS.map(l => ({ ...l, chords: SET1_CHORDS, spb: 2, length: 14, loopBeats: 8 })) }, ...ADDED_SETS];
+let curSet = 0;
+const QMAP = { m7: { sub: 'ii' }, '7': { sub: 'V' }, maj: { sub: 'I' } };
+const TONE_M = ['1','♭9','9','♭3','3','11','♭5','5','♭13','13','♭7','7'];   // over Dm7
+const TONE_D = ['1','♭9','9','♯9','3','11','♯11','5','♭13','13','♭7','7'];  // over G7
+const TONE_C = ['1','♭9','9','♯9','3','11','♯11','5','♭13','13','♭7','7'];  // over C
+const ROMAN_N = { 1:'I', 2:'II', 3:'III', 4:'IV', 5:'V', 6:'VI', 7:'VII', 9:'IX', 11:'XI', 13:'XIII' };
+// '♭3' → '♭III', '°7' → '°VII': keep the accidental, convert the number
+const toRoman = l => { const m = l.match(/^([♭♯°]?)(\d+)$/); return m ? m[1] + (ROMAN_N[m[2]] || m[2]) : l; };
+const FROM_C = ['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
+const FROM_C_SHARP = ['1','♯1','2','♯2','3','4','♯4','5','♯5','6','♯6','7'];
+const NAMES  = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+let CHORDS = [];   // the current lick's chords: { name, sub, root, map, bass, from }
+
+/* Colors: same ramps and distances as the Triad Palette / 2–5 apps */
+const RAMP = {
+  sharp: ['#EED27A','#F1B56C','#EA937A','#CB8DB1','#958FD2','#6F86C8'],
+  flat:  ['#EED27A','#D2D879','#A2CC8C','#7DC0AF','#7DA7D0','#6F86C8'],
+};
+const MAXD = 7;
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+function rampRGB(side, d) {
+  const stops = RAMP[side], x = Math.min(d, MAXD) / MAXD * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2), f = x - i;
+  const [a, b] = [hex(stops[i]), hex(stops[i+1])];
+  return a.map((v, j) => v + (b[j] - v) * f);
+}
+function color(side, d, dim) {
+  let rgb = rampRGB(side, d);
+  if (dim) rgb = rgb.map(v => v * 0.45 + 165 * 0.55);
+  return `rgb(${rgb.map(Math.round).join(' ')})`;
+}
+
+/* ---------- Current lick state ---------- */
+let NOTES = [], CARDS = [], noteEls = [], toneEls = [], links = [], cardEls = [], cur = 0;
+let L = null, SPB = 2, START = 0, TOTAL = 14, SW = 50, W = 700, PAD = 25;
+const revealed = new Set();
+const svg = document.getElementById('contour');
+const R = 24;
+const xOf = s => (s - START) * SW + PAD;
+let yOf = m => m;
+const NS = 'http://www.w3.org/2000/svg';
+const mk = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+const pct = s => (((s - START) * SW + PAD - SW / 2) / W * 100) + '%';
+const wid = n => (n * SW / W * 100) + '%';
+const chordIndexAt = s => { let k = 0; CHORDS.forEach((c, i) => { if (c.from <= s) k = i; }); return k; };
+const noteName = i => (L.names && L.names[i]) || NAMES[NOTES[i].m % 12];
+const noteDeg = i => (noteName(i).includes('♯') ? FROM_C_SHARP : FROM_C)[NOTES[i].m % 12];
+const chordsEl = document.getElementById('chords'), lanesEl = document.getElementById('lanes');
+const status = document.getElementById('status');
+const revealBtn = document.getElementById('revealBtn');
+const isPassing = i => CARDS.some(c => (c.passing || []).includes(i));
+const DEFAULT_STATUS = 'Press <b>Play</b> (or Space), or tap any note. The grey cards are the shapes hiding in the line: tap one to reveal it and hear just its notes.';
+
+
+function render(k) {
+  stopPlayback();
+  cur = k;
+  L = SETS[curSet].licks[k];
+  SPB = L.spb;
+  CHORDS = L.chords.map(c => ({ name: c.name, sub: c.sub || QMAP[c.q].sub, root: c.root, from: c.slot,
+    map: c.q === 'm7' ? TONE_M : c.q === '7' ? TONE_D : TONE_C, bass: 43 + ((c.root - 7 + 12) % 12) }));
+  NOTES = L.notes.map(([m, s, len]) => ({ m, s, len: len || 1 }));
+  NOTES.forEach(n => n.ch = chordIndexAt(n.s));
+  CARDS = L.cards.map(c => ({ ...c, color: typeof c.color === 'function' ? c.color() : color(c.color.side, c.color.dist, c.color.dim) }));
+  revealed.clear();
+  document.getElementById('title').textContent = `${SETS[curSet].title} ${SETS[curSet].licks[k].num || k + 1}`;
+  const byChord = CHORDS.map((c, ci) => NOTES.map((n, i) => n.ch === ci ? noteName(i) : null).filter(Boolean).join('–'));
+  document.getElementById('notesLine').textContent = CHORDS.map((c, ci) => `${byChord[ci]} over ${c.name}`).join(', ') + '.';
+  document.querySelectorAll('.pick').forEach((b, i) => b.setAttribute('aria-pressed', i === k));
+
+  // horizontal layout: fit the width when the lick is short enough, otherwise keep notes apart and scroll
+  START = Math.min(0, ...NOTES.map(n => n.s));
+  TOTAL = L.length - START;
+  let gap = Infinity;
+  NOTES.forEach((n, i) => { if (i) gap = Math.min(gap, n.s - NOTES[i - 1].s); });
+  const fitSW = 700 / TOTAL, needSW = (2 * R + 2) / Math.max(gap, 1);
+  SW = Math.max(fitSW, needSW); W = SW * TOTAL;
+  const fit = W <= 700.5;
+  // fitting: same layout as before; scrolling: keep a margin so the first and last circles aren't cut
+  if (fit) { SW = fitSW; W = 700; PAD = SW / 2; }
+  else { PAD = R + 6; W = (TOTAL - 1) * SW + 2 * PAD; }
+  svg.setAttribute('viewBox', `0 0 ${W} 280`);
+  document.getElementById('inner').style.width = fit ? '100%' : `${W}px`;
+  document.getElementById('scroller').scrollLeft = 0;
+  chordsEl.innerHTML = '';
+  CHORDS.forEach(c => {
+    const d = document.createElement('div'); d.className = 'chord';
+    d.style.left = pct(c.from); d.innerHTML = `${c.name}<span>${c.sub}</span>`;
+    chordsEl.appendChild(d);
+  });
+  revealBtn.textContent = 'Reveal all';
+  status.innerHTML = DEFAULT_STATUS;
+  buildGuides();
+
+  // vertical scale fits this lick's range
+  const lo = Math.min(...NOTES.map(n => n.m)), hi = Math.max(...NOTES.map(n => n.m));
+  const step = 175 / Math.max(hi - lo, 12);
+  yOf = m => 228 - (m - lo) * step;
+
+  svg.innerHTML = '';
+  mk('defs', {}).innerHTML = '<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  CHORDS.slice(1).forEach(c => mk('line', { class: 'barline', x1: xOf(c.from) - SW / 2, x2: xOf(c.from) - SW / 2, y1: 0, y2: 280 }));
+
+  // like a highlighter pass across the whole lick: it runs under every C, E and G and bends around the other notes
+  const isHome = n => [0, 4, 7].includes(n.m % 12);
+  if (NOTES.some(isHome)) {
+    mk('defs', {}).innerHTML = '<filter id="marker" x="-5%" y="-20%" width="110%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="1" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2"/></filter>';
+    // the marker is a stiff rod: as straight as it can be, bent only where it has to pass through a C, E or G,
+    // and held a clear distance from every other note (least bending energy, solved with bounds on each 4 px slice)
+    const HALF = 14, NEAR = R + HALF + 3, WANT = R + HALF + 6, TEN = 0.004, SLACK = 2, TOP = 8, BOT = 274;
+    const capsule = n => ({ x0: xOf(n.s), x1: xOf(n.s) + Math.max(0, n.len * SW - (2 * R + 2)), y: yOf(n.m) });
+    const caps = NOTES.map(capsule);
+    const X0 = caps[0].x0 - (isHome(NOTES[0]) ? 0 : R), X1 = caps[caps.length - 1].x1 + (isHome(NOTES[NOTES.length - 1]) ? 0 : R);
+    const N = Math.max(4, Math.ceil((X1 - X0) / 6) + 1), xs = Array.from({ length: N }, (_, i) => X0 + (X1 - X0) * i / (N - 1));
+    // rod through bounds lo[i] <= y[i] <= hi[i]: minimise bending (+ a touch of tension); active set, banded solve
+    const rod = (lo, hi) => {
+      let act = new Array(N).fill(0), y = new Array(N).fill(0);         // act: 0 free, -1 held at lo, 1 held at hi
+      for (let pass = 0; pass < 200; pass++) {
+        const A = Array.from({ length: N }, () => new Float64Array(5)), rhs = new Float64Array(N);
+        const add = (i, j, v) => { A[i][2 + j - i] += v; };
+        for (let i = 1; i < N - 1; i++) { const r = [i - 1, i, i + 1], w = [1, -2, 1];
+          for (let p = 0; p < 3; p++) for (let q = 0; q < 3; q++) add(r[p], r[q], w[p] * w[q]); }
+        for (let i = 0; i < N - 1; i++) { add(i, i, TEN); add(i + 1, i + 1, TEN); add(i, i + 1, -TEN); add(i + 1, i, -TEN); }
+        for (let i = 0; i < N; i++) if (act[i]) { A[i][2] += 1e5; rhs[i] += 1e5 * (act[i] < 0 ? lo[i] : hi[i]); }
+        for (let k = 0; k < N; k++) for (let r = k + 1; r <= Math.min(k + 2, N - 1); r++) {
+          const f = A[r][2 - (r - k)] / A[k][2]; if (!f) continue;
+          for (let c = k; c <= Math.min(k + 2, N - 1); c++) A[r][2 + c - r] -= f * A[k][2 + c - k];
+          rhs[r] -= f * rhs[k]; }
+        for (let k = N - 1; k >= 0; k--) { let v = rhs[k]; for (let c = k + 1; c <= Math.min(k + 2, N - 1); c++) v -= A[k][2 + c - k] * y[c]; y[k] = v / A[k][2]; }
+        let changed = false;
+        for (let i = 0; i < N; i++) {
+          if (act[i] < 0 && 1e5 * (lo[i] - y[i]) < -1e-6) { act[i] = 0; changed = true; }  // bound is pulling, not pushing: let go
+          else if (act[i] > 0 && 1e5 * (y[i] - hi[i]) < -1e-6) { act[i] = 0; changed = true; }
+          else if (!act[i] && y[i] < lo[i] - 0.3) { act[i] = -1; changed = true; }
+          else if (!act[i] && y[i] > hi[i] + 0.3) { act[i] = 1; changed = true; }
+        }
+        if (!changed) break;
+      }
+      return y;
+    };
+    const lo = new Array(N).fill(TOP), hi = new Array(N).fill(BOT);
+    const homeAt = []; caps.forEach((c, k) => { if (isHome(NOTES[k])) xs.forEach((x, i) => { if (x >= c.x0 - 3 && x <= c.x1 + 3) homeAt.push([i, c.y]); }); });
+    homeAt.forEach(([i, y]) => { lo[i] = Math.max(lo[i], y - SLACK); hi[i] = Math.min(hi[i], y + SLACK); });
+    // which side of each non-triad note: the side a rod through the triad notes alone already passes on (a run of them all on one side)
+    const lim = (a, x, c) => { const dx = x < a.x0 ? a.x0 - x : x > a.x1 ? x - a.x1 : 0; return dx >= c ? null : a.y + a.side * Math.sqrt(c * c - dx * dx); };
+    // bounds for a choice of sides: the wanted distance where it fits with the triad notes, else the minimum
+    const bounds = avoid => { const L = lo.slice(), H = hi.slice();
+      xs.forEach((x, i) => { for (const c of [WANT, NEAR]) {
+        let l = L[i], h = H[i];
+        for (const a of avoid) { const v = lim(a, x, c); if (v === null) continue; if (a.side > 0) l = Math.max(l, v); else h = Math.min(h, v); }
+        if (l <= h || c === NEAR) {
+          if (l > h) { if (homeAt.some(([k]) => k === i)) h = l; else l = h = (l + h) / 2; }
+          L[i] = Math.max(TOP, Math.min(BOT, l)); H[i] = Math.max(L[i], Math.min(BOT, h)); break;
+        } } });
+      return [L, H]; };
+    const energy = y => { let e = 0; for (let i = 1; i < N - 1; i++) e += (y[i - 1] - 2 * y[i] + y[i + 1]) ** 2; for (let i = 0; i < N - 1; i++) e += TEN * (y[i + 1] - y[i]) ** 2; return e; };
+    // runs of neighbouring non-triad notes go on one side together; each run takes the side that bends the rod least
+    const runs = [];
+    for (let i = 0; i < NOTES.length; i++) { if (isHome(NOTES[i])) continue; let j = i; while (j + 1 < NOTES.length && !isHome(NOTES[j + 1])) j++; runs.push(caps.slice(i, j + 1)); i = j; }
+    const sides = runs.map(() => 1);
+    runs.forEach((run, r) => { const up = Math.min(...run.map(c => c.y - TOP)), dn = Math.min(...run.map(c => BOT - c.y)); sides[r] = dn >= up ? 1 : -1; });
+    const allowed = (r, sd) => { const run = runs[r], room = Math.min(...run.map(c => sd > 0 ? BOT - c.y : c.y - TOP)), other = Math.min(...run.map(c => sd > 0 ? c.y - TOP : BOT - c.y)); return room >= NEAR || other < NEAR; };
+    const build = sd => runs.flatMap((run, r) => run.map(c => ({ ...c, side: sd[r] })));
+    const cost = sd => energy(rod(...bounds(build(sd))));
+    // whole-lick search: flip one run's side at a time and keep any flip that leaves the rod less bent, until nothing improves
+    let cur = cost(sides);
+    if (runs.length <= 5) for (let mask = 0; mask < (1 << runs.length); mask++) {     // few enough runs: try every combination
+      const t = runs.map((_, r) => (mask >> r) & 1 ? 1 : -1); if (!t.every((sd, r) => allowed(r, sd))) continue;
+      const e = cost(t); if (e < cur - 1e-6) { cur = e; t.forEach((sd, r) => sides[r] = sd); }
+    }
+    for (let sweep = 0; sweep < 4; sweep++) {
+      let better = false;
+      for (let r = 0; r < runs.length; r++) {
+        const t = sides.slice(); t[r] = -t[r]; if (!allowed(r, t[r])) continue;
+        const e = cost(t); if (e < cur - 1e-6) { cur = e; sides[r] = t[r]; better = true; }
+      }
+      if (!better) break;
+    }
+    const avoid = build(sides);
+    const ys = rod(...bounds(avoid));
+    let d = `M${xs[0].toFixed(1)},${ys[0].toFixed(1)}`;
+    for (let i = 1; i < N; i++) d += ` L${xs[i].toFixed(1)},${ys[i].toFixed(1)}`;
+    mk('path', { class: 'marker', d, filter: 'url(#marker)' });
+  }
+  links = [];
+  NOTES.forEach((n, i) => {
+    if (!i) return;
+    const p = NOTES[i - 1], half = Math.abs(n.m - p.m) === 1;
+    const line = mk('line', { class: 'link' + (half ? ' half' : ''), x1: xOf(p.s), y1: yOf(p.m), x2: xOf(n.s), y2: yOf(n.m) });
+    let lbl = null;
+    if (half) { lbl = mk('text', { class: 'halflbl', x: (xOf(p.s) + xOf(n.s)) / 2 + 12, y: (yOf(p.m) + yOf(n.m)) / 2 - 12 }); lbl.textContent = '½'; }
+    links.push({ line, lbl });
+  });
+  toneEls = [];
+  noteEls = NOTES.map((n, i) => {
+    const g = mk('g', { class: 'note' + (isPassing(i) ? ' passing' : ''), tabindex: 0, role: 'button', 'aria-label': `${noteName(i)}, ${noteDeg(i)} from C` });
+    const extra = n.len * SW - (2 * R + 2);
+    if (extra > 0.5) mk('rect', { x: xOf(n.s) - R, y: yOf(n.m) - R, width: extra + 2 * R, height: 2 * R, rx: R }, g);
+    else mk('circle', { cx: xOf(n.s), cy: yOf(n.m), r: R }, g);
+    mk('text', { x: xOf(n.s), y: yOf(n.m) + 1 }, g).textContent = noteDeg(i);
+    // above: the note's relationship to the chord sounding under it
+    const ch = CHORDS[n.ch];
+    mk('text', { class: 'rn', x: xOf(n.s), y: yOf(n.m) - R - 9 }, g).textContent = ch.map[(n.m - ch.root + 12) % 12];
+    toneEls.push(mk('text', { class: 'tone', x: xOf(n.s), y: yOf(n.m) + R + 18 }, g));
+    g.addEventListener('pointerdown', e => { if (e.button === 0) tapNote(i); });
+    g.addEventListener('keydown', e => { if (e.key === 'Enter') tapNote(i); });
+    return g;
+  });
+  // under each circle, faint: the note's place in its shape
+  CARDS.forEach(c => c.use.forEach((i, j) => toneEls[i].textContent = c.labels[j]));
+  markGuides();
+
+  lanesEl.innerHTML = '';
+  cardEls = CARDS.map((c, k) => {
+    const a = Math.min(...c.use.map(i => NOTES[i].s));
+    const b = Math.max(...c.use.map(i => NOTES[i].s + Math.min(NOTES[i].len, 2)));
+    const el = document.createElement('button');
+    el.className = 'card hid';
+    el.style.left = `calc(${pct(a)} + 3px)`; el.style.width = `calc(${wid(b - a)} - 6px)`;
+    el.style.top = '0';
+    el.style.setProperty('--c', c.color); el.style.setProperty('--glow', c.color);
+    el.setAttribute('aria-label', 'Hidden shape. Tap to reveal and hear it.');
+    el.innerHTML = `<div class="strip">?</div><div class="body"><div class="deg">${c.deg}</div><div class="sn">${c.stack}</div></div>`;
+    el.addEventListener('pointerdown', e => { if (e.button === 0) tapCard(k); });
+    el.addEventListener('click', e => { if (e.detail === 0) tapCard(k); });
+    lanesEl.appendChild(el); return el;
+  });
+}
+
+
+/* ---------- Voice leading: the two guide-tone voices ---------- */
+// guide tones (3rd, 7th) of a chord as pitch classes
+const guidePcs = c => { const q = c.q || (c.map === TONE_M ? 'm7' : c.map === TONE_D ? '7' : 'maj');
+  return q === 'm7' ? [(c.root + 3) % 12, (c.root + 10) % 12] : q === '7' ? [(c.root + 4) % 12, (c.root + 10) % 12] : [(c.root + 4) % 12, (c.root + 11) % 12]; };
+const pcDist = (a, b) => { const d = ((b - a) % 12 + 12) % 12; return Math.min(d, 12 - d); };
+const pcStep = (a, b) => { let d = ((b - a) % 12 + 12) % 12; if (d > 6) d -= 12; return d; };   // signed, shortest way
+const isDomThird = (c, pc) => (c.q === '7' || c.map === TONE_D) && pc === (c.root + 4) % 12;
+const degName = (c, pc) => (isDomThird(c, pc) && NAMES[pc].includes('♭') ? FROM_C_SHARP : FROM_C)[pc];
+const pcName = (c, pc) => { const n = NAMES[pc]; return isDomThird(c, pc) && n.includes('♭') ? ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'][pc] : n; };
+const roleIn = (c, pc) => c.map[(pc - c.root + 12) % 12];
+let VOICES = [], vCells = [], SEAMS = [];
+// voice 0 starts on the first chord's 7th, voice 1 on its 3rd; at each change every voice takes the nearest guide tone of the new chord
+function computeVoices(chords) {
+  const g0 = guidePcs(chords[0]);
+  const v = [[g0[1]], [g0[0]]];
+  for (let i = 1; i < chords.length; i++) {
+    const [a, b] = guidePcs(chords[i]), p0 = v[0][i - 1], p1 = v[1][i - 1];
+    if (pcDist(p0, a) + pcDist(p1, b) < pcDist(p0, b) + pcDist(p1, a)) { v[0].push(a); v[1].push(b); }
+    else { v[0].push(b); v[1].push(a); }
+  }
+  return v;
+}
+// how a lick crosses each change: does it step onto the voice that moves?
+function seamsFor(notes, chords, voices) {
+  const out = [];
+  for (let k = 1; k < chords.length; k++) {
+    const before = notes.filter(n => n.ch === k - 1), after = notes.filter(n => n.ch === k);
+    const p = before[before.length - 1], n = after[0];
+    const moving = [0, 1].filter(v => voices[v][k] !== voices[v][k - 1]);
+    let hit = -1;
+    if (p && n) moving.forEach(v => { if (p.m % 12 === voices[v][k - 1] && n.m % 12 === voices[v][k] && Math.abs(n.m - p.m) <= 2) hit = v; });
+    out.push({ k, p, n, moving, hit });
+  }
+  return out;
+}
+const VC = v => `var(--v${v})`;
+const voiceLabel = (v, chords) => VOICES[v].map((pc, i) => degName(chords[i], pc)).join(' → ');
+const roleLabel = (v, chords) => VOICES[v].map((pc, i) => roleIn(chords[i], pc)).join(' → ');
+function guideAt(i) {    // which voice (if any) a lick note sits on
+  const n = NOTES[i]; return [0, 1].find(v => VOICES[v][n.ch] === n.m % 12);
+}
+function buildGuides() {
+  const box = document.getElementById('guides');
+  box.innerHTML = ''; vCells = [];
+  if (CHORDS.length < 2) { document.querySelectorAll('.vbtns').forEach(x => x.remove()); return; }
+  VOICES = computeVoices(CHORDS);
+  SEAMS = seamsFor(NOTES, CHORDS, VOICES);
+  const endSlot = Math.max(L.length, ...NOTES.map(n => n.s + n.len));
+  const btns = document.createElement('div'); btns.className = 'vbtns'; btns.innerHTML = '<span>Hear one voice:</span>';
+  document.getElementById('lickBox').insertBefore(btns, document.getElementById('scroller'));
+  document.querySelectorAll('.vbtns').forEach(x => x !== btns && x.remove());
+  [0, 1].forEach(v => {
+    const row = document.createElement('div'); row.className = 'vrow'; row.style.setProperty('--vc', VC(v));
+    vCells[v] = CHORDS.map((c, i) => {
+      const pc = VOICES[v][i], hold = i > 0 && pc === VOICES[v][i - 1];
+      const to = i + 1 < CHORDS.length ? CHORDS[i + 1].from : endSlot;
+      const d = document.createElement('div'); d.className = 'vcell' + (hold ? ' hold' : '');
+      d.style.left = pct(c.from); d.style.width = wid(to - c.from);
+      d.innerHTML = `<b>${degName(c, pc)}</b><span>${roleIn(c, pc)} of ${c.name}</span>`;
+      d.title = `${pcName(c, pc)}: the ${roleIn(c, pc)} of ${c.name}${hold ? ' (held over from the last chord)' : ''}`;
+      row.appendChild(d);
+      if (i > 0 && !hold) {
+        const prev = VOICES[v][i - 1], st = pcStep(prev, pc);
+        const m = document.createElement('div'); m.className = 'vmove';
+        m.style.left = pct(c.from - 0.5);
+        m.textContent = `${degName(CHORDS[i - 1], prev)}${st < 0 ? '↘' : '↗'}${degName(c, pc)} ${Math.abs(st) === 1 ? '½' : Math.abs(st) === 2 ? '1' : ''}`.trim();
+        row.appendChild(m);
+      }
+      return d;
+    });
+    const b = document.createElement('button'); b.className = 'vlbl';
+    b.textContent = `▶ ${voiceLabel(v, CHORDS)}`;
+    b.title = `Hear this voice alone: ${roleLabel(v, CHORDS)}`;
+    b.setAttribute('aria-label', `Play the voice ${voiceLabel(v, CHORDS)}, ${roleLabel(v, CHORDS)}`);
+    b.style.setProperty('--vc', VC(v));
+    b.addEventListener('click', e => { playVoice(v); if (e.detail) b.blur(); });
+    btns.appendChild(b);
+    box.appendChild(row);
+  });
+  // what the lick does at each change
+  const sm = document.createElement('div'); sm.className = 'seams';
+  SEAMS.forEach(({ k, p, n, moving, hit }) => {
+    const c = CHORDS[k], d = document.createElement('div');
+    d.className = 'seam' + (hit >= 0 ? ' yes' : ''); d.style.left = pct(c.from - 0.5);
+    if (hit >= 0) d.style.setProperty('--vc', VC(hit));
+    if (!p || !n) d.innerHTML = '<span>no note across this change</span>';
+    else {
+      const from = `${NAMES[p.m % 12]}→${NAMES[n.m % 12]}`, st = n.m - p.m;
+      const size = Math.abs(st) === 1 ? 'half step' : Math.abs(st) === 2 ? 'whole step' : Math.abs(st) === 0 ? 'same note' : `leap of ${Math.abs(st)}`;
+      if (hit >= 0) d.innerHTML = `<span class="ok">✓</span><span class="long"> on the moving voice<br></span> <b>${degName(CHORDS[k - 1], p.m % 12)} → ${degName(c, n.m % 12)}</b> · ${from}`;
+      else {
+        const gv = [0, 1].find(v => VOICES[v][k] === n.m % 12);
+        const lands = gv !== undefined ? `lands on the ${roleIn(c, n.m % 12)} (guide tone)` : `lands on the ${roleIn(c, n.m % 12)}`;
+        d.innerHTML = `<span class="long">${lands}<br></span><b>${degName(CHORDS[k - 1], p.m % 12)} → ${degName(c, n.m % 12)}</b><span class="long"> · ${from}, ${size}</span>`;
+      }
+    }
+    sm.appendChild(d);
+  });
+  box.appendChild(sm);
+}
+// marks on the contour: a dot under each note on a guide tone, and the lick step that follows a moving voice drawn in its color
+function markGuides() {
+  if (!VOICES.length) return;
+  NOTES.forEach((n, i) => {
+    const v = guideAt(i); if (v === undefined) return;
+    const c = mk('circle', { class: 'gmark', cx: xOf(n.s), cy: yOf(n.m) - R - 27, r: 4.5 });
+    c.style.setProperty('--vc', VC(v));
+  });
+  SEAMS.forEach(({ n, hit }) => {
+    if (hit < 0) return;
+    const i = NOTES.indexOf(n); const l = links[i - 1]; if (!l) return;
+    l.line.classList.add('gl'); l.line.style.setProperty('--vc', VC(hit));
+    const p = NOTES[i - 1];
+    const t = mk('text', { class: 'gllbl', x: (xOf(p.s) + xOf(n.s)) / 2 - 14, y: (yOf(p.m) + yOf(n.m)) / 2 + 20 });
+    t.style.setProperty('--vc', VC(hit)); t.textContent = Math.abs(n.m - p.m) === 1 ? '½' : '1';
+    svg.insertBefore(l.line, svg.querySelector('.note'));
+  });
+}
+// how many changes a lick crosses on a moving voice (for the dots on the lick buttons)
+function lickGuideScore(l) {
+  const chords = l.chords.map(c => ({ ...c, from: c.slot, map: c.q === 'm7' ? TONE_M : c.q === '7' ? TONE_D : TONE_C }));
+  if (chords.length < 2) return 0;
+  const sorted = chords.slice().sort((a, b) => a.from - b.from);
+  const at = s => { let k = 0; sorted.forEach((c, i) => { if (c.from <= s) k = i; }); return k; };
+  const notes = l.notes.map(([m, s]) => ({ m, s, ch: at(s) }));
+  return seamsFor(notes, sorted, computeVoices(sorted)).filter(x => x.hit >= 0).length;
+}
+// a voice laid out in time: one note per run of equal pitch class, in a middle register, each step to the nearest octave
+function voiceNotes(v) {
+  let prev = null;
+  const segs = [];
+  CHORDS.forEach((c, i) => {
+    const pc = VOICES[v][i];
+    let m;
+    if (prev === null) { m = 60 + pc; if (m < 64) m += 12; if (v === 0 && m > 74) m -= 12; }   // around E4–D5
+    else { m = prev + pcStep(prev % 12, pc); }
+    if (segs.length && segs[segs.length - 1].m === m) segs[segs.length - 1].to = i + 1;
+    else segs.push({ m, from: i, to: i + 1 });
+    prev = m;
+  });
+  return segs;
+}
+const chordBeat = i => beatOf(Math.ceil(CHORDS[i].from / SPB) * SPB);
+function scheduleVoices(t0, B, off, scale, voices = [0, 1]) {
+  if (!VOICES.length) return;
+  const end = L.loopBeats ? chordBeat(CHORDS.length - 1) + 3.5 : loopBeats() - 0.5;
+  voices.forEach(v => voiceNotes(v).forEach(sg => {
+    let b0 = chordBeat(sg.from); const b1 = sg.to < CHORDS.length ? chordBeat(sg.to) : end;
+    if (b1 <= off) return;
+    b0 = Math.max(b0, off);
+    // samples fade after a few seconds: re-strike softly at each chord if a held note is long
+    const buf = buffers[sg.m], max = buf ? buf.duration - 0.3 : 99;
+    if ((b1 - b0) * B > max) {
+      for (let i = sg.from; i < sg.to; i++) { const a = Math.max(chordBeat(i), off), z = i + 1 < CHORDS.length ? Math.min(chordBeat(i + 1), b1) : b1;
+        if (z > a) piano(sg.m, t0 + a * B, (z - a) * B + 0.05, scale * (i === sg.from ? 1 : 0.7)); }
+    } else piano(sg.m, t0 + b0 * B, (b1 - b0) * B + 0.05, scale);
+  }));
+  // light the cells as each chord sounds
+  CHORDS.forEach((c, i) => {
+    const b0 = chordBeat(i), b1 = i + 1 < CHORDS.length ? chordBeat(i + 1) : end;
+    if (b1 <= off) return;
+    at(t0 + Math.max(b0, off) * B, () => voices.forEach(v => vCells[v] && vCells[v].forEach((d, j) => d.classList.toggle('on', j === i))));
+  });
+  at(t0 + end * B, () => vCells.forEach(r => r && r.forEach(d => d.classList.remove('on'))));
+}
+async function playVoice(v) {
+  const B = await begin(); setPlayUI(true);
+  const t0 = ctx.currentTime + 0.05;
+  if (bassBox.checked) scheduleBass(t0, 0);
+  scheduleVoices(t0, B, 0, 0.85, [v]);
+  const end = L.loopBeats ? chordBeat(CHORDS.length - 1) + 4 : loopBeats();
+  at(t0 + end * B - 0.05, () => setPlayUI(false));
+  status.innerHTML = `Voice <b>${voiceLabel(v, CHORDS)}</b> (${roleLabel(v, CHORDS)}). Sing it, then play the lick and listen for it inside.`;
+}
+let hear = 'lick';
+const hearBtns = document.querySelectorAll('[data-hear]');
+hearBtns.forEach(b => b.addEventListener('click', e => {
+  hear = b.dataset.hear;
+  hearBtns.forEach(x => x.setAttribute('aria-pressed', x === b));
+  try { localStorage.setItem('stitt-hear', hear); } catch (err) {}
+  if (!playing) document.getElementById('playLbl').textContent = playLabel();
+  if (e.detail) b.blur();
+}));
+const playLabel = () => hear === 'lines' ? 'Play lines' : hear === 'both' ? 'Play lick + lines' : 'Play lick';
+const vlBox = document.getElementById('vlBox');
+vlBox.addEventListener('change', () => { document.getElementById('lickBox').classList.toggle('vl-off', !vlBox.checked);
+  try { localStorage.setItem('stitt-vl', vlBox.checked ? '1' : '0'); } catch (e) {} });
+try {
+  const h = localStorage.getItem('stitt-hear'); if (h && ['lick','both','lines'].includes(h)) { hear = h; hearBtns.forEach(x => x.setAttribute('aria-pressed', x.dataset.hear === h)); }
+  if (localStorage.getItem('stitt-vl') === '0') { vlBox.checked = false; document.getElementById('lickBox').classList.add('vl-off'); }
+} catch (e) {}
+
+/* ---------- Picker ---------- */
+const picks = document.getElementById('picks'), setSel = document.getElementById('setSel');
+SETS.forEach((st, i) => { const o = document.createElement('option'); o.value = i; o.textContent = `${st.name} (${st.licks.length})`; setSel.appendChild(o); });
+const remember = () => { try { localStorage.setItem('stitt-pos', JSON.stringify({ set: curSet, lick: cur })); } catch (e) {} };
+function buildPicks() {
+  picks.innerHTML = '';
+  SETS[curSet].licks.forEach((l, k) => {
+    const b = document.createElement('button');
+    b.className = 'pick'; b.textContent = l.num || k + 1; b.setAttribute('aria-pressed', 'false');
+    const gs = lickGuideScore(l);
+    b.setAttribute('aria-label', `Lick ${l.num || k + 1}${gs ? `, follows the moving voice at ${gs} change${gs > 1 ? 's' : ''}` : ''}`);
+    if (gs) { b.dataset.gl = '•'.repeat(gs); b.title = `Steps onto the moving voice at ${gs} chord change${gs > 1 ? 's' : ''}`; }
+    // after a tap or click, give focus back to the page so Space plays the lick instead of pressing the button again
+    b.addEventListener('click', e => { render(k); remember(); if (e.detail) b.blur(); });
+    picks.appendChild(b);
+  });
+}
+function chooseSet(i, k = 0) { curSet = i; setSel.value = i; buildPicks(); render(k); }
+setSel.addEventListener('change', () => { chooseSet(+setSel.value); remember(); setSel.blur(); });
+
+/* ---------- Reveal ---------- */
+function reveal(k) {
+  if (revealed.has(k)) return;
+  revealed.add(k);
+  const el = cardEls[k], c = CARDS[k];
+  el.classList.remove('hid');
+  // on G7, show which chord tone of G7 the shape starts on, e.g. B°7 (3)
+  el.querySelector('.strip').innerHTML = c.name + (c.tone ? ` <em>(${c.tone})</em>` : '');
+  el.setAttribute('aria-label', `${c.name}${c.tone ? ', on the ' + c.tone + ' of G7' : ''}, ${c.deg} from C, ${c.stack}`);
+  c.use.forEach(i => toneEls[i].classList.add('shown'));
+  // tint the shape's own notes (not passing notes): its color at 10% over the circle's dark fill, kept opaque so lines don't show through
+  const tint = 'rgb(' + c.color.match(/\d+/g).map((v, j) => Math.round(v * 0.1 + [22, 22, 24][j] * 0.9)).join(' ') + ')';
+  c.use.filter(i => !(c.passing || []).includes(i)).forEach(i => noteEls[i].firstChild.style.fill = tint);
+  if (revealed.size === CARDS.length) {
+    links.forEach(l => { l.line.classList.add('shown'); if (l.lbl) l.lbl.classList.add('shown'); });
+    revealBtn.textContent = 'Hide all';
+  }
+}
+function hideAll() {
+  revealed.clear();
+  cardEls.forEach(el => { el.classList.add('hid'); el.querySelector('.strip').textContent = '?'; el.setAttribute('aria-label', 'Hidden shape. Tap to reveal and hear it.'); });
+  toneEls.forEach(r => r.classList.remove('shown'));
+  noteEls.forEach(n => n.firstChild.style.fill = '');
+  links.forEach(l => { l.line.classList.remove('shown'); if (l.lbl) l.lbl.classList.remove('shown'); });
+  revealBtn.textContent = 'Reveal all';
+}
+revealBtn.addEventListener('click', () => {
+  if (revealed.size === CARDS.length) { hideAll(); status.innerHTML = 'Hidden again. Play it and see if you can hear the shapes.'; return; }
+  CARDS.forEach((_, k) => reveal(k));
+  status.innerHTML = L.summary;
+});
+
+
+/* ---------- Playback ---------- */
+const tempo = document.getElementById('tempo'), tempoOut = document.getElementById('tempoOut');
+tempo.addEventListener('input', () => tempoOut.textContent = tempo.value);
+const swingBox = document.getElementById('swing'), bassBox = document.getElementById('bass'), loopBox = document.getElementById('loop');
+const playBtn = document.getElementById('playBtn');
+let timers = [], playing = false;
+
+function stopPlayback() {
+  timers.forEach(clearTimeout); timers = [];
+  if (ctx) {
+    const now = ctx.currentTime;
+    live.forEach(({ srcs, g }) => { try {
+      g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.linearRampToValueAtTime(0, now + 0.03); srcs.forEach(o => o.stop(now + 0.04));
+    } catch (e) {} });
+  }
+  live = [];
+  noteEls.forEach(n => n.classList.remove('on'));
+  cardEls.forEach(c => c.classList.remove('playing'));
+  vCells.forEach(r => r && r.forEach(d => d.classList.remove('on')));
+  setPlayUI(false);
+}
+function setPlayUI(on) { playing = on; playBtn.setAttribute('aria-pressed', on); document.getElementById('playLbl').textContent = on ? 'Stop' : playLabel(); }
+async function begin() {
+  audio(); stopPlayback();
+  if (Object.keys(buffers).length < Object.keys(PIANO).length) await loadPiano();
+  return 60 / tempo.value;
+}
+// grid step → beats from the start. Eighth-note licks swing (on-beats get 2/3, off-beats 1/3);
+// triplets and 16ths play straight. Pickups (negative steps) start the clock earlier.
+const rawBeat = s => SPB === 2 ? Math.floor(s / 2) + (((s % 2) + 2) % 2 ? (swingBox.checked ? 2 / 3 : 0.5) : 0) : s / SPB;
+const beatOf = s => rawBeat(s) - rawBeat(START);
+const at = (when, fn) => timers.push(setTimeout(fn, Math.max(0, (when - ctx.currentTime) * 1000)));
+const cardsWith = i => CARDS.map((c, k) => c.use.includes(i) && !(c.passing || []).includes(i) ? k : -1).filter(k => k >= 0);
+function follow(i) {
+  const sc = document.getElementById('scroller');
+  if (sc.scrollWidth <= sc.clientWidth + 1) return;            // short licks fit, nothing to scroll
+  const x = xOf(NOTES[i].s) * sc.scrollWidth / W;              // the note's position in the scrolling strip
+  const target = Math.max(0, x - sc.clientWidth * 0.35);       // keep it about a third of the way in
+  const back = target < sc.scrollLeft - 1;                      // a new loop jumps back to the start
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  sc.scrollTo({ left: target, behavior: back || still ? 'auto' : 'smooth' });
+}
+function light(i, from, to, track = false) {
+  at(from, () => {
+    if (track) follow(i);
+    noteEls.forEach((n, j) => n.classList.toggle('on', j === i));
+    const ks = cardsWith(i);
+    cardEls.forEach((c, k) => c.classList.toggle('playing', ks.includes(k)));
+  });
+  at(to, () => { noteEls[i].classList.remove('on'); cardsWith(i).forEach(k => cardEls[k].classList.remove('playing')); });
+}
+function loopBeats() {
+  if (L.loopBeats) return L.loopBeats;
+  const end = Math.max(L.length, ...NOTES.map(n => n.s + n.len));
+  return Math.ceil((end - START) / SPB / 4 - 1e-9) * 4;
+}
+function scheduleLick(t0, B, from = 0) {
+  const off = from ? beatOf(NOTES[from].s) : 0;     // starting mid-lick: shift the clock so that note sounds now
+  t0 -= off * B;
+  if (bassBox.checked) scheduleBass(t0, off);
+  if (hear !== 'lick') scheduleVoices(t0, B, off, hear === 'both' ? 0.42 : 0.8);
+  NOTES.forEach((n, i) => {
+    if (i < from) return;
+    const start = t0 + beatOf(n.s) * B;
+    const end = t0 + beatOf(n.s + n.len) * B;
+    if (hear !== 'lines') { piano(n.m, start, end - start + 0.12); light(i, start, end, true); }
+  });
+  return t0 + loopBeats() * B;
+}
+// bass: each chord's root from the beat it lands on (an anticipated chord still gets its bass on the downbeat)
+function scheduleBass(t0, off) {
+  const B = 60 / tempo.value;
+  CHORDS.forEach((c, i) => {
+    const s0 = Math.ceil(c.from / SPB) * SPB;
+    const s1 = i + 1 < CHORDS.length ? Math.ceil(CHORDS[i + 1].from / SPB) * SPB : null;
+    let b0 = beatOf(s0); const b1 = s1 === null ? (L.loopBeats ? b0 + 3.5 : loopBeats() - 0.5) : beatOf(s1);
+    if (b1 <= off) return;
+    b0 = Math.max(b0, off);
+    piano(c.bass, t0 + b0 * B, (b1 - b0) * B, 0.8);
+  });
+}
+let fromNote = null;
+function setFrom(i) { fromNote = i; noteEls.forEach((n, j) => n.classList.toggle('from', j === i)); }
+async function playLick(from = 0) {
+  const B = await begin(); setPlayUI(true);
+  let t0 = ctx.currentTime + 0.05;
+  const go = () => {
+    const end = scheduleLick(t0, B, from);
+    at(end - 0.05, () => { if (loopBox.checked && playing) { t0 = end; go(); } else setPlayUI(false); });
+  };
+  go();
+}
+playBtn.addEventListener('click', () => playing ? stopPlayback() : playLick());
+
+async function tapNote(i) {
+  setFrom(i);
+  const n = NOTES[i], c = CHORDS[n.ch];
+  const B = await begin(), t = ctx.currentTime + 0.02;
+  if (bassBox.checked) piano(c.bass, t, 1.6, 0.8);
+  piano(n.m, t, 1.4);
+  light(i, t, t + 1.2);
+  const role = c.map[(n.m - c.root + 12) % 12];
+  const shown = CARDS.filter((x, k) => revealed.has(k) && x.use.includes(i));
+  status.innerHTML = `<b>${noteName(i)}</b> · <b>${noteDeg(i)}</b> from C · the <b>${role}</b> of ${c.name}` +
+    (shown.length ? `<br>${isPassing(i) ? 'A passing note inside' : 'The'} ${shown.map(x => `<b>${x.labels[x.use.indexOf(i)]}</b> of <b>${x.name}</b>`).join(', ')}.` : '') +
+    (guideAt(i) !== undefined ? `<br>On the guide-tone voice <b>${voiceLabel(guideAt(i), CHORDS)}</b> (${roleLabel(guideAt(i), CHORDS)}).` : '');
+}
+async function tapCard(k) {
+  const c = CARDS[k], wasHidden = !revealed.has(k);
+  reveal(k);
+  const B = await begin(), t0 = ctx.currentTime + 0.03;
+  const ch = CHORDS[NOTES[c.use[0]].ch];
+  const play = c.use.filter(i => !(c.passing || []).includes(i));
+  const step = B * 0.75;
+  if (bassBox.checked) piano(ch.bass, t0, step * (play.length + 1.5), 0.8);
+  play.forEach((i, j) => { piano(NOTES[i].m, t0 + j * step, step * 1.6 + 0.3); light(i, t0 + j * step, t0 + (j + 1) * step); });
+  at(t0, () => cardEls[k].classList.add('playing'));
+  at(t0 + play.length * step + step, () => cardEls[k].classList.remove('playing'));
+  status.innerHTML = `${wasHidden ? 'Revealed: ' : ''}<b>${c.name}</b> · ${c.deg} from C · ${c.stack}<br>${c.about}`;
+}
+
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA/.test(e.target.tagName) && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
+  if (e.code === 'Space' && e.target.tagName !== 'SELECT') {
+    e.preventDefault();
+    if (e.repeat) return;
+    if (playing) { stopPlayback(); return; }
+    const focused = noteEls.indexOf(document.activeElement);
+    playLick(focused >= 0 ? focused : fromNote ?? 0);
+  }
+  else if (e.key === 'Escape') { stopPlayback(); setFrom(null); }
+  else if (/^[1-9]$/.test(e.key) && +e.key <= SETS[curSet].licks.length && !e.metaKey && !e.ctrlKey) { render(+e.key - 1); remember(); }
+});
+['pointerdown','keydown'].forEach(ev => document.addEventListener(ev, () => { if (ctx && ctx.state === 'suspended') ctx.resume(); }, { capture: true }));
+
+let pos = { set: 0, lick: 0 };
+try {
+  const v = JSON.parse(localStorage.getItem('stitt-pos') || 'null');
+  if (v && SETS[v.set] && v.lick >= 0 && v.lick < SETS[v.set].licks.length) pos = v;
+  else { const old = +localStorage.getItem('stitt-lick'); if (old >= 0 && old < SETS[0].licks.length) pos.lick = old; }
+} catch (e) {}
+chooseSet(pos.set, pos.lick);
+try { audio(); } catch (e) {}
+</script>
+
+<script src="lab.js"></script>
+</body></html>

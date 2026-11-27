@@ -1,0 +1,681 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Triad Palette over C</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: title → controls → frame with the circle of fifths unrolled left-to-right
+   (major row on top, relative minor below; on phones it turns into two columns) → distance scale */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #f2f2f2;
+  --muted: #a3a3a8;
+  --dim: #6e6e73;
+  --line: #2c2c2e;
+  --card-line: #3a3a3c;
+  --strip-ink: #1c1c1e;
+  --panel: #111113;
+  --gold: #EED27A;
+  --good: #8FD19E;
+  --bad: #EF8A80;
+  --focus: hsl(205 60% 70%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.sub { margin: -10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 70ch; }
+
+/* Controls */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
+}
+.btn {
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--fg);
+  background: #1e1e20; border: 1px solid var(--card-line); border-radius: 999px;
+  padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover { background: #26262a; }
+.btn[aria-pressed="true"] { background: var(--gold); color: var(--strip-ink); border-color: var(--gold); }
+.btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.btn[aria-pressed="true"] .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
+.ctl { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctl input[type=range] { width: 100px; accent-color: var(--gold); }
+.ctl output { color: var(--fg); font-variant-numeric: tabular-nums; min-width: 3ch; }
+.seg { display: inline-flex; border: 1px solid var(--card-line); border-radius: 999px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: #2c2c2f; color: var(--fg); }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { accent-color: var(--gold); width: 15px; height: 15px; }
+.spacer { flex: 1 1 0; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Frame + grid */
+.frame { border: 1.5px solid var(--line); border-radius: 26px; padding: clamp(12px, 2vw, 22px); display: flex; flex-direction: column; gap: 10px; }
+.rowlabels { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); letter-spacing: .06em; text-transform: uppercase; }
+.grid {
+  display: grid; gap: clamp(6px, 1vw, 12px);
+  grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: auto auto auto; grid-auto-flow: column;
+}
+.card {
+  font: inherit; color: inherit; text-align: left; padding: 0; cursor: pointer;
+  background: #000; border: 1.5px solid var(--card-line); border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; min-width: 0; position: relative;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  touch-action: manipulation;
+}
+.card:hover { border-color: #5a5a5e; }
+.card:active { transform: scale(.97); }
+.card.playing { border-color: #fff; box-shadow: 0 0 0 3px var(--glow, #fff), 0 0 26px -4px var(--glow, #fff); }
+.card.right { border-color: var(--good); box-shadow: 0 0 0 3px var(--good); }
+.card.wrong { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad); }
+.card.target { box-shadow: 0 0 0 2px var(--tring), 0 0 22px -2px var(--tring); }
+.lead-tag {
+  position: absolute; top: 5px; left: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em;
+  color: var(--strip-ink); background: rgb(255 255 255 / .55); border-radius: 999px; padding: 1px 6px;
+  opacity: 0; transition: opacity .4s ease;
+}
+.card.target .lead-tag { opacity: var(--tstr, 1); }
+.lead-tag:empty { display: none; }
+.card.target.soft { box-shadow: 0 0 0 1.5px var(--tring); }
+.card { transition: transform .12s ease, border-color .12s ease, box-shadow .6s ease; }
+.strip {
+  height: clamp(48px, 5.4vw, 64px); display: grid; place-items: center;
+  color: var(--strip-ink); font-size: clamp(14px, 1.5vw, 18px); font-weight: 600; padding-inline: 4px;
+}
+.body { padding: clamp(7px, 0.9vw, 11px); display: flex; flex-direction: column; gap: 3px; }
+.deg { font-size: clamp(11px, 1vw, 13px); color: var(--muted); line-height: 1.35; overflow-wrap: anywhere; }
+.deg span { transition: color .08s, text-shadow .08s; }
+.deg span.on { color: #fff; text-shadow: 0 0 10px var(--glow, #fff); }
+.dist { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.home-tag { position: absolute; top: 5px; right: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; color: var(--strip-ink); opacity: .7; }
+.quizzing .strip { color: transparent; }
+.quizzing .deg, .quizzing .dist { visibility: hidden; }
+
+.status { font-size: 13.5px; color: var(--muted); min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.status b { color: var(--fg); font-weight: 600; }
+.score { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+/* Key */
+.key { display: flex; flex-direction: column; gap: 10px; }
+.key h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.key p { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin: 0; max-width: 72ch; }
+.scale { overflow-x: auto; }
+.scale svg { width: 100%; max-width: 860px; min-width: 520px; display: block; }
+
+/* Host chords */
+.hosts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 36px; margin-top: -8px; }
+.hosts .lbl { font-size: 12.5px; color: var(--dim); margin-right: 2px; }
+.chip {
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; touch-action: manipulation;
+  background: #1e1e20; border: 1px solid var(--card-line); border-radius: 999px; padding: 6px 13px 6px 8px;
+  transition: border-color .12s ease, box-shadow .2s ease;
+}
+.chip:hover { background: #26262a; }
+.chip .sw { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.chip small { font-size: 12px; font-weight: 500; color: var(--muted); }
+.chip.on { border-color: #fff; box-shadow: 0 0 0 2px var(--c, #fff); }
+
+@media (max-width: 760px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: none; grid-auto-flow: row; }
+  .rowlabels { padding-inline: 4px; }
+  .rowlabels span { width: 33.3%; }
+  .strip { height: 44px; font-size: 15px; }
+  .body { padding: 6px 8px; }
+  .spacer { display: none; }
+}
+@media (min-width: 761px) { .rowlabels { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <h1>Triads over C</h1>
+  <p class="sub">Every major, minor and diminished triad (36 in all), laid out around the circle of fifths with C in the middle. Turn on the drone, tap anything, and listen to how far each one travels from home.</p>
+
+  <div class="controls">
+    <button class="btn" id="droneBtn" aria-pressed="false"><span class="dot"></span><span id="droneLbl">C drone</span></button>
+    <label class="ctl">Drone vol <input type="range" id="droneVol" min="0" max="100" value="5"></label>
+    <label class="ctl">Piano vol <input type="range" id="keysVol" min="0" max="100" value="70"></label>
+    <span class="spacer"></span>
+    <label class="ctl">Tempo <input type="range" id="tempo" min="40" max="180" value="96"><output id="tempoOut">96</output></label>
+    <div class="seg" role="group" aria-label="How to play each triad">
+      <button id="mUp" aria-pressed="true">Up</button>
+      <button id="mUpDown" aria-pressed="false">Up &amp; down</button>
+      <button id="mChord" aria-pressed="false">Chord</button>
+    </div>
+    <label class="check"><input type="checkbox" id="autoDrone"> Drone on with taps</label>
+    <label class="check"><input type="checkbox" id="showPull" checked> Show where it leads</label>
+    <label class="check"><input type="checkbox" id="resolve"> Play the resolution</label>
+    <label class="check"><input type="checkbox" id="vlead" checked> Voice-lead</label>
+    <button class="btn" id="quizBtn">Guess the color</button>
+  </div>
+
+  <div class="frame">
+    <div class="rowlabels"><span>Major</span><span>Relative minor</span><span>Diminished</span></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="status" id="status">Turn on the C drone, then tap any triad.</div>
+  <div class="hosts" id="hosts"></div>
+
+  <section class="key">
+    <h2>How far from home</h2>
+    <div class="scale"><svg id="scale" viewBox="0 0 860 250" role="img" aria-label="Each triad placed by its distance from C"></svg></div>
+    <p>Gold is home (C). Distance counts how many sharps or flats separate C major from the chord's home key. A minor chord's home key is its relative major, so A minor lives in C and E minor lives in G. Minor chords add half a step and diminished chords add a full step, so you can tell them apart from their major partner. Each key's diminished chord is the one built on its leading tone (B° in C, F♯° in G), which is why it sits in the same column.</p>
+    <p>The farther away, the cooler and dimmer the color. The sharp side (G, D, A…) cools through amber, coral and mauve. The flat side (F, B♭, E♭…) cools through lime, sage and teal. Both meet in blue at F♯, the far side of the circle.</p>
+    <p>The chips under the status line show three chords the triad lives inside, all taken from the triad's own key: as the 1–3–5, the 3–5–7 and the 5–7–9. Tap one to hear its bass note go under the triad. The drone fades out while it plays, because a C drone under another bass note clashes.</p>
+    <p>With “Voice-lead” on, each triad starts on its note closest to the last note you heard, so moving between triads sounds like one line instead of jumping back to the root. The other two notes alternate direction: one triad goes up from that note, the next comes down. Press Esc to start fresh from root position. The quiz always plays root position, so the voicing can't give the answer away.</p>
+    <p>Tap a minor triad and it's treated as the ii of a ii–V. Every triad that works over its V7 lights up, and the V itself gets a “V” tag. A triad works if all three of its notes fit one of the usual dominant scales (mixolydian, altered, half-whole diminished, lydian ♭7, whole tone). Bright rings hold the V7's 3rd or 7th, which pull home. Faint rings fit but float: they hold the 11th (a sus sound) or neither guide tone.</p>
+    <p>“Guess the color” plays a hidden triad. Tap the card you think it was. Try to answer from the color you hear, not by naming the chord.</p>
+  </section>
+</div>
+
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+// Drone: user-supplied Indian drone in C (myNoise), crossfaded into a seamless 24.25s loop
+const DRONE_LOOP = 24.2548125;
+
+/* ---------- Triads ---------- */
+const SHARP = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const FLAT  = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+const DEG_S = ['1','♯1','2','♯2','3','4','♯4','5','♯5','6','♯6','7'];
+const DEG_F = ['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'];
+const fifthsFromC = pc => { const k = (pc * 7) % 12; return k > 6 ? k - 12 : k; };
+// circle order, flat side → C → sharp side
+const KEYS = [-5,-4,-3,-2,-1,0,1,2,3,4,5,6];
+
+function makeTriad(rootPc, q, k) {
+  const flat = k < 0;
+  const names = flat ? FLAT : SHARP, deg = flat ? DEG_F : DEG_S;
+  const ints = q === 'maj' ? [0,4,7] : q === 'min' ? [0,3,7] : [0,3,6];
+  const pcs = ints.map(i => (rootPc + i) % 12);
+  const root = 55 + ((rootPc - 7 + 12) % 12);      // roots between G3 and F♯4
+  const t = {
+    q, k, rootPc, side: k < 0 ? 'flat' : 'sharp',
+    name: names[rootPc] + ({ maj:'', min:'m', dim:'°' })[q],
+    label: names[rootPc] + ({ maj:' major', min:' minor', dim:' diminished' })[q],
+    notes: pcs.map(pc => names[pc]),
+    deg: pcs.map(pc => deg[pc]),
+    midi: ints.map(i => root + i),
+    dist: Math.abs(k) + ({ maj:0, min:0.5, dim:1 })[q],
+  };
+  t.color = rampColor(t.side, t.dist);
+  return t;
+}
+
+/* One ramp per side: warm gold at home, cooling and dimming with distance; both end in the same blue. */
+const RAMP = {
+  sharp: ['#EED27A','#F1B56C','#EA937A','#CB8DB1','#958FD2','#6F86C8'],
+  flat:  ['#EED27A','#D2D879','#A2CC8C','#7DC0AF','#7DA7D0','#6F86C8'],
+};
+const MAXD = 7;
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+function rampColor(side, d) {
+  const stops = RAMP[side], x = Math.min(d, MAXD) / MAXD * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2), f = x - i;
+  const [a, b] = [hex(stops[i]), hex(stops[i+1])];
+  return `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * f)).join(' ')})`;
+}
+
+const TRIADS = [];
+KEYS.forEach(k => {
+  const majPc = ((k * 7) % 12 + 12) % 12;
+  TRIADS.push(makeTriad(majPc, 'maj', k));
+  TRIADS.push(makeTriad((majPc + 9) % 12, 'min', k));   // relative minor
+  TRIADS.push(makeTriad((majPc + 11) % 12, 'dim', k));  // the key's own diminished (vii°)
+  if (k === 6) {   // F♯ major's leading tone, spelled F° (F–A♭–B) so it matches how it's played over G7
+    const e = TRIADS[TRIADS.length - 1];
+    e.name = 'F°'; e.label = 'F diminished'; e.notes = ['F','A♭','B']; e.deg = ['4','♭6','7'];
+  }
+});
+
+/* ---------- Render ---------- */
+const grid = document.getElementById('grid');
+const cards = TRIADS.map((t, i) => {
+  const el = document.createElement('button');
+  el.className = 'card';
+  el.style.setProperty('--glow', t.color);
+  el.setAttribute('aria-label', t.label);
+  el.innerHTML = `
+    <div class="strip" style="background:${t.color}">${t.name}</div>
+    <span class="lead-tag"></span>
+    ${t.dist === 0 ? '<span class="home-tag">HOME</span>' : ''}
+    <div class="body">
+      <div class="deg">${t.midi.map((m, j) => `<span data-pc="${m % 12}">${t.deg[j]}</span>`).join('–')}</div>
+      <div class="dist">${t.dist === 0 ? 'home' : t.dist + ' away'}</div>
+    </div>`;
+  el.addEventListener('pointerdown', e => { if (e.button === 0) tap(i); });
+  el.addEventListener('click', e => { if (e.detail === 0) tap(i); });
+  grid.appendChild(el);
+  return el;
+});
+
+(function drawScale(){
+  const W = 860, X0 = 40, X1 = W - 30, x = d => X0 + (d / MAXD) * (X1 - X0);
+  const lanes = [['sharp', 'Sharp side ♯', 30], ['flat', 'Flat side ♭', 140]];
+  let out = '<defs>' + lanes.map(([side]) => `<linearGradient id="g-${side}">${RAMP[side].map((c, i) => `<stop offset="${i / 5}" stop-color="${c}"/>`).join('')}</linearGradient>`).join('') + '</defs>';
+  for (let d = 0; d <= 7; d++) out += `<text x="${x(d)}" y="236" text-anchor="middle" font-size="11" fill="#6e6e73">${d}</text>`;
+  out += `<text x="${X0}" y="249" font-size="11" fill="#a3a3a8" text-anchor="middle">home</text><text x="${X1}" y="249" font-size="11" fill="#a3a3a8" text-anchor="end">farthest</text>`;
+  lanes.forEach(([side, label, y]) => {
+    out += `<text x="${X0 - 14}" y="${y - 12}" font-size="11" fill="#a3a3a8">${label}</text>`;
+    out += `<rect x="${X0}" y="${y + 10}" width="${X1 - X0}" height="6" rx="3" fill="url(#g-${side})" opacity=".5"/>`;
+    TRIADS.filter(t => side === 'sharp' ? t.k >= 0 : (t.k < 0 || t.dist === 0)).forEach(t => {
+      const cx = x(t.dist), cy = t.q === 'dim' ? y + 50 : y + 13;
+      out += `<circle cx="${cx}" cy="${cy}" r="${t.q === 'maj' ? 17 : t.q === 'min' ? 15 : 13}" fill="${t.color}" stroke="#000" stroke-width="2"/>`;
+      out += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="${t.name.length > 3 ? 10 : 11.5}" font-weight="600" fill="#1c1c1e">${t.name}</text>`;
+    });
+  });
+  document.getElementById('scale').innerHTML = out;
+})();
+
+/* ---------- Audio ---------- */
+let live = [];
+let ctx, master;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    // gentle safety limiter so overlapping notes never clip
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  loadPiano(); loadDrone();
+  return ctx;
+}
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+/* Drone: looped tanpura-style recording in C */
+let drone = null;
+const droneVol = document.getElementById('droneVol');
+const droneLevel = () => (droneVol.value / 100) * 0.9;
+let droneBuf = null, droneStart = 0, droneLoad = null;
+function loadDrone() {
+  if (droneLoad) return droneLoad;
+  droneLoad = new Promise(res => ctx.decodeAudioData(b64ToBuf(DRONE_URL), b => {
+    droneBuf = b;
+    // skip MP3 encoder padding so the loop points land on real audio
+    const d = b.getChannelData(0); let i = 0;
+    while (i < d.length && Math.abs(d[i]) < 0.002) i++;
+    droneStart = i / b.sampleRate; res();
+  }, () => res()));
+  return droneLoad;
+}
+async function startDrone() {
+  if (drone) return;
+  audio();
+  const g = ctx.createGain(); g.gain.setValueAtTime(0, ctx.currentTime);
+  drone = { g, oscs: [] };
+  setDroneUI(true);
+  await loadDrone();
+  if (!drone || drone.g !== g || !droneBuf) return;
+  const src = ctx.createBufferSource(); src.buffer = droneBuf;
+  src.loop = true; src.loopStart = droneStart; src.loopEnd = droneStart + DRONE_LOOP;
+  src.connect(g); g.connect(master);
+  src.start(ctx.currentTime, droneStart);
+  g.gain.linearRampToValueAtTime(droneLevel(), ctx.currentTime + 1.2);
+  drone.oscs.push(src);
+}
+function stopDrone() {
+  if (!drone) return;
+  const { g, oscs } = drone; const t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.4);
+  oscs.forEach(o => o.stop(t + 0.45));
+  drone = null; setDroneUI(false);
+}
+droneVol.addEventListener('input', () => { if (drone && !ducked) drone.g.gain.setTargetAtTime(droneLevel(), ctx.currentTime, 0.05); });
+let ducked = false;
+function duck(on) {
+  ducked = on;
+  if (drone && ctx) drone.g.gain.setTargetAtTime(on ? 0 : droneLevel(), ctx.currentTime, on ? 0.08 : 0.4);
+}
+const droneBtn = document.getElementById('droneBtn');
+function setDroneUI(on) {
+  droneBtn.setAttribute('aria-pressed', on);
+  document.getElementById('droneLbl').textContent = on ? 'C drone on' : 'C drone';
+}
+droneBtn.addEventListener('click', () => drone ? stopDrone() : startDrone());
+
+/* Sampled piano; synth tone only as a fallback while samples decode */
+const buffers = {}; let pianoLoad = null;
+function b64ToBuf(url) {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+function loadPiano() {
+  if (pianoLoad) return pianoLoad;
+  pianoLoad = Promise.all(Object.entries(PIANO).map(([m, url]) =>
+    new Promise(res => ctx.decodeAudioData(b64ToBuf(url), b => { buffers[m] = b; res(); }, () => res()))
+  ));
+  return pianoLoad;
+}
+function piano(m, t, dur, scale = 1) {
+  let buf = buffers[m], rate = 1;
+  if (!buf) {
+    const ks = Object.keys(buffers).map(Number);
+    if (!ks.length) return synth(m, t, dur);
+    const near = ks.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a);
+    buf = buffers[near]; rate = Math.pow(2, (m - near) / 12);
+  }
+  const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+  const g = ctx.createGain();
+  const end = Math.max(t + 0.3, Math.min(t + dur, t + buf.duration / rate));
+  const v = keysLevel() * scale;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.004);
+  g.gain.setValueAtTime(v, end - 0.25);
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  src.connect(g); g.connect(master);
+  src.start(t); src.stop(end + 0.02);
+  live.push({ srcs: [src], g });
+}
+const keysVol = document.getElementById('keysVol');
+const keysLevel = () => (keysVol.value / 100) * 1.0;
+/* Synth fallback */
+function synth(m, t, dur) {
+  const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+  o1.type = 'triangle'; o2.type = 'sine';
+  o1.frequency.value = hz(m); o2.frequency.value = hz(m) * 2; o2.detune.value = 3;
+  const g2 = ctx.createGain(); g2.gain.value = 0.18;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(1100, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.14, t + 0.18);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(master);
+  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+  live.push({ srcs: [o1, o2], g });
+}
+
+
+
+/* ---------- Playback ---------- */
+const tempo = document.getElementById('tempo'), tempoOut = document.getElementById('tempoOut');
+tempo.addEventListener('input', () => tempoOut.textContent = tempo.value);
+let mode = 'up';
+const modeBtns = { up: document.getElementById('mUp'), updown: document.getElementById('mUpDown'), chord: document.getElementById('mChord') };
+Object.entries(modeBtns).forEach(([m, b]) => b.addEventListener('click', () => {
+  mode = m; Object.entries(modeBtns).forEach(([n, bb]) => bb.setAttribute('aria-pressed', n === m));
+}));
+const autoDrone = document.getElementById('autoDrone');
+const status = document.getElementById('status');
+
+let timers = [];
+function stopPlayback() {
+  timers.forEach(clearTimeout); timers = [];
+  if (ctx) {
+    const now = ctx.currentTime;
+    live.forEach(({ srcs, g }) => {
+      try {
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.03);
+        srcs.forEach(o => o.stop(now + 0.04));
+      } catch (e) {}
+    });
+  }
+  live = [];
+  cards.forEach(c => c.classList.remove('playing'));
+  document.querySelectorAll('.deg span.on').forEach(sp => sp.classList.remove('on'));
+  document.querySelectorAll('.chip.on').forEach(c => c.classList.remove('on'));
+  if (ducked) duck(false);
+}
+
+/* ---------- Voice-leading between triads ----------
+   The next triad starts on its note closest to the last note you heard (ties go up).
+   Its other two notes follow in alternating order: one triad ascending from there, the next descending. */
+const vlBox = document.getElementById('vlead');
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number);
+const LO = Math.max(54, Math.min(...SAMPLE_KEYS)), HI = Math.max(...SAMPLE_KEYS);
+let lastNote = null, flip = false;
+function nearest(pc, target) {
+  let best = null;
+  for (let m = LO; m <= HI; m++) if (((m % 12) + 12) % 12 === pc) {
+    const d = Math.abs(m - target), bd = best === null ? Infinity : Math.abs(best - target);
+    if (d < bd || (d === bd && m > best)) best = m;
+  }
+  return best;
+}
+function voiced(t) {
+  if (!vlBox.checked || quiz || lastNote === null) return t.midi.slice();
+  const pcs = t.midi.map(m => m % 12);
+  const firstPc = pcs.map(pc => ({ pc, m: nearest(pc, lastNote) }))
+    .sort((a, b) => Math.abs(a.m - lastNote) - Math.abs(b.m - lastNote) || b.m - a.m)[0];
+  const first = firstPc.m;
+  // the other two, in triad order after the first note (going up the stack), then flipped every other triad
+  const k = pcs.indexOf(firstPc.pc);
+  let rest = [pcs[(k + 1) % 3], pcs[(k + 2) % 3]];
+  if (flip) rest.reverse();
+  flip = !flip;
+  return [first, ...rest.map(pc => nearest(pc, first))];
+}
+/* light the degree number of the note that's sounding, matched by pitch class */
+function noteLight(ci, m, from, to) {
+  const sp = cards[ci] && cards[ci].querySelector(`.deg span[data-pc="${m % 12}"]`);
+  if (!sp) return;
+  timers.push(setTimeout(() => sp.classList.add('on'), Math.max(0, (from - ctx.currentTime) * 1000)));
+  timers.push(setTimeout(() => sp.classList.remove('on'), Math.max(0, (to - ctx.currentTime) * 1000)));
+}
+function schedule(t, at, step) {
+  const base = voiced(t), ci = TRIADS.indexOf(t);
+  if (mode === 'chord') {
+    base.forEach(m => { piano(m, at, step * 4, 0.7); noteLight(ci, m, at, at + step * 4); });
+    lastNote = Math.max(...base);
+    return at + step * 4;
+  }
+  const seq = mode === 'updown' ? base.concat(base.slice(0, -1).reverse()) : base;
+  seq.forEach(m => { piano(m, at, step * 2.4 + 0.4); noteLight(ci, m, at, at + step); at += step; });
+  lastNote = seq[seq.length - 1];
+  return at;
+}
+async function playTriad(i, { show = true, then = null } = {}) {
+  audio(); stopPlayback();
+  if (Object.keys(buffers).length < Object.keys(PIANO).length) await loadPiano();
+  if (autoDrone.checked) startDrone();
+  const step = 60 / tempo.value;
+  const t0 = ctx.currentTime + 0.01;
+  let at = schedule(TRIADS[i], t0, step);
+  const lit = (idx, from, to) => {
+    timers.push(setTimeout(() => cards[idx].classList.add('playing'), Math.max(0, (from - ctx.currentTime) * 1000)));
+    timers.push(setTimeout(() => cards[idx].classList.remove('playing'), (to - ctx.currentTime) * 1000));
+  };
+  if (then !== null) {
+    const r0 = at + step * 0.6;
+    const end = schedule(TRIADS[then], r0, step);
+    if (show) { lit(i, t0, r0); lit(then, r0, end + step); }
+  } else if (show) lit(i, t0, at + step);
+}
+
+/* ---------- Where a triad could lead (as part of a secondary dominant) ----------
+   major X     = 1-3-5 of X7      → resolves a fourth up          strong
+   diminished  = 3-5-7 of a V7    → resolves a half step up       strongest (root-less dominant)
+   minor X     = ii of a ii–V     → its V is the major a fourth up (Dm → G)  */
+const PULL = {
+  maj: { shift: 5,  strength: 0.85, how: t => `as V of the chord a fourth up` },
+  dim: { shift: 1,  strength: 1.0,  how: t => `it's the 3–5–7 of a dominant 7th with no root` },
+  min: { shift: 5,  strength: 0.9,  how: t => `as ii, its V is the major a fourth up` },
+};
+const DOM_ROOT = { maj: 0, dim: 8, min: 5 };   // semitones from triad root to the implied dominant's root
+const findTriad = (pc, q) => TRIADS.findIndex(x => x.rootPc === pc && x.q === q);
+function targetsOf(i) {
+  const t = TRIADS[i], p = PULL[t.q], pc = (t.rootPc + p.shift) % 12;
+  const qs = t.q === 'min' ? ['maj'] : ['maj', 'min'];
+  return { idx: qs.map(q => findTriad(pc, q)).filter(x => x >= 0), strength: p.strength };
+}
+/* ---------- A minor triad as ii: which triads work over its V7? ----------
+   A triad fits if all three notes belong to one of the usual dominant scales over V7.
+   Strong = it holds the V7's 3rd or 7th (the guide tones that pull home) and not its 11th.
+   Soft  = it fits but floats: it holds the 11th (sus), or neither guide tone. */
+const DOM_SCALES = {
+  'mixolydian':      [0,2,4,5,7,9,10],
+  'altered':         [0,1,3,4,6,8,10],
+  'half-whole dim':  [0,1,3,4,6,7,9,10],
+  'lydian ♭7':       [0,2,4,6,7,9,10],
+  'whole tone':      [0,2,4,6,8,10],
+  'mixolydian ♭9♭13':[0,1,3,4,5,7,8,10],
+};
+const pcsOf = t => t.midi.map(m => m % 12);
+function overV(i) {
+  const vRoot = (TRIADS[i].rootPc + 5) % 12;
+  const out = [];
+  TRIADS.forEach((u, j) => {
+    if (j === i) return;
+    const rel = pcsOf(u).map(pc => (pc - vRoot + 12) % 12);
+    if (!Object.values(DOM_SCALES).some(sc => rel.every(x => sc.includes(x)))) return;
+    const guide = rel.includes(4) || rel.includes(10), sus = rel.includes(5);
+    out.push({ j, strong: guide && !sus, isV: u.q === 'maj' && u.rootPc === vRoot });
+  });
+  return { vRoot, list: out };
+}
+const showPull = document.getElementById('showPull'), resolveBox = document.getElementById('resolve');
+let pullTimer = null;
+function clearTargets() {
+  clearTimeout(pullTimer);
+  cards.forEach(c => { c.classList.remove('target', 'soft'); c.style.removeProperty('--tring'); c.style.removeProperty('--tstr'); c.querySelector('.lead-tag').textContent = ''; });
+}
+function ring(j, strength, tag = '') {
+  const c = cards[j];
+  c.style.setProperty('--tring', TRIADS[j].color.replace(')', ` / ${strength})`));
+  c.style.setProperty('--tstr', Math.max(strength, 0.45));
+  c.querySelector('.lead-tag').textContent = tag;
+  c.classList.add('target');
+}
+function showTargets(i) {
+  clearTargets();
+  if (!showPull.checked) return;
+  if (TRIADS[i].q === 'min') {
+    overV(i).list.forEach(({ j, strong, isV }) => { ring(j, isV || strong ? 1 : 0.55, isV ? 'V' : ''); if (!strong && !isV) cards[j].classList.add('soft'); });
+    pullTimer = setTimeout(clearTargets, 9000);
+    return;
+  }
+  const { idx, strength } = targetsOf(i);
+  idx.forEach(j => ring(j, strength));
+  pullTimer = setTimeout(clearTargets, 3500);
+}
+function pullText(i) {
+  const t = TRIADS[i], { idx } = targetsOf(i);
+  const names = idx.map(j => TRIADS[j].name).join(' or ');
+  const dom = (t.rootPc + DOM_ROOT[t.q]) % 12;
+  const domName = (t.side === 'flat' ? FLAT : SHARP)[dom] + '7';
+  if (t.q === 'maj') return `could lead to <b>${names}</b> as ${domName}`;
+  if (t.q === 'dim') return `could lead to <b>${names}</b>: it's ${domName} without its root`;
+  const I = (t.side === 'flat' ? FLAT : SHARP)[(t.rootPc + 10) % 12];
+  const { list } = overV(i), strong = list.filter(x => x.strong).length;
+  return `as ii, its V is <b>${names}</b> (ii–V–I: ${t.name} → ${names}7 → ${I}). ${list.length} triads work over ${names}7: the ${strong} bright rings hold its 3rd or 7th and pull home, the faint ones float`;
+}
+// the resolution plays whichever target sits closer to home
+const nearestTarget = i => targetsOf(i).idx.sort((a, b) => TRIADS[a].dist - TRIADS[b].dist)[0];
+
+/* ---------- Chords this triad lives inside ----------
+   Taken from the triad's own key (its column): major = I, minor = vi, diminished = vii.
+   1–3–5 → the 7th chord on its own root; 3–5–7 → a third below; 5–7–9 → a fifth below. */
+const SCALE7 = [0,2,4,5,7,9,11];
+const Q7    = ['maj7','m7','m7','maj7','7','m7','m7♭5'];
+const Q9    = ['maj9','m9','m7♭9','maj9','9','m9','m9♭5'];
+const Q7TRI = ['maj','min','min','maj','maj','min','dim'];
+const DEG_OF = { maj: 0, min: 5, dim: 6 };
+function hostsOf(i) {
+  const t = TRIADS[i], tonic = ((t.k * 7) % 12 + 12) % 12, d = DEG_OF[t.q];
+  const names = t.k < 0 ? FLAT : SHARP;
+  const spell = pc => names[pc];
+  return [[0, '1–3–5', Q7], [5, '3–5–7', Q7], [3, '5–7–9', Q9]].map(([off, stack, Q]) => {
+    const deg = (d + off) % 7, pc = (tonic + SCALE7[deg]) % 12;
+    const host = TRIADS[findTriad(pc, Q7TRI[deg])];
+    return { pc, stack, bass: spell(pc), name: spell(pc) + Q[deg], color: host ? host.color : '#888' };
+  });
+}
+const hostsEl = document.getElementById('hosts');
+function renderHosts(i) {
+  hostsEl.innerHTML = `<span class="lbl">${TRIADS[i].name} lives in</span>`;
+  hostsOf(i).forEach(h => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.style.setProperty('--c', h.color);
+    b.innerHTML = `<span class="sw" style="background:${h.color}"></span>${h.name} <small>${h.stack}</small>`;
+    b.addEventListener('click', () => playHost(i, h, b));
+    hostsEl.appendChild(b);
+  });
+}
+async function playHost(i, h, chip) {
+  audio(); stopPlayback(); clearTargets();
+  if (Object.keys(buffers).length < Object.keys(PIANO).length) await loadPiano();
+  duck(true);
+  const t = TRIADS[i], step = 60 / tempo.value, t0 = ctx.currentTime + 0.01;
+  const end = schedule(t, t0 + step * 0.75, step);
+  const tail = end + step * 1.5;
+  piano(43 + ((h.pc - 7 + 12) % 12), t0, tail - t0, 0.85);   // bass between G2 and F♯3
+  cards[i].classList.add('playing'); chip.classList.add('on');
+  timers.push(setTimeout(() => {
+    cards[i].classList.remove('playing'); chip.classList.remove('on'); duck(false);
+  }, (tail - ctx.currentTime) * 1000));
+  status.innerHTML = `<b>${t.name}</b> over a ${h.bass} bass = <b>${h.name}</b> · the triad is its ${h.stack}`;
+}
+
+/* ---------- Tap + quiz ---------- */
+let quiz = null, score = { right: 0, total: 0 };
+const quizBtn = document.getElementById('quizBtn');
+function clearMarks() { cards.forEach(c => c.classList.remove('right', 'wrong')); }
+function newQuestion() {
+  clearMarks(); clearTargets(); hostsEl.innerHTML = '';
+  quiz = { answer: Math.floor(Math.random() * TRIADS.length) };
+  grid.classList.add('quizzing');
+  quizBtn.textContent = 'Stop guessing';
+  status.innerHTML = `Listen… which color was that? Tap a card. <span class="score">${score.right}/${score.total}</span> · tap “Hear again” <button class="btn" id="again" style="padding:4px 10px;font-size:12px">Hear again</button>`;
+  document.getElementById('again').addEventListener('click', () => playTriad(quiz.answer, { show: false }));
+  playTriad(quiz.answer, { show: false });
+}
+function endQuiz() {
+  quiz = null; grid.classList.remove('quizzing'); clearMarks();
+  quizBtn.textContent = 'Guess the color';
+  status.innerHTML = score.total ? `Final score <b>${score.right}/${score.total}</b>. Tap any triad to keep exploring.` : 'Tap any triad.';
+}
+quizBtn.addEventListener('click', () => quiz ? endQuiz() : (score = { right: 0, total: 0 }, newQuestion()));
+
+function tap(i) {
+  const t = TRIADS[i];
+  if (quiz && !quiz.done) {
+    const a = TRIADS[quiz.answer];
+    score.total++;
+    grid.classList.remove('quizzing');
+    if (i === quiz.answer) {
+      score.right++;
+      cards[i].classList.add('right');
+      status.innerHTML = `Yes, <b>${a.label}</b> (${a.deg.join('–')}). <span class="score">${score.right}/${score.total}</span>`;
+    } else {
+      cards[i].classList.add('wrong'); cards[quiz.answer].classList.add('right');
+      const near = Math.abs(t.dist - a.dist) <= 0.5 && t.side === a.side;
+      status.innerHTML = `It was <b>${a.label}</b> (${a.dist} away). You picked ${t.label}${near ? ', the right neighbourhood' : ''}. <span class="score">${score.right}/${score.total}</span>`;
+    }
+    quiz.done = true;
+    playTriad(quiz.answer);
+    timers.push(setTimeout(() => { if (quiz) newQuestion(); }, 2600));
+    return;
+  }
+  if (quiz && quiz.done) return;
+  playTriad(i, { then: resolveBox.checked ? nearestTarget(i) : null });
+  showTargets(i);
+  renderHosts(i);
+  status.innerHTML = `<b>${t.label}</b> · ${t.deg.join('–')} over C · ${t.dist === 0 ? 'home' : t.dist + ' from home'}${showPull.checked ? ' · ' + pullText(i) : ''}`;
+}
+
+['pointerdown','keydown'].forEach(ev => document.addEventListener(ev, () => { if (ctx && ctx.state === 'suspended') ctx.resume(); }, { capture: true }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { stopPlayback(); lastNote = null; flip = false; if (quiz) endQuiz(); } });
+try { audio(); } catch (e) {}
+</script>
+
+<script src="lab.js"></script>
+</body></html>

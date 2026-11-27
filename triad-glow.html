@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Glow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#14110f; --panel:#1d1916; --line:#2e2824; --ink:#f3ece4; --mute:#a3978b; --dim:#6d635a; --home:#e9b96e; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  button,select,input{font:inherit;color:inherit}
+  .wrap{max-width:680px;margin:0 auto;padding:22px 16px 90px}
+  h1{font-family:Fraunces,serif;font-weight:700;font-size:28px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--mute);font-size:14px;margin:6px 0 16px;line-height:1.45}
+  .bar{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px;margin-bottom:14px}
+  .row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:13.5px;color:var(--mute)}
+  .row label{display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+  input[type=range]{flex:1;min-width:120px;accent-color:var(--home)}
+  input[type=checkbox]{accent-color:var(--home);width:15px;height:15px}
+  select{background:#181512;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font-size:13.5px;min-width:0}
+  .btn{border:1px solid var(--line);background:#181512;color:var(--ink);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:14px}
+  .btn.on{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .chip{border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .chip[aria-pressed="true"]{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  canvas{width:100%;height:500px;border-radius:16px;display:block;border:1px solid var(--line)}
+  .meta{font-size:14px;color:var(--ink);margin:2px 0}
+  .meta small{display:block;color:var(--mute);font-size:12.5px;margin-top:3px}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mute);margin-top:10px}
+  .tnum{font-variant-numeric:tabular-nums;color:var(--ink);min-width:4.5em;display:inline-block}
+  #stage{position:relative}
+  body.focus{overflow:hidden}
+  body.focus > :not(.wrap){display:none!important}
+  body.focus #stage{position:fixed;inset:0;z-index:2147483647;background:#0b0907}
+  body.focus #stage canvas{height:100vh;height:100dvh;border:0;border-radius:0;touch-action:none}
+  .btn.primary{background:var(--home);border-color:var(--home);color:#1a140c;font-weight:600}
+  .btn.primary.on{background:#f5cf8e;border-color:#f5cf8e;color:#1a140c}
+  .sw{display:inline-flex;align-items:center;gap:9px;cursor:pointer;color:var(--ink);font-size:14px}
+  .sw input{appearance:none;-webkit-appearance:none;width:40px;height:22px;border-radius:999px;background:#2e2824;border:1px solid var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}
+  .sw input::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--mute);transition:transform .15s,background .15s}
+  .sw input:checked{background:#3a2f22;border-color:var(--home)}
+  .sw input:checked::after{transform:translateX(18px);background:var(--home)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Home Glow</h1>
+  <div class="sub">Bebop licks from your library that live on one triad, moved to C. Home glows in the column; every outside note shows up beside it for as long as it sounds, then goes home.</div>
+
+  <div class="bar">
+    <div class="row">
+      <button class="chip" data-h="all" aria-pressed="true">All</button>
+      <button class="chip" data-h="M" aria-pressed="false">Major home</button>
+      <button class="chip" data-h="m" aria-pressed="false">Minor home</button>
+      <select id="player"></select>
+    </div>
+    <div class="row" style="flex-wrap:nowrap">
+      <button class="btn" id="solosBtn" style="flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Solos: all ▾</button>
+    </div>
+    <div id="solosPanel" style="display:none;background:#181512;border:1px solid var(--line);border-radius:12px;padding:10px;gap:8px">
+      <div class="row" style="flex-wrap:nowrap;margin-bottom:8px">
+        <input id="q" type="search" placeholder="Find a tune or player" autocomplete="off" style="flex:1;min-width:0;background:#14110f;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13.5px">
+        <button class="chip" id="solosClear">Clear</button>
+        <button class="chip" id="solosDone">Done</button>
+      </div>
+      <div id="solosList" style="max-height:320px;overflow:auto;display:grid;gap:2px;font-size:13.5px"></div>
+    </div>
+    <div class="row" style="flex-wrap:nowrap">
+      <select id="sel" style="flex:1"></select>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="pl">▶ Play</button>
+      <button class="btn" id="nx">Next ⏭</button>
+      <button class="btn" id="fav">☆ Favorite</button>
+      <button class="btn" id="listen">Auto: each lick ×2</button>
+      <label class="sw"><input type="checkbox" id="allk" role="switch"> All 12 keys</label>
+      <button class="btn" id="st">■</button>
+      <button class="btn" id="fs">⛶ Full screen</button>
+    </div>
+    <div class="row">
+      <span>Tempo</span><input type="range" id="tp" min="40" max="240" step="1" value="90"><span class="tnum" id="tpo">90 bpm</span>
+    </div>
+    <div class="row">
+      <span>Under the lick</span>
+      <button class="chip" data-bg="chord" aria-pressed="false">Chord</button>
+      <button class="chip" data-bg="drone" aria-pressed="true">Drone</button>
+      <button class="chip" data-bg="none" aria-pressed="false">Silence</button>
+    </div>
+    <div class="row">
+      <span>Background volume</span><input type="range" id="dv" min="0" max="150" step="1" value="70">
+    </div>
+    <div class="row">
+      <label class="sw"><input type="checkbox" id="met" role="switch"> Metronome</label>
+      <label><input type="checkbox" id="trip" checked> Triplets</label>
+      <input type="range" id="mv" min="0" max="150" step="1" value="80" aria-label="Metronome volume">
+    </div>
+    <div class="row">
+      <span>Slow down</span>
+      <button class="chip" data-sl="1" aria-pressed="true">Normal</button>
+      <button class="chip" data-sl="2" aria-pressed="false">Half speed</button>
+      <button class="chip" data-sl="4" aria-pressed="false">Super slow ¼</button>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="loop"> Loop lick</label>
+      <label><input type="checkbox" id="num" checked> Numbers</label>
+      <label><input type="checkbox" id="thr" checked> Return threads</label>
+      <label><input type="checkbox" id="mem" checked> Home memory</label>
+      <label><input type="checkbox" id="dark" checked> Darkness grows away</label>
+    </div>
+  </div>
+
+  <div class="meta" id="meta">&nbsp;</div>
+  <div class="meta" id="keyNow" style="color:var(--home);margin-bottom:8px">Key: C</div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+  <div class="legend">
+    <span><span style="color:#FAC775">●</span> home triad</span>
+    <span><span style="color:#5DCAA5">●</span> 2</span>
+    <span><span style="color:#EF9F27">●</span> 6</span>
+    <span><span style="color:#F0997B">●</span> 4</span>
+    <span><span style="color:#E24B4A">●</span> 7</span>
+    <span><span style="color:#ED93B1">●</span> b7</span>
+    <span><span style="color:#AFA9EC">●</span> chromatic</span>
+  </div>
+</div>
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+const LICKS = [{"h":"M","c":"D7","p":"Bob Berg","t":"No Moe","b":82,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.111,55],[0.111,0.222,61],[0.333,0.611,60],[0.944,0.5,65],[1.444,0.5,67],[1.944,0.5,73],[2.444,0.5,72],[2.944,0.5,80],[3.444,0.5,79],[3.944,0.5,80],[4.444,0.5,79],[4.944,0.5,77],[5.444,0.5,76],[5.944,0.5,73],[6.444,0.5,72]]},{"h":"M","c":"D7","p":"Dexter Gordon","t":"Society Red","b":52,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.75,67],[0.75,0.25,67],[1.0,0.25,68],[1.25,0.25,67],[1.5,0.25,65],[1.75,0.25,64],[2.0,0.25,67],[2.25,0.25,70],[2.5,0.25,72],[2.75,0.25,73],[3.0,0.25,72],[3.25,0.25,66],[3.5,0.375,64]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Bird Gets the Worm","b":37,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.333,64],[0.333,0.333,65],[0.667,0.333,66],[1.0,0.333,67],[1.333,0.333,66],[1.667,0.333,65],[2.0,0.5,64],[2.5,0.5,55],[3.0,0.5,58],[3.5,0.5,60],[4.0,0.333,61],[4.333,0.333,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Warming Up a Riff","b":33,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.25,66],[0.75,0.25,65],[1.0,0.5,64],[2.0,0.5,65],[2.5,0.25,64],[2.75,0.25,63],[3.0,0.5,62],[4.0,1.0,64],[5.0,0.5,60]]},{"h":"M","c":"Eb7","p":"Joe Henderson","t":"The Sidewinder","b":62,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,60],[0.333,0.25,63],[0.583,0.25,64],[0.833,0.25,65],[1.083,0.25,66],[1.333,0.333,67],[1.667,0.333,60],[2.0,0.5,60],[2.5,0.167,63],[2.667,0.167,64],[2.833,0.333,60]]},{"h":"M","c":"Bb7","p":"Steve Coleman","t":"Take the Coltrane","b":160,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.167,67],[0.167,0.333,67],[0.5,0.75,65],[1.25,1.0,64],[2.25,0.5,58],[2.75,0.25,60],[3.0,0.5,64],[3.5,0.5,62],[4.0,0.5,61],[4.5,0.5,60],[5.0,0.5,59],[5.5,0.333,58],[5.833,0.667,60]]},{"h":"M","c":"A","p":"Charlie Parker","t":"Cherokee","b":170,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,76],[0.5,0.5,72],[1.0,0.5,69],[1.5,0.5,68],[2.0,0.5,67],[2.5,0.5,65],[3.0,0.5,64],[3.5,0.5,67],[4.0,0.333,71],[4.333,0.333,72]]},{"h":"M","c":"F7","p":"Cannonball Adderley","t":"This Here","b":121,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,67],[0.5,0.667,67],[1.167,0.333,65],[2.0,0.5,63],[2.5,0.5,64],[3.0,1.0,60]]},{"h":"m","c":"Dm","p":"Chet Baker","t":"There Will Never Be Another You","b":15,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.5,68],[1.0,0.5,67],[1.5,0.5,65],[2.0,0.667,63],[2.667,0.333,60]]},{"h":"M","c":"G7","p":"Sonny Rollins","t":"Vierd Blues","b":67,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.333,67],[0.333,0.292,68],[0.625,0.25,67],[0.875,0.375,65],[1.25,0.125,64],[1.375,0.125,60]]},{"h":"M","c":"Bb7","p":"Branford Marsalis","t":"Housed from Edward (take 1)","b":74,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.583,63],[0.833,0.333,64],[1.167,0.333,66],[1.833,0.167,67],[2.0,0.333,64],[2.333,0.5,60]]},{"h":"M","c":"F7","p":"Branford Marsalis","t":"Housed from Edward (take 1)","b":15,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,64],[0.5,0.25,67],[0.75,0.5,70],[1.25,0.5,72],[1.75,0.75,73],[2.5,0.25,71],[2.75,0.667,72]]},{"h":"M","c":"Bb7","p":"Freddie Hubbard","t":"245","b":17,"g":["chromatic approach","enclosure","scale with passing tone"],"n":[[0.0,0.2,67],[0.2,0.1,65],[0.3,0.1,67],[0.4,0.1,65],[0.5,0.3,63],[0.8,0.2,64],[1.0,0.2,62],[1.2,0.2,60],[1.4,0.2,59],[1.6,0.4,58],[2.0,0.2,60]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Ornithology","b":6,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,67],[0.5,1.0,64],[1.5,0.5,60],[2.0,0.5,65],[2.5,0.5,63],[3.0,0.5,64],[3.5,0.5,60]]},{"h":"M","c":"Eb7","p":"Hank Mobley","t":"Soul Station","b":11,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.167,55],[0.167,0.375,60],[0.542,0.375,62],[0.917,0.125,63],[1.042,0.375,64],[1.417,0.5,65],[1.917,0.5,67],[2.417,0.25,63],[2.667,0.25,64],[2.917,0.417,60]]},{"h":"M","c":"G","p":"Roy Hargrove","t":"Strasbourg / St. Denis","b":25,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.25,65],[0.5,0.25,66],[0.75,0.25,67],[1.0,0.25,64],[1.25,0.75,61],[2.0,1.0,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Ko Ko","b":80,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.333,64],[0.333,0.333,65],[0.667,0.333,66],[1.0,0.333,67],[1.333,0.333,66],[1.667,0.333,65],[2.0,0.5,64],[2.5,0.5,60],[3.0,0.5,57],[3.5,0.5,55]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Scrapple from the Apple","b":15,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,67],[1.5,0.5,64],[2.0,0.5,65],[2.5,0.5,64],[3.0,0.5,63],[3.5,0.5,64],[4.0,0.5,60],[4.5,0.5,55],[5.0,0.5,59],[5.5,0.5,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Ko Ko","b":25,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,67],[1.0,0.5,71],[1.5,0.5,72],[2.0,0.5,74],[2.5,0.5,73],[3.0,0.5,72],[3.5,0.5,67],[4.0,0.5,64],[4.5,0.5,60]]},{"h":"m","c":"Cm","p":"Chet Baker","t":"Two's Blues","b":42,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,63],[0.5,1.5,60],[2.0,0.5,62],[2.5,0.5,63],[3.0,0.5,67],[3.5,0.333,65],[3.833,0.333,64],[4.167,0.333,63],[4.5,0.5,62],[5.0,0.5,60]]},{"h":"M","c":"G7","p":"David Liebman","t":"There Will Never Be Another You","b":36,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.583,66],[1.083,0.5,65],[1.583,0.667,64],[2.25,0.5,61],[2.75,0.667,60]]},{"h":"M","c":"Eb7","p":"J.J. Johnson","t":"Blues in the Closet","b":27,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.5,66],[1.0,0.5,64],[1.5,0.5,62],[2.0,0.5,61],[2.5,1.0,60]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Ornithology","b":37,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,1.0,60],[1.0,0.5,55],[1.5,0.5,60],[2.0,0.5,64],[2.5,0.5,65],[3.0,0.5,64],[3.5,0.5,62],[4.0,0.5,60],[4.5,0.5,56],[5.0,0.5,55],[5.5,0.5,53],[6.0,0.5,52],[6.5,0.5,55]]},{"h":"M","c":"A7","p":"Charlie Parker","t":"Yardbird Suite","b":43,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,64],[0.5,0.5,67],[1.0,0.5,61],[1.5,0.5,59],[2.0,0.5,60],[2.5,0.5,68],[3.0,0.5,67]]},{"h":"m","c":"Fm","p":"Charlie Parker","t":"The Bird","b":21,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,55],[0.5,0.25,60],[0.75,0.25,63],[1.0,0.25,67],[1.25,0.25,72],[1.5,0.5,74],[2.0,0.5,73],[2.5,0.5,72]]},{"h":"M","c":"Bb7","p":"Stan Getz","t":"Blues in the Closet","b":98,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,72],[1.0,1.25,74],[2.25,0.5,72],[2.75,0.25,67],[3.0,0.5,63],[3.5,0.5,64],[4.0,0.5,67],[4.5,1.5,72]]},{"h":"m","c":"Cm","p":"Wayne Shorter","t":"Footprints","b":19,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,60],[0.333,0.417,63],[0.75,1.5,65],[2.25,0.25,63],[2.5,0.25,66],[2.75,0.75,67],[3.5,0.667,63],[4.167,0.333,60]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Au Privave (No. 1)","b":37,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,72],[1.0,0.5,67],[1.5,0.5,66],[2.0,1.0,67],[3.0,0.5,64],[3.5,0.5,60]]},{"h":"M","c":"Bb7","p":"Stan Getz","t":"Blues in the Closet","b":118,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,63],[1.0,0.5,64],[1.5,0.5,67],[2.0,0.667,60],[2.667,0.333,60]]},{"h":"M","c":"C","p":"Charlie Parker","t":"Cherokee","b":94,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,62],[2.0,0.5,60],[2.5,0.5,55],[3.0,0.5,59],[3.5,0.5,60]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Au Privave (No. 2)","b":23,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.25,67],[0.25,0.25,64],[0.5,0.167,65],[0.667,0.167,67],[0.833,0.167,65],[1.0,0.25,64],[1.25,0.25,62],[1.5,1.0,60]]},{"h":"M","c":"Eb7","p":"Art Pepper","t":"Blues for Blanche","b":61,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.167,65],[0.667,0.417,67],[1.083,0.25,63],[1.333,0.25,64],[1.583,0.25,67],[1.833,0.5,72]]},{"h":"m","c":"Bbm","p":"Charlie Parker","t":"Diverse","b":66,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,63],[0.5,0.5,55],[1.0,0.5,60],[1.5,0.5,63],[2.0,0.5,67],[2.5,0.25,68],[2.75,0.25,67],[3.0,0.5,65],[3.5,0.5,63]]},{"h":"M","c":"Eb7","p":"Michael Brecker","t":"Nothing Personal","b":113,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,60],[0.25,0.25,62],[0.5,0.25,64],[0.75,0.5,67],[1.25,0.25,72],[1.5,0.25,76],[1.75,0.333,77],[2.083,1.417,76],[3.5,0.75,72],[4.25,0.5,67],[4.75,0.5,64],[5.25,1.0,60]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Red Cross","b":57,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.333,64],[1.333,0.333,67],[1.667,0.333,70],[2.0,0.25,72],[2.25,0.25,73],[2.5,1.0,72]]},{"h":"M","c":"D7","p":"Joe Henderson","t":"In 'n Out (take 1)","b":8,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,52],[0.5,0.5,55],[1.0,0.5,58],[1.5,0.5,60],[2.0,0.5,61],[2.5,0.5,60],[3.0,0.5,59],[3.5,0.5,60]]},{"h":"M","c":"Bb7","p":"Sonny Stitt","t":"Blue Mode","b":11,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.4,60],[0.4,0.2,55],[0.6,0.2,60],[0.8,0.2,62],[1.0,0.25,63],[1.25,0.25,64],[1.5,0.25,62],[1.75,0.25,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Warming Up a Riff","b":106,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.5,59],[0.75,0.5,60],[1.25,0.5,65],[1.75,0.5,64],[2.25,0.5,54],[2.75,0.5,55],[3.25,0.5,62],[3.75,0.5,60],[4.25,0.5,51],[4.75,0.5,52],[5.25,0.5,57],[5.75,0.5,55],[6.25,0.5,52]]},{"h":"m","c":"Dm","p":"Charlie Parker","t":"Cherokee","b":77,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,60],[0.5,0.5,63],[1.0,0.5,60],[1.5,0.333,67],[1.833,0.333,68],[2.167,0.333,67],[2.5,0.5,65],[3.0,0.5,63]]},{"h":"m","c":"Gm","p":"Charlie Parker","t":"Cherokee","b":67,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,63],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.5,61],[2.5,0.5,60]]},{"h":"M","c":"A7","p":"Jimmy Raney","t":"There Will Never Be Another You","b":23,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,60],[2.0,0.5,61],[2.5,0.5,60]]},{"h":"M","c":"A7","p":"Sonny Stitt","t":"I Got Rhythm","b":147,"g":["arpeggio","chromatic approach"],"n":[[0.0,2.0,64],[2.0,0.5,65],[2.5,0.5,66],[3.0,0.5,67],[3.5,0.5,64],[4.0,0.5,60]]},{"h":"M","c":"D7","p":"Charlie Parker","t":"Scrapple from the Apple","b":64,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.25,67],[0.5,0.25,70],[0.75,0.25,72],[1.0,0.25,73],[1.25,0.75,72]]},{"h":"M","c":"F7","p":"Cannonball Adderley","t":"This Here","b":31,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.2,67],[0.2,0.2,69],[0.4,0.2,67],[0.6,0.2,64],[0.8,0.75,61],[1.55,1.0,60]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"K.C. Blues","b":16,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.25,67],[0.75,0.333,63],[1.083,0.333,64],[1.417,1.333,60]]},{"h":"m","c":"Dm","p":"David Murray","t":"Body and Soul (take 1)","b":22,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.2,48],[0.2,0.2,51],[0.4,0.2,55],[0.6,0.2,60],[0.8,0.4,67],[1.2,0.2,63],[1.4,0.2,60],[1.6,0.2,71],[1.8,0.2,72]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Au Privave (No. 2)","b":47,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.25,64],[0.75,0.25,62],[1.0,0.25,60],[1.25,0.25,56],[1.5,0.25,55],[1.75,0.25,53],[2.0,0.25,52],[2.25,0.25,55]]},{"h":"M","c":"G","p":"Charlie Parker","t":"Ko Ko","b":107,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,72],[0.5,0.5,77],[1.0,0.5,76],[1.5,0.5,72],[2.0,0.5,69],[2.5,0.5,68],[3.0,0.5,67],[3.5,0.5,65],[4.0,0.333,64],[4.333,0.333,67]]},{"h":"M","c":"C7","p":"Sonny Stitt","t":"I Got Rhythm","b":37,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,60],[2.0,0.5,62],[2.5,0.5,61],[3.0,0.5,60]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"An Oscar for Treadwell","b":94,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.333,65],[0.667,0.333,66],[1.0,0.5,67],[1.5,0.5,65],[2.0,0.5,64],[2.5,0.5,60]]},{"h":"M","c":"Eb","p":"Charlie Parker","t":"The Bird","b":55,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,55],[1.0,0.333,59],[1.333,0.333,60],[1.667,0.333,61],[2.0,0.5,62],[2.5,0.5,60]]},{"h":"m","c":"Cm","p":"Charlie Parker","t":"Ko-Ko","b":15,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.75,60],[0.75,0.75,60],[1.5,0.25,62],[1.75,0.5,63],[2.25,0.5,62],[2.75,0.25,61],[3.0,0.5,60]]},{"h":"m","c":"Fm","p":"Clifford Brown","t":"Sandu","b":22,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.667,60],[0.667,0.333,66],[1.0,1.333,67],[2.333,0.5,65],[2.833,0.417,63],[3.25,0.5,62],[3.75,0.25,60]]},{"h":"m","c":"Cm","p":"Sonny Stitt","t":"Elora","b":5,"g":["arpeggio","scale with passing tone"],"n":[[0.0,0.5,60],[0.5,0.5,67],[1.0,0.25,63],[1.25,0.25,65],[1.5,0.25,63],[1.75,0.25,62],[2.0,0.5,60],[2.5,0.5,55],[3.0,0.5,51],[3.5,0.5,48]]},{"h":"M","c":"Eb7","p":"Hank Mobley","t":"Soul Station","b":49,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,60],[1.0,0.5,64],[1.5,0.333,65],[1.833,0.167,64],[2.0,0.333,60],[2.333,0.417,55],[2.75,0.25,53],[3.0,0.25,52],[3.25,0.5,55],[3.75,0.25,60]]},{"h":"m","c":"Cm","p":"Charlie Parker","t":"Ko Ko","b":47,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.333,63],[2.333,0.333,62],[2.667,0.333,61],[3.0,0.5,60]]},{"h":"M","c":"C7","p":"Steve Turre","t":"Steve's Blues","b":13,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.25,60],[0.25,0.25,62],[0.5,0.25,63],[0.75,0.25,64],[1.0,0.333,65],[1.333,0.333,64],[1.667,0.333,62],[2.0,0.333,60]]},{"h":"m","c":"Fm","p":"David Murray","t":"Body and Soul (take 1)","b":5,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.2,67],[0.2,0.2,68],[0.4,0.2,67],[0.6,0.263,65],[0.863,0.25,63],[1.113,0.25,67],[1.363,0.188,63]]},{"h":"M","c":"Eb7","p":"Hank Mobley","t":"Soul Station","b":2,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.75,69],[1.0,0.333,67],[1.333,0.452,60],[1.786,0.429,65],[2.214,0.143,64],[2.357,0.393,60],[2.75,0.375,55],[3.125,0.25,53],[3.375,0.625,52],[4.0,2.5,60]]},{"h":"M","c":"Eb7","p":"Hank Mobley","t":"Soul Station","b":33,"g":["arpeggio","chromatic approach"],"n":[[0.0,2.0,60],[2.0,1.0,60],[3.0,0.25,64],[3.25,0.25,65],[3.5,0.25,64],[3.75,0.25,60],[4.0,0.25,55],[4.25,0.75,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Anthropology","b":2,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,60],[0.5,0.5,64],[1.0,0.5,62],[1.5,0.5,60],[2.0,0.5,65],[2.5,0.5,63],[3.0,0.5,64],[3.5,0.5,67]]},{"h":"M","c":"F7","p":"Lee Konitz","t":"Bop Goes to Leesel","b":70,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,63],[1.5,0.5,64],[2.0,0.5,67],[2.5,0.5,64],[3.0,0.5,65],[3.5,0.5,67]]},{"h":"M","c":"G","p":"Charlie Parker","t":"Ko-Ko","b":75,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,60],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,60],[2.0,0.5,57],[2.5,0.5,56],[3.0,0.5,55],[3.5,0.5,53],[4.0,0.25,52]]},{"h":"M","c":"Bb","p":"Sonny Rollins & Sonny Stitt","t":"The Eternal Triangle","b":167,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,72],[0.5,0.5,68],[1.0,0.5,67],[1.5,0.25,65],[1.75,0.25,64],[2.0,1.5,67]]},{"h":"M","c":"Bb7","p":"Michael Brecker","t":"Cabin Fever","b":32,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,55],[0.5,0.5,60],[1.0,0.25,64],[1.25,0.75,65],[2.0,0.5,63],[2.5,0.5,64]]},{"h":"M","c":"Eb7","p":"Pat Metheny","t":"Cabin Fever","b":85,"g":["chromatic approach","enclosure"],"n":[[0.0,0.5,67],[0.5,0.667,65],[1.167,0.25,63],[1.417,0.75,64],[2.167,0.5,62],[2.667,0.5,60]]},{"h":"M","c":"D7","p":"Pat Metheny","t":"Nothing Personal","b":45,"g":["chromatic approach","enclosure"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,1.0,73],[2.5,0.5,71],[3.0,0.5,72]]},{"h":"M","c":"Bb","p":"Sonny Rollins & Sonny Stitt","t":"The Eternal Triangle","b":480,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,64],[1.0,0.5,63],[1.5,0.5,64],[2.0,0.5,69],[2.5,0.5,68],[3.0,0.5,67],[3.5,0.5,76]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Segment","b":78,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,64],[1.0,0.333,65],[1.333,0.333,67],[1.667,0.333,73],[2.0,1.0,72],[3.0,0.5,66],[3.5,0.5,64]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Confirmation","b":9,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,1.0,64],[1.5,0.5,60],[2.0,0.333,65],[2.333,0.333,64],[2.667,0.333,63],[3.0,0.5,62],[3.5,0.5,64]]},{"h":"M","c":"Bb7","p":"Lee Konitz","t":"Bop Goes to Leesel","b":11,"g":["arpeggio","chromatic approach","enclosure"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.25,63],[1.25,0.5,64],[1.75,0.5,67],[2.25,0.667,69],[2.917,0.333,67]]},{"h":"m","c":"Bbm","p":"Charlie Parker","t":"Segment","b":92,"g":["arpeggio","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.5,63],[1.0,0.5,60],[1.5,0.5,55],[2.0,0.5,65],[2.5,0.5,63],[3.0,0.5,62],[3.5,0.5,60]]},{"h":"M","c":"G","p":"Sonny Rollins","t":"Pent-Up House","b":35,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,60],[1.0,0.5,55],[1.5,0.5,52],[2.0,0.5,59],[2.5,1.5,60]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Bloomdido","b":47,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,64],[1.0,0.333,64],[1.333,0.333,67],[1.667,0.333,65],[2.0,0.5,64],[2.5,0.5,60]]},{"h":"M","c":"Bb","p":"Bob Berg","t":"No Moe","b":16,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,72],[0.5,0.5,67],[1.0,0.75,64],[1.75,0.583,65],[2.333,0.5,64],[2.833,0.5,60]]},{"h":"M","c":"Eb7","p":"Lee Morgan","t":"Blue Train","b":3,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.5,65],[0.75,0.167,64],[1.25,0.333,60],[1.583,0.667,55],[2.25,1.5,60]]},{"h":"m","c":"Cm","p":"Charlie Parker","t":"The Bird","b":46,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,63],[0.5,0.5,55],[1.0,0.5,60],[1.5,0.5,63],[2.0,0.5,62],[2.5,0.5,60],[3.0,0.5,59],[3.5,0.5,60],[4.0,0.5,62],[4.5,0.5,60]]},{"h":"M","c":"G7","p":"Roy Hargrove","t":"But Not for Me","b":80,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,64],[1.0,0.5,65],[1.5,0.25,67],[1.75,0.25,65],[2.0,0.75,64],[2.75,0.25,60]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Confirmation (head)","b":1,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,1.0,67],[1.5,0.5,64],[2.0,0.5,65],[2.5,0.5,64],[3.0,0.333,59],[3.333,0.333,60]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Card Board","b":58,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.167,67],[0.167,0.167,65],[0.333,0.5,64],[0.833,0.5,67],[1.333,0.5,64],[1.833,0.5,62],[2.333,0.5,60]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Steeplechase","b":63,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.167,60],[0.667,0.167,62],[0.833,0.167,60],[1.0,0.5,55],[1.5,0.333,59],[1.833,0.333,60]]},{"h":"M","c":"F7","p":"Art Pepper","t":"Anthropology","b":24,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,1.0,64],[2.0,0.5,72],[2.5,0.5,67],[3.0,0.75,70],[3.75,0.25,72]]},{"h":"M","c":"Eb7","p":"Joe Henderson","t":"The Sidewinder","b":45,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,55],[0.25,0.25,60],[0.5,0.25,59],[0.75,0.25,60],[1.0,0.25,62],[1.25,0.5,64],[1.75,0.5,60]]},{"h":"M","c":"Bb7","p":"Sonny Rollins","t":"Tenor Madness","b":84,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,59],[1.0,0.667,60],[1.667,0.333,64],[2.0,0.5,65],[2.5,0.833,64],[3.333,0.333,60]]},{"h":"M","c":"C","p":"Stan Getz","t":"Body and Soul","b":39,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,72],[0.333,0.167,67],[0.5,0.167,64],[0.667,0.417,62],[1.083,0.25,60],[1.333,0.25,59],[1.583,0.25,60]]},{"h":"m","c":"Gm","p":"Wynton Marsalis","t":"Cherokee II","b":12,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,72],[0.5,0.5,67],[1.0,0.5,62],[1.5,0.5,63],[2.0,0.5,60],[2.5,0.5,62],[3.0,0.25,60]]},{"h":"m","c":"Cm","p":"David Liebman","t":"There Will Never Be Another You","b":69,"g":["arpeggio"],"n":[[0.0,0.25,51],[0.25,0.583,51],[0.833,0.333,53],[1.167,0.667,53],[1.833,0.333,55],[2.167,0.333,55],[2.5,0.5,58],[3.0,0.5,58],[3.5,0.5,60],[4.0,0.25,60],[4.25,0.75,63],[5.0,0.5,63],[5.5,0.5,65],[6.0,0.5,65],[6.5,0.5,67],[7.0,1.5,67]]},{"h":"M","c":"Bb","p":"Sonny Rollins & Sonny Stitt","t":"The Eternal Triangle","b":472,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,60],[1.0,0.5,69],[1.5,0.5,68],[2.0,0.5,67],[2.5,0.5,64],[3.0,0.5,63],[3.5,0.5,64]]},{"h":"m","c":"Ebm","p":"Charlie Parker","t":"Diverse","b":82,"g":["arpeggio"],"n":[[0.0,0.5,51],[0.5,0.5,55],[1.0,0.5,60],[1.5,1.5,63],[3.0,0.5,60],[3.5,0.5,61],[4.0,0.5,62],[4.5,1.5,60]]},{"h":"m","c":"Cm","p":"Bob Berg","t":"Blues for Bela","b":20,"g":["arpeggio"],"n":[[0.0,0.5,63],[0.5,0.5,65],[1.0,0.5,67],[1.5,0.5,63],[2.0,0.25,63],[2.25,0.25,61],[2.5,0.25,63],[2.75,0.75,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Passport","b":63,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,60],[0.333,0.333,64],[0.667,0.333,67],[1.0,0.5,71],[1.5,0.5,72],[2.0,0.5,72],[2.5,0.5,72]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Red Cross (head)","b":7,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.25,62],[0.5,0.5,60],[1.0,0.5,55],[1.5,0.5,60],[2.0,0.5,55],[2.5,0.5,59],[3.0,0.5,60]]},{"h":"M","c":"Bb","p":"Wynton Marsalis","t":"Cherokee II","b":3,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.5,67],[0.833,0.5,64],[1.333,0.5,62],[1.833,0.5,60],[2.333,0.5,62],[2.833,0.333,60],[3.167,0.833,59],[4.0,0.333,60]]},{"h":"M","c":"G","p":"Charlie Parker","t":"Ornithology (head)","b":1,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,62],[1.0,0.5,64],[1.5,0.5,65],[2.0,0.5,67],[2.5,0.5,64],[3.0,0.5,65],[3.5,0.25,67],[3.75,0.25,65],[4.0,0.5,64],[4.5,0.5,60]]},{"h":"M","c":"A7","p":"Sonny Stitt","t":"It Could Happen to You","b":70,"g":["chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.25,64],[0.75,0.25,55],[1.0,0.25,59],[1.25,0.25,60],[1.5,0.25,61],[1.75,0.25,60],[2.0,0.25,59],[2.25,0.25,60],[2.5,1.0,72]]},{"h":"M","c":"Eb","p":"Roy Hargrove","t":"Strasbourg / St. Denis","b":7,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,64],[0.5,0.25,62],[0.75,0.25,60],[1.0,0.25,59],[1.25,0.5,60]]},{"h":"m","c":"Fm","p":"Chet Baker","t":"Autumn Leaves","b":32,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,62],[2.0,1.0,63],[3.0,1.5,60]]},{"h":"M","c":"C7","p":"Sonny Stitt","t":"I Got Rhythm","b":109,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,64],[2.0,0.5,62],[2.5,0.5,60]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Back Home Blues","b":29,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,65],[1.0,0.5,67],[1.5,0.5,65],[2.0,0.5,64],[2.5,0.5,60]]},{"h":"M","c":"C","p":"Charlie Parker","t":"Card Board","b":27,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,67],[1.0,0.5,69],[1.5,0.5,67],[2.0,0.5,71],[2.5,0.5,72]]},{"h":"m","c":"Cm","p":"Charlie Parker","t":"The Bird","b":27,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,55],[0.5,0.5,60],[1.0,0.5,62],[1.5,0.5,63],[2.0,0.5,62],[2.5,0.5,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Red Cross","b":48,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.333,59],[0.833,0.333,60],[1.167,0.333,62],[1.5,0.5,64],[2.0,0.5,60]]},{"h":"M","c":"Ab","p":"Charlie Parker","t":"Bird Gets the Worm","b":31,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,67],[2.0,0.5,71],[2.5,0.5,72]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Mohawk (No. 1)","b":35,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,55],[1.5,0.5,60],[2.0,0.5,59],[2.5,0.25,60],[2.75,0.25,62],[3.0,0.5,60]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Mohawk (No. 1)","b":60,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,65],[2.0,0.5,64],[2.5,0.5,60]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Blues for Alice","b":13,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,60],[0.333,0.333,62],[0.667,0.5,60],[1.167,0.5,55],[1.667,0.5,59],[2.167,0.5,60]]},{"h":"M","c":"C7","p":"Cannonball Adderley","t":"This Here","b":118,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.667,65],[1.167,0.667,64],[1.833,0.167,60],[2.0,0.5,62],[2.5,0.5,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Ko-Ko","b":57,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.833,64],[0.833,0.5,65],[1.333,0.5,67],[1.833,0.75,65],[2.583,0.5,64],[3.083,0.25,60]]},{"h":"M","c":"Eb7","p":"Lee Morgan","t":"The Sidewinder","b":14,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.5,64],[1.0,1.0,60],[2.0,0.5,58],[2.5,1.5,60]]},{"h":"M","c":"Bb7","p":"Sonny Rollins","t":"Tenor Madness","b":47,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,62],[1.0,0.5,60],[1.5,0.5,55],[2.0,0.75,59],[2.75,1.0,60]]},{"h":"m","c":"Fm","p":"Chet Baker","t":"Autumn Leaves","b":53,"g":["arpeggio"],"n":[[0.0,0.5,63],[0.5,0.5,65],[1.0,0.5,63],[1.5,0.5,60],[2.0,0.333,60],[2.333,0.333,58],[2.667,1.333,60]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Chasing the Bird","b":23,"g":["chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.333,64],[1.333,0.333,55],[1.667,0.333,55],[2.0,0.5,61],[2.5,1.5,60]]},{"h":"m","c":"Cm","p":"Michael Brecker","t":"Cabin Fever","b":94,"g":["arpeggio"],"n":[[0.0,0.583,63],[0.583,0.5,67],[1.083,0.25,63],[1.333,0.5,65],[1.833,0.75,67],[2.583,0.5,70],[3.083,0.25,72]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Red Cross","b":32,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,55],[1.0,0.5,60],[1.5,0.5,55],[2.0,0.5,59],[2.5,0.5,60]]},{"h":"M","c":"Eb7","p":"John Coltrane","t":"Blue Train","b":25,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.417,64],[1.417,0.5,65],[1.917,0.5,64],[2.417,0.583,64],[3.0,0.333,64],[3.333,0.833,60]]},{"h":"M","c":"F7","p":"Milt Jackson","t":"Bag's Groove","b":14,"g":["chromatic approach","enclosure"],"n":[[0.0,0.5,67],[0.5,0.5,68],[1.0,0.5,66],[1.5,0.5,67],[2.0,0.5,65],[2.5,0.5,64]]},{"h":"M","c":"Db7","p":"Branford Marsalis","t":"Gutbucket Steepy","b":32,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,72],[0.25,0.25,74],[0.5,0.25,76],[0.75,0.5,74],[1.25,0.25,72],[1.5,0.25,69],[1.75,0.45,67],[2.2,0.2,60],[2.4,0.2,63],[2.6,0.2,64],[2.8,0.7,67]]},{"h":"m","c":"Dm","p":"Charlie Parker","t":"Confirmation","b":43,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.25,63],[0.75,0.25,62],[1.0,0.25,60],[1.25,0.25,59],[1.5,0.25,60]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"K.C. Blues","b":8,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.333,67],[0.583,0.333,70],[0.917,0.167,71],[1.083,0.333,72],[1.417,0.333,74],[1.75,0.167,72]]},{"h":"M","c":"C7","p":"J.J. Johnson","t":"Walkin'","b":82,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.2,67],[0.2,0.2,69],[0.4,0.2,67],[0.6,0.533,65],[1.133,0.333,64],[1.467,0.583,62],[2.05,0.5,60]]},{"h":"M","c":"G7","p":"Sonny Rollins","t":"Pent-Up House","b":89,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,62],[2.0,0.5,60],[2.5,0.5,59],[3.0,0.5,58],[3.5,0.5,60]]},{"h":"m","c":"Cm","p":"Sonny Stitt","t":"Elora","b":25,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,55],[0.5,0.5,60],[1.0,0.5,63],[1.5,0.25,62],[1.75,0.25,63],[2.0,0.25,62],[2.25,0.25,60]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Now's the Time (No. 2)","b":26,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,67],[1.0,0.5,65],[1.5,0.25,67],[1.75,0.25,65],[2.0,0.5,64],[2.5,0.5,60]]},{"h":"M","c":"Bb7","p":"John Coltrane","t":"Blues by Five","b":54,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.5,72],[0.5,0.25,67],[0.75,0.583,65],[1.333,0.5,64],[1.833,0.667,62],[2.5,0.5,60],[3.0,1.0,55]]},{"h":"m","c":"Fm","p":"Charlie Parker","t":"Blues for Alice (head)","b":5,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,63],[0.5,0.5,55],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.5,63],[2.5,0.5,66],[3.0,0.5,67],[3.5,0.5,63]]},{"h":"m","c":"Ebm","p":"Sonny Stitt","t":"Body and Soul","b":27,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,60],[0.25,0.25,63],[0.5,0.25,65],[0.75,0.2,66],[0.95,0.2,67],[1.15,0.2,63],[1.35,0.2,60],[1.55,0.3,55]]},{"h":"M","c":"F","p":"Jimmy Raney","t":"There Will Never Be Another You","b":14,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,72],[0.5,0.5,67],[1.0,0.5,64],[1.5,0.5,63],[2.0,0.5,64],[2.5,0.5,67]]},{"h":"M","c":"Db7","p":"Branford Marsalis","t":"Gutbucket Steepy","b":56,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.2,67],[0.2,0.2,66],[0.4,0.2,67],[0.6,0.25,64],[0.85,0.25,64],[1.1,0.25,67]]},{"h":"M","c":"Bb7","p":"Dexter Gordon","t":"Stanley the Steamer","b":50,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,60],[1.0,2.0,60],[3.0,0.25,63],[3.25,0.25,64],[3.5,0.25,67]]},{"h":"M","c":"Db","p":"Charlie Parker","t":"Confirmation","b":87,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.167,67],[0.167,0.167,69],[0.333,0.167,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,60],[2.0,0.5,57],[2.5,0.5,55]]},{"h":"M","c":"Eb7","p":"Joe Henderson","t":"The Sidewinder","b":44,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.333,67],[0.333,0.167,65],[0.5,0.333,64],[0.833,0.25,62],[1.083,0.25,60],[1.333,0.5,62],[1.833,0.25,64],[2.083,0.25,67]]},{"h":"M","c":"Eb","p":"Joe Henderson","t":"In 'n Out (take 1)","b":70,"g":["chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,61],[1.0,0.75,62],[1.75,0.5,60],[2.25,0.5,57],[2.75,0.25,55],[3.0,1.0,59],[4.0,1.0,60]]},{"h":"M","c":"Bb","p":"Roy Hargrove","t":"Strasbourg / St. Denis","b":23,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,2.0,67],[2.0,0.5,64],[2.5,0.5,69],[3.0,0.5,67],[3.5,0.25,65],[3.75,0.25,64]]},{"h":"M","c":"F","p":"Roy Hargrove","t":"But Not for Me","b":5,"g":["arpeggio","chromatic approach","scale with passing tone"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.5,64],[1.0,0.5,62],[1.5,0.5,60],[2.0,1.5,55]]},{"h":"M","c":"Eb7","p":"Joshua Redman","t":"Blues on Sunday","b":63,"g":["chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.333,69],[0.667,0.25,68],[0.917,0.5,67],[1.417,1.75,60],[3.167,0.25,60],[3.417,0.25,60]]},{"h":"m","c":"Bm","p":"Sonny Rollins & Sonny Stitt","t":"The Eternal Triangle","b":145,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,68],[0.5,0.25,67],[0.75,0.5,63],[1.25,0.5,62],[1.75,1.0,60],[2.75,0.5,55]]},{"h":"M","c":"Bb7","p":"Stan Getz","t":"Blues in the Closet","b":46,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,64],[1.0,0.5,65],[1.5,0.667,67],[2.167,0.333,63],[2.5,0.5,64],[3.0,0.5,67]]},{"h":"m","c":"Cm","p":"Dizzy Gillespie","t":"Blue 'n Boogie","b":46,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.333,67],[0.333,0.5,65],[0.833,0.417,64],[1.25,0.5,63],[1.75,0.45,62],[2.2,0.2,60],[2.4,0.2,62],[2.6,0.2,60]]},{"h":"M","c":"F","p":"Jimmy Raney","t":"There Will Never Be Another You","b":20,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,67],[1.5,0.5,64],[2.0,0.5,62],[2.5,0.5,60],[3.0,0.5,62],[3.5,0.5,63],[4.0,0.5,64],[4.5,0.5,67]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Laird Baird","b":26,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.333,64],[1.833,0.333,65],[2.167,0.333,66],[2.5,0.5,67],[3.0,0.5,64]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Now's the Time (No. 1)","b":32,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.167,64],[1.167,0.167,65],[1.333,0.167,64],[1.5,0.5,62],[2.0,0.5,60]]},{"h":"M","c":"Eb7","p":"Phil Woods","t":"Strollin' with Pam","b":17,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.75,55],[0.75,0.7,65],[1.45,0.2,64],[1.65,0.2,65],[1.85,0.2,64],[2.05,0.2,62],[2.25,0.5,60]]},{"h":"M","c":"Eb7","p":"John Coltrane","t":"Bessie's Blues","b":8,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.333,64],[0.833,0.333,60],[1.167,0.333,64],[1.5,0.167,65],[1.667,0.167,64],[1.833,0.5,65],[2.333,0.667,67],[3.0,0.5,64],[3.5,0.75,60],[4.25,0.25,62],[4.5,0.5,64],[5.0,0.5,67],[5.5,0.75,72],[6.25,0.25,79],[6.5,0.667,67]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Si Si","b":5,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,64],[1.5,1.0,73],[2.5,1.0,72],[3.5,0.5,67],[4.0,0.5,74],[4.5,0.5,74],[5.0,0.5,72],[5.5,0.5,67],[6.0,0.5,69],[6.5,0.5,67]]},{"h":"M","c":"Ab7","p":"John Coltrane","t":"Bessie's Blues","b":30,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,55],[0.5,0.5,60],[1.0,0.5,62],[1.5,0.5,64],[2.0,0.5,62],[2.5,0.5,64],[3.0,0.25,63],[3.25,2.0,64],[5.25,0.5,62],[5.75,0.5,60],[6.25,0.75,55]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Scrapple from the Apple","b":6,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,67],[1.5,0.5,64],[2.0,0.5,65],[2.5,0.5,64],[3.0,0.5,63],[3.5,0.5,64],[4.0,0.5,67],[4.5,0.5,64],[5.0,0.5,65],[5.5,0.5,67]]},{"h":"M","c":"G","p":"Clifford Brown","t":"Pent-Up House","b":72,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,60],[0.333,0.333,64],[0.667,0.333,70],[1.0,0.5,71],[1.5,0.5,72],[2.0,1.0,64]]},{"h":"M","c":"A","p":"Sonny Stitt","t":"Afternoon in Paris","b":7,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.25,64],[0.75,0.25,73],[1.0,0.25,72],[1.25,0.25,67]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Scrapple from the Apple (head)","b":6,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,67],[1.5,0.5,64],[2.0,0.5,65],[2.5,0.5,64],[3.0,0.5,63],[3.5,0.5,64]]},{"h":"m","c":"Cm","p":"Charlie Parker","t":"The Bird","b":33,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,63],[1.0,0.5,60],[1.5,0.5,65],[2.0,0.5,67],[2.5,0.5,68],[3.0,0.5,67]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Laird Baird","b":14,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,60],[2.5,0.167,66],[2.667,0.167,64]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Anthropology","b":62,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,60],[0.333,0.333,62],[0.667,0.333,63],[1.0,1.0,64],[2.0,1.0,60],[3.0,1.0,55]]},{"h":"M","c":"Eb7","p":"Clifford Brown","t":"Sandu","b":25,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.75,60],[0.75,0.5,59],[1.25,0.25,60],[1.5,0.25,63],[1.75,0.5,64],[2.25,0.25,67]]},{"h":"M","c":"C7","p":"Dexter Gordon","t":"Society Red","b":42,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.292,64],[0.292,0.5,65],[0.792,0.25,67],[1.042,0.375,66],[1.417,0.25,67],[1.667,0.25,64]]},{"h":"m","c":"Cm","p":"Roy Hargrove","t":"Strasbourg / St. Denis","b":67,"g":[],"n":[[0.0,0.25,55],[0.25,0.25,55],[0.5,0.25,58],[0.75,0.25,60],[1.0,0.25,62],[1.25,0.25,60],[1.5,0.25,58],[1.75,0.25,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Laird Baird","b":38,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,64],[1.0,0.5,69],[1.5,0.5,68],[2.0,0.5,67],[2.5,0.5,64],[3.0,0.5,65],[3.5,1.0,64]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Diverse","b":46,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.333,65],[0.667,0.333,66],[1.0,0.5,67],[1.5,0.5,65],[2.0,0.5,64],[2.5,0.5,67]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Bloomdido","b":39,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.333,64],[1.833,0.333,65],[2.167,0.333,66],[2.5,0.5,67]]},{"h":"M","c":"C7","p":"Bob Berg","t":"Blues for Bela","b":17,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,67],[0.5,0.5,68],[1.0,0.5,67],[1.5,0.5,65],[2.0,0.5,64],[2.5,0.5,65],[3.0,0.5,67]]},{"h":"M","c":"D7","p":"Charlie Parker","t":"An Oscar for Treadwell","b":86,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,64],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,62],[2.0,0.5,61],[2.5,0.5,60],[3.0,0.5,62],[3.5,1.0,64]]},{"h":"m","c":"Gm","p":"Chet Baker","t":"Two's Blues","b":45,"g":["chromatic approach","enclosure"],"n":[[0.0,0.25,63],[0.25,0.25,61],[0.5,0.25,59],[0.75,0.5,60],[1.25,0.5,62],[1.75,0.5,63],[2.25,0.5,65],[2.75,0.5,67]]},{"h":"M","c":"Eb7","p":"John Coltrane","t":"Blue Train","b":20,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.9,64],[0.9,0.2,65],[1.1,0.2,66],[1.3,0.2,67],[1.5,0.25,69],[1.75,1.25,67],[3.0,0.25,65],[3.25,0.25,64]]},{"h":"M","c":"E7","p":"Wynton Marsalis","t":"Cherokee","b":107,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,72],[0.5,0.25,69],[0.75,0.25,67],[1.0,0.5,64],[1.5,0.5,66],[2.0,0.5,67],[2.5,0.5,64]]},{"h":"M","c":"Ab7","p":"Charlie Parker","t":"Chi Chi","b":79,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.333,65],[0.667,0.333,66],[1.0,0.5,67],[1.5,0.5,64],[2.0,0.5,65],[2.5,0.25,67],[2.75,0.25,65],[3.0,0.5,64]]},{"h":"M","c":"F7","p":"Miles Davis","t":"Walkin'","b":32,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,60],[0.25,0.25,62],[0.5,0.25,64],[0.75,0.333,65],[1.083,0.333,66],[1.417,0.333,67],[1.75,0.5,64],[2.25,0.25,65],[2.5,0.75,64]]},{"h":"M","c":"Db","p":"Chet Baker","t":"But Not for Me","b":19,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,71],[1.0,0.5,71],[1.5,0.5,72],[2.0,0.5,72],[2.5,0.5,69],[3.0,0.5,69],[3.5,0.5,67],[4.0,0.5,67],[4.5,1.0,64],[5.5,0.5,60],[6.0,2.5,64]]},{"h":"m","c":"Cm","p":"John Coltrane","t":"Mr. P.C.","b":180,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.75,62],[1.25,0.5,63],[1.75,0.5,65],[2.25,0.5,67],[2.75,0.25,72],[3.0,0.5,67],[3.5,0.75,65],[4.25,0.5,63],[4.75,0.25,67],[5.0,0.5,63],[5.5,0.5,62],[6.0,1.0,60],[7.0,0.5,62],[7.5,3.0,63],[10.5,0.75,62],[11.25,0.5,63]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Ko Ko","b":73,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,60],[2.0,0.5,62],[2.5,0.5,60],[3.0,0.5,59],[3.5,0.5,60],[4.0,0.5,64],[4.5,0.5,67]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Ko Ko","b":84,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.5,64],[0.5,0.5,69],[1.0,0.5,68],[1.5,0.5,67],[2.0,0.5,65],[2.5,0.5,64]]},{"h":"M","c":"Eb7","p":"Joshua Redman","t":"Blues on Sunday","b":8,"g":["chromatic approach","enclosure"],"n":[[0.0,1.833,48],[1.833,0.5,62],[2.333,0.333,64],[2.667,0.333,63],[3.0,0.5,65],[3.5,0.25,64]]},{"h":"m","c":"Fm","p":"Joshua Redman","t":"Blues on Sunday","b":47,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.2,60],[0.2,0.2,62],[0.4,0.367,63],[0.767,0.167,65],[0.933,0.167,67],[1.1,0.333,63],[1.433,0.333,62],[1.767,0.167,60],[1.933,0.167,59],[2.1,0.333,60],[2.433,0.333,65],[2.767,0.167,64],[2.933,0.5,63]]},{"h":"M","c":"Db","p":"Charlie Parker","t":"Relaxing with Lee","b":2,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,65],[1.0,0.25,67],[1.25,0.25,65],[1.5,0.5,64],[2.0,0.5,60],[2.5,0.5,62],[3.0,0.5,64],[3.5,0.5,65],[4.0,0.5,67],[4.5,0.5,64],[5.0,0.5,55]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Perhaps","b":30,"g":["chromatic approach","scale with passing tone"],"n":[[0.0,0.167,67],[0.167,0.167,68],[0.333,0.167,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,65],[2.0,0.5,67],[2.5,0.5,65],[3.0,0.5,64]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Thriving from a Riff","b":1,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.333,65],[0.667,0.333,66],[1.0,0.5,67],[1.5,0.5,64],[2.0,0.5,65],[2.5,0.5,67]]},{"h":"M","c":"F7","p":"Dizzy Gillespie","t":"Cognac Blues","b":2,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.333,65],[0.667,0.333,65],[1.0,0.333,64],[1.333,1.4,60],[2.733,0.2,55],[2.933,0.2,60],[3.133,0.2,64]]},{"h":"M","c":"Bb7","p":"John Coltrane","t":"Bessie's Blues","b":46,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.25,64],[0.75,0.25,62],[1.0,0.5,60],[1.5,0.5,55],[2.0,0.667,60],[2.667,0.167,65],[2.833,0.167,64]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Billie's Bounce","b":71,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,67],[1.0,0.5,67],[1.5,0.5,67],[2.0,0.5,65],[2.5,0.5,64],[3.0,0.5,60],[3.5,0.5,55]]},{"h":"m","c":"Fm","p":"Dizzy Gillespie","t":"Groovin' High (head)","b":18,"g":["chromatic approach"],"n":[[0.0,1.0,60],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.5,63],[2.5,0.5,62],[3.0,1.0,60]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Warming Up a Riff","b":112,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,60],[0.25,0.5,59],[0.75,0.5,60],[1.25,0.5,64],[1.75,1.0,67],[2.75,0.5,67]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Perhaps","b":43,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,55],[0.333,0.333,60],[0.667,0.333,64],[1.0,0.5,67],[1.5,0.5,65],[2.0,0.5,64]]},{"h":"m","c":"Em","p":"Charlie Parker","t":"Yardbird Suite","b":50,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,63],[1.0,0.5,60],[1.5,0.5,55],[2.0,0.333,62],[2.333,0.333,63]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Donna Lee","b":2,"g":["chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,55],[2.0,0.5,58],[2.5,0.5,60]]},{"h":"M","c":"Eb7","p":"Hank Mobley","t":"Soul Station","b":76,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,60],[1.0,0.167,65],[1.167,0.5,64],[1.667,0.167,60],[1.833,0.417,55]]},{"h":"M","c":"Bb7","p":"Lee Konitz","t":"Bop Goes to Leesel","b":23,"g":["chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.25,60],[0.75,0.667,59],[1.417,0.333,60],[1.75,0.5,62],[2.25,0.5,60]]},{"h":"M","c":"Bb7","p":"Paul Desmond","t":"Blue Rondo a la Turk","b":41,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,64],[0.5,0.45,59],[0.95,0.2,60],[1.15,0.2,64],[1.35,0.2,67]]},{"h":"M","c":"Bb","p":"Sonny Stitt","t":"Elora","b":30,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,60],[1.0,0.5,57],[1.5,0.5,55],[2.0,0.5,59],[2.5,0.5,60],[3.0,0.5,62],[3.5,0.5,64],[4.0,0.5,60],[4.5,0.5,55]]},{"h":"m","c":"Am","p":"Sonny Stitt","t":"Ray's Idea","b":1,"g":["chromatic approach"],"n":[[0.0,0.5,55],[0.5,0.25,62],[0.75,0.25,63],[1.0,0.25,62],[1.25,0.25,60],[1.5,0.5,59],[2.0,0.5,60]]},{"h":"m","c":"Bm","p":"Sonny Stitt","t":"On the Sunny Side of the Street","b":11,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,55],[0.5,0.5,60],[1.0,0.5,62],[1.5,0.5,63],[2.0,0.5,65],[2.5,0.5,67],[3.0,0.5,63]]},{"h":"m","c":"Ebm","p":"Sonny Stitt","t":"Elora","b":18,"g":["arpeggio","scale with passing tone"],"n":[[0.0,0.333,63],[0.333,0.333,65],[0.667,0.333,63],[1.0,0.5,62],[1.5,0.5,60],[2.0,1.5,67],[3.5,0.5,63]]},{"h":"M","c":"C","p":"Sonny Stitt","t":"It Could Happen to You","b":67,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,64],[2.0,0.5,65],[2.5,0.5,67],[3.0,0.5,64]]},{"h":"M","c":"C","p":"Sonny Stitt","t":"It Could Happen to You","b":73,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,64],[2.0,0.5,67],[2.5,0.5,69],[3.0,0.5,67]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Au Privave (No. 2)","b":35,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,64],[1.0,0.333,65],[1.333,0.333,67],[1.667,0.333,65],[2.0,0.5,64],[2.5,1.5,67]]},{"h":"M","c":"Ab7","p":"Charlie Parker","t":"Chi Chi","b":35,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.333,64],[1.333,0.333,67],[1.667,0.333,71],[2.0,0.5,72],[2.5,1.5,67]]},{"h":"M","c":"Ab7","p":"Charlie Parker","t":"Chi Chi","b":52,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,67],[1.0,0.5,64],[1.5,0.5,65],[2.0,0.25,67],[2.25,0.25,65],[2.5,0.5,64]]},{"h":"M","c":"C","p":"Charlie Parker","t":"Card Board","b":7,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,64],[1.0,1.5,64],[2.5,0.25,67],[2.75,0.25,65],[3.0,0.333,64],[3.333,0.333,65],[3.667,0.333,67]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Chasing the Bird","b":56,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.333,64],[1.333,0.333,67],[1.667,0.333,71],[2.0,0.5,72],[2.5,0.5,67]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Si Si","b":47,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.5,64],[1.5,0.25,67],[1.75,0.25,65],[2.0,0.5,64],[2.5,0.5,60],[3.0,0.5,57],[3.5,0.5,55]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Kim (No. 2)","b":33,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,62],[1.0,0.5,60],[1.5,0.5,59],[2.0,0.5,60],[2.5,0.5,64],[3.0,0.5,67]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Now's the Time (No. 1)","b":38,"g":["arpeggio","chromatic approach"],"n":[[0.0,1.0,60],[1.0,0.5,67],[1.5,0.5,65],[2.0,0.5,64],[2.5,0.5,60],[3.0,0.5,57],[3.5,0.5,55]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Buzzy","b":2,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,55],[0.5,0.5,64],[1.0,0.5,62],[1.5,0.5,60],[2.0,0.5,59],[2.5,0.5,60],[3.0,0.5,55]]},{"h":"M","c":"Eb7","p":"Kenny Dorham","t":"Blues in Be-Bop","b":11,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.25,64],[0.75,1.0,60],[1.75,0.25,65],[2.0,0.5,67],[2.5,0.25,65],[2.75,1.0,64]]},{"h":"M","c":"D7","p":"Kenny Dorham","t":"In 'n Out","b":32,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,67],[2.0,0.25,64],[2.25,0.25,65],[2.5,0.5,67]]},{"h":"M","c":"Bb7","p":"John Coltrane","t":"Bessie's Blues","b":21,"g":["arpeggio"],"n":[[0.0,0.333,67],[0.333,0.5,66],[0.833,0.667,65],[1.5,0.5,67],[2.0,0.5,64],[2.5,0.333,67],[2.833,0.833,72],[3.667,0.333,76]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Barbados","b":7,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,2.0,67],[3.0,1.0,67],[4.0,0.5,64],[4.5,0.5,65],[5.0,0.5,64],[5.5,0.5,67]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Now's the Time (No. 1)","b":60,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,62],[1.0,0.5,64],[1.5,0.5,65],[2.0,0.5,67],[2.5,0.5,65],[3.0,0.5,64],[3.5,0.5,67]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Barbados","b":35,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,60],[0.25,0.25,62],[0.5,0.25,64],[0.75,0.25,65],[1.0,0.25,67],[1.25,0.25,65],[1.5,0.25,64],[1.75,0.25,67],[2.0,0.25,62],[2.25,0.25,64]]},{"h":"m","c":"Cm","p":"Wayne Shorter","t":"Footprints","b":5,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,72],[0.5,0.5,67],[1.0,0.5,72],[1.5,0.333,67],[1.833,0.167,71],[2.0,0.5,72],[2.5,0.5,67],[3.0,0.667,65],[3.667,0.333,67]]},{"h":"m","c":"Dm","p":"Jimmy Raney","t":"There Will Never Be Another You","b":10,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,62],[1.0,0.5,63],[1.5,0.5,65],[2.0,0.5,67],[2.5,0.5,63]]},{"h":"M","c":"F7","p":"Charlie Parker","t":"Billie's Bounce","b":44,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.5,64],[1.0,0.5,65],[1.5,0.5,67],[2.0,1.5,64]]},{"h":"M","c":"F","p":"Charlie Parker","t":"Au Privave (No. 2)","b":39,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,64],[1.0,0.5,65],[1.5,0.25,67],[1.75,0.25,65],[2.0,0.5,64]]},{"h":"M","c":"Ab7","p":"Charlie Parker","t":"Chi Chi","b":28,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,64],[1.0,0.333,65],[1.333,0.333,67],[1.667,0.333,65],[2.0,0.5,64]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Shaw 'Nuff","b":2,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.5,64],[2.5,0.5,67]]},{"h":"m","c":"Em","p":"Charlie Parker","t":"Yardbird Suite","b":19,"g":["arpeggio","scale with passing tone"],"n":[[0.0,0.5,63],[0.5,0.5,65],[1.0,0.5,63],[1.5,0.5,62],[2.0,0.5,60],[2.5,0.5,55]]},{"h":"M","c":"Bb7","p":"Charlie Parker","t":"Buzzy","b":7,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,62],[1.0,0.5,60],[1.5,0.5,59],[2.0,0.5,60],[2.5,0.5,55]]},{"h":"M","c":"Bb7","p":"Dexter Gordon","t":"Society Red","b":82,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.5,69],[0.75,0.5,67],[1.25,0.333,64],[1.583,0.333,65],[1.917,0.167,64]]},{"h":"M","c":"Bb7","p":"Woody Shaw","t":"Steve's Blues","b":49,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.333,64],[0.333,0.333,67],[0.667,0.25,65],[0.917,0.25,64],[1.167,1.5,62],[2.667,0.333,64]]},{"h":"M","c":"C","p":"Sonny Stitt","t":"It Could Happen to You","b":29,"g":["chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,55],[1.0,0.5,54],[1.5,0.5,55],[2.0,1.0,67],[3.0,0.5,67],[3.5,1.5,67]]},{"h":"M","c":"F7","p":"J.J. Johnson","t":"Blues in the Closet","b":133,"g":["chromatic approach"],"n":[[0.0,0.333,60],[0.333,1.0,60],[1.333,0.333,58],[1.667,0.333,59],[2.0,0.333,60],[2.333,2.0,60]]},{"h":"m","c":"Dm","p":"Charlie Parker","t":"Cherokee","b":28,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,63],[0.5,0.5,60],[1.0,0.5,62],[1.5,0.5,60],[2.0,0.5,65],[2.5,0.5,64],[3.0,0.5,63]]},{"h":"M","c":"Eb7","p":"Charlie Parker","t":"Mohawk (No. 1)","b":63,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,62],[2.0,0.5,62],[2.5,0.5,60],[3.0,0.5,55]]},{"h":"M","c":"C","p":"Charlie Parker","t":"Back Home Blues","b":38,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,65],[1.0,0.5,64],[1.5,0.5,60],[2.0,0.5,64],[2.5,0.5,65],[3.0,0.5,64]]},{"h":"M","c":"Bb7","p":"Dexter Gordon","t":"Stanley the Steamer","b":64,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,62],[1.0,0.5,64],[1.5,0.417,65],[1.917,0.667,67],[2.583,0.417,64],[3.0,0.25,65],[3.25,0.25,67],[3.5,0.5,65],[4.0,0.5,64]]},{"h":"M","c":"Eb","p":"Roy Hargrove","t":"Strasbourg / St. Denis","b":31,"g":["scale with passing tone"],"n":[[0.0,0.25,67],[0.25,0.25,67],[0.5,0.25,69],[0.75,0.125,67],[0.875,0.125,66],[1.0,0.5,64]]},{"h":"M","c":"Bb","p":"Wynton Marsalis","t":"Cherokee II","b":74,"g":["chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.667,66],[1.167,0.333,67],[1.833,0.667,67],[2.5,0.5,69],[3.0,0.5,67]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Back Home Blues","b":21,"g":["chromatic approach"],"n":[[0.0,0.25,60],[0.25,0.25,62],[0.5,0.25,60],[0.75,0.25,59],[1.0,0.25,60],[1.25,0.25,63],[1.5,0.25,64]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Anthropology","b":74,"g":["chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,65],[2.0,0.5,64],[2.5,0.5,54],[3.0,0.5,55]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Ko Ko","b":12,"g":["chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.25,65],[0.5,0.25,67],[0.75,0.5,69],[1.25,0.5,67],[1.75,0.5,66],[2.25,0.5,67]]},{"h":"M","c":"Ab","p":"Charlie Parker","t":"Donna Lee","b":11,"g":["chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.5,64],[1.0,0.5,65],[1.5,0.5,66],[2.0,0.5,67],[2.5,0.5,65],[3.0,0.5,64]]},{"h":"m","c":"Cm","p":"Charlie Parker","t":"Laird Baird (head)","b":9,"g":["chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.5,63],[2.5,0.5,65],[3.0,0.5,66],[3.5,0.5,67]]},{"h":"m","c":"Gm","p":"Milt Jackson","t":"Bag's Groove","b":10,"g":["chromatic approach"],"n":[[0.0,0.667,63],[0.667,0.333,59],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.5,63],[2.5,0.5,65],[3.0,0.333,66],[3.333,0.333,67]]},{"h":"M","c":"Ab7","p":"Charlie Parker","t":"Chi Chi","b":68,"g":["chromatic approach"],"n":[[0.0,0.5,52],[0.5,0.333,59],[0.833,0.333,60],[1.167,0.333,61],[1.5,0.5,62],[2.0,0.5,60],[2.5,0.25,59],[2.75,0.25,60],[3.0,0.25,62],[3.25,0.25,64]]},{"h":"M","c":"D7","p":"Charlie Parker","t":"Laird Baird","b":3,"g":["chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.25,71],[0.75,0.25,72],[1.0,0.25,70],[1.25,0.25,71],[1.5,1.5,72]]},{"h":"M","c":"Ab7","p":"Charlie Parker","t":"Relaxing with Lee","b":25,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.25,64],[0.25,0.25,65],[0.5,0.25,67],[0.75,0.25,64],[1.0,0.25,65],[1.25,0.25,64]]},{"h":"M","c":"Bb","p":"Charlie Parker","t":"Celerity","b":57,"g":["arpeggio","chromatic approach"],"n":[[0.0,0.5,64],[0.5,0.333,65],[0.833,0.333,64],[1.167,0.333,60],[1.5,1.5,65],[3.0,0.5,64]]},{"h":"M","c":"F","p":"Roy Hargrove","t":"Strasbourg / St. Denis","b":79,"g":["chromatic approach"],"n":[[0.0,0.25,67],[0.25,0.25,65],[0.5,0.25,64],[0.75,0.25,65],[1.0,0.25,66],[1.25,0.25,67]]},{"h":"m","c":"Fm","p":"Charlie Parker","t":"Quasimodo (head)","b":5,"g":["chromatic approach"],"n":[[0.0,1.0,60],[1.5,0.5,62],[2.0,0.5,63],[2.5,0.5,65],[3.0,0.5,66],[3.5,0.5,67]]},{"h":"M","c":"C7","p":"Charlie Parker","t":"Visa","b":32,"g":["chromatic approach"],"n":[[0.0,1.5,64],[1.5,0.25,65],[1.75,0.25,66],[2.0,0.5,67],[2.5,0.5,65],[3.0,0.5,64]]},{"h":"m","c":"Cm","p":"Bob Berg","t":"Blues for Bela","b":94,"g":["chromatic approach"],"n":[[0.0,0.167,72],[0.167,0.333,71],[0.5,0.333,72],[0.833,0.333,69],[1.167,0.5,68],[1.667,0.5,67]]},{"h":"M","c":"F7","p":"Branford Marsalis","t":"Housed from Edward (take 2)","b":20,"g":["chromatic approach"],"n":[[0.0,1.0,64],[1.0,0.5,65],[1.5,0.75,66],[2.25,0.5,67],[2.75,0.25,69],[3.0,1.0,67]]},{"h":"M","c":"Eb7","p":"Pat Metheny","t":"Cabin Fever","b":47,"g":["chromatic approach"],"n":[[0.0,0.333,55],[0.333,0.333,58],[0.667,0.333,60],[1.0,1.25,62],[2.25,0.5,63],[2.75,0.25,64]]},{"h":"M","c":"F7","p":"Steve Coleman","t":"Take the Coltrane","b":48,"g":["chromatic approach"],"n":[[0.0,0.5,67],[0.5,0.5,65],[1.0,0.5,65],[1.5,0.5,64],[2.0,0.5,63],[2.5,0.25,64]]},{"h":"M","c":"Bb7","p":"J.J. Johnson","t":"Blues in the Closet","b":132,"g":["chromatic approach"],"n":[[0.0,0.333,67],[0.333,1.0,67],[1.333,0.333,65],[1.667,0.333,66],[2.0,0.333,67],[2.333,1.0,67]]},{"h":"M","c":"Eb7","p":"Sonny Stitt","t":"Blues in Be-Bop","b":19,"g":["chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.25,62],[0.75,0.5,64],[1.25,0.5,65],[1.75,0.5,67],[2.25,0.5,65],[2.75,0.5,64]]},{"h":"M","c":"C7","p":"Sonny Stitt","t":"I Got Rhythm","b":45,"g":["scale with passing tone"],"n":[[0.0,0.5,64],[0.5,0.5,62],[1.0,0.5,60],[1.5,0.5,59],[2.0,0.5,58],[2.5,0.5,60],[3.0,0.5,62],[3.5,0.5,64]]},{"h":"M","c":"Bb7","p":"Wynton Marsalis","t":"Cherokee II","b":70,"g":[],"n":[[0.0,0.5,67],[0.5,0.333,66],[0.833,0.333,64],[1.167,0.583,62],[1.75,0.75,60],[2.5,0.5,62],[3.0,0.5,64]]},{"h":"m","c":"Gm","p":"Steve Turre","t":"Steve's Blues","b":46,"g":[],"n":[[0.0,0.333,60],[0.333,1.333,60],[1.667,0.333,60],[2.0,0.333,61],[2.333,0.333,63],[2.667,0.333,65],[3.0,0.333,67]]},{"h":"m","c":"Gm","p":"Roy Hargrove","t":"But Not for Me","b":17,"g":["chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.5,59],[1.0,0.5,60],[1.5,0.5,62],[2.0,0.5,63],[2.5,0.5,62],[3.0,0.5,63]]},{"h":"m","c":"Bbm","p":"Chet Baker","t":"But Not for Me","b":12,"g":["chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.25,62],[0.75,0.25,60],[1.0,0.5,59],[1.5,0.5,60],[2.0,0.5,62],[2.5,0.5,63]]},{"h":"m","c":"Dbm","p":"Wynton Marsalis","t":"Cherokee II","b":35,"g":["chromatic approach"],"n":[[0.0,0.5,60],[0.5,0.75,59],[1.25,0.5,60],[1.75,0.5,65],[2.25,0.5,67],[2.75,0.5,65],[3.25,0.5,67]]}];
+const $ = id => document.getElementById(id);
+const DEG = ['1','b2','2','b3','3','4','#4','5','b6','6','b7','7'];
+const DK = {'#FAC775':'#633806','#5DCAA5':'#04342C','#EF9F27':'#412402','#F0997B':'#4A1B0C','#E24B4A':'#501313','#ED93B1':'#4B1528','#AFA9EC':'#26215C'};
+function infoFor(pc, mode){
+  const hs = mode === 'M' ? [0,4,7] : [0,3,7];
+  if (hs.includes(pc)) return [0,'#FAC775'];
+  if (pc===2) return [1,'#5DCAA5']; if (pc===9) return [1,'#EF9F27']; if (pc===5) return [2,'#F0997B'];
+  if (pc===11) return [2.4,'#E24B4A']; if (pc===10) return [1.6,'#ED93B1']; return [3,'#AFA9EC'];
+}
+
+/* ---------- list + filters ---------- */
+let homeF = 'all', playerF = 'all', view = [];
+const players = [...new Set(LICKS.map(l => l.p))].sort();
+$('player').innerHTML = '<option value="all">All players</option>' + players.map(p => `<option>${p}</option>`).join('');
+function rebuild(){
+  // only the solos ticked in the Solos list (none ticked = all solos)
+  view = LICKS.map((l,i)=>i).filter(i => (homeF==='all'||LICKS[i].h===homeF) && (playerF==='all'||LICKS[i].p===playerF) && (!picked.size || picked.has(soloKey(LICKS[i]))));
+  solosLabel();
+  $('sel').innerHTML = view.map((i,k) => `<option value="${i}">${k+1}. ${LICKS[i].p} — ${LICKS[i].t}</option>`).join('');
+  try { const s = localStorage.getItem('glow:sel'); if (s && view.includes(+s)) $('sel').value = s; } catch(e){}
+  showMeta();
+}
+document.querySelectorAll('.chip[data-h]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.chip[data-h]').forEach(x => x.setAttribute('aria-pressed', x===b));
+  homeF = b.dataset.h; stopAll(); rebuild(); if ($('allk').checked) { listening = true; play(); }
+});
+/* ---------- Solos picker: one checkbox per solo (tune — player) ---------- */
+function soloKey(l){ return l.t + ' — ' + l.p; }
+const SOLOS = (() => { const m = new Map(); LICKS.forEach(l => { const k = soloKey(l); m.set(k, (m.get(k)||0) + 1); }); return [...m.entries()].sort((a,b) => a[0].localeCompare(b[0])); })();
+let picked = new Set();
+try { const s = JSON.parse(localStorage.getItem('glow:solos') || '[]'); picked = new Set(s.filter(k => SOLOS.some(x => x[0] === k))); } catch(e){}
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderSolos(){
+  const w = ($('q').value || '').toLowerCase().trim();
+  const list = SOLOS.filter(([k]) => !w || k.toLowerCase().includes(w));
+  // ticked solos first, so you can see your choice
+  list.sort((a,b) => (picked.has(b[0]) - picked.has(a[0])) || a[0].localeCompare(b[0]));
+  $('solosList').innerHTML = list.map(([k,n]) => `<label style="display:flex;gap:9px;align-items:center;padding:6px 4px;border-radius:6px;cursor:pointer;color:${picked.has(k)?'var(--home)':'var(--ink)'}"><input type="checkbox" data-k="${esc(k)}" ${picked.has(k)?'checked':''}><span style="flex:1">${esc(k)}</span><span style="color:var(--dim)">${n}</span></label>`).join('') || '<div style="color:var(--mute);padding:6px">No solos match.</div>';
+}
+function solosLabel(){
+  const n = view.length, arr = [...picked];
+  $('solosBtn').textContent = 'Solos: ' + (arr.length ? arr[0] + (arr.length > 1 ? ' +' + (arr.length-1) : '') : 'all') + ' · ' + n + ' licks ▾';
+}
+function solosChanged(){
+  try { localStorage.setItem('glow:solos', JSON.stringify([...picked])); } catch(e){}
+  const was = listening || $('pl').classList.contains('on');
+  stopAll(); rebuild();
+  if (was && view.length) { listening = $('allk').checked; play(); }
+}
+$('solosList').addEventListener('change', e => {
+  const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+  if (e.target.checked) picked.add(k); else picked.delete(k);
+  e.target.closest('label').style.color = e.target.checked ? 'var(--home)' : 'var(--ink)';
+  solosChanged();
+});
+$('solosBtn').onclick = () => { const p = $('solosPanel'), open = p.style.display === 'none'; p.style.display = open ? 'block' : 'none'; if (open) renderSolos(); };
+$('solosDone').onclick = () => { $('solosPanel').style.display = 'none'; };
+$('solosClear').onclick = () => { picked.clear(); $('q').value = ''; renderSolos(); solosChanged(); };
+$('q').oninput = renderSolos;
+$('player').onchange = () => { playerF = $('player').value; stopAll(); rebuild(); if ($('allk').checked) { listening = true; play(); } };
+$('sel').onchange = () => { stopAll(); keyIdx = 0; curKey = 0; if ($('keyNow')) $('keyNow').textContent = 'Key: C'; showMeta(); if ($('allk').checked) { listening = true; play(); } try{localStorage.setItem('glow:sel',$('sel').value)}catch(e){} };
+function cur(){ return LICKS[+$('sel').value]; }
+function showMeta(){
+  const l = cur(); if (!l) { $('meta').textContent = 'No licks for this filter.'; return; }
+  setHome(l.h);
+  $('meta').innerHTML = `${l.p} · ${l.t}<small>Bar ${l.b}, over ${l.c} in the original · home = C ${l.h==='M'?'major':'minor'} triad · ${l.g.join(', ')}</small>`;
+}
+$('tp').oninput = () => { $('tpo').textContent = $('tp').value + ' bpm'; try{localStorage.setItem('glow:tp',$('tp').value)}catch(e){} };
+try { const t = localStorage.getItem('glow:tp'); if (t) { $('tp').value = t; $('tpo').textContent = t + ' bpm'; } } catch(e){}
+
+// where each lick starts in its bar (beats from the bar line), so clicks land on the real beats
+const PH = [0.556,0.25,2.0,4.0,3.667,1.5,4.0,0.0,2.0,2.5,0.5,3.25,0.4,0.0,0.833,0.0,4.0,0.0,1.0,1.5,3.107,0.5,4.0,4.0,0.5,0.0,3.5,0.0,0.0,4.0,0.5,0.167,4.0,0.25,1.0,0.0,0.0,0.75,0.5,0.5,1.0,1.0,2.0,0.2,0.25,0.0,1.0,3.0,0.0,0.0,1.0,0.0,4.0,0.0,0.5,0.0,1.0,0.2,0.5,0.0,0.0,0.0,3.0,0.0,0.5,0.333,2.0,4.0,0.0,0.0,0.75,4.0,0.0,0.0,4.0,0.25,4.0,1.0,1.0,0.167,0.5,3.0,1.75,4.0,0.167,0.5,3.357,4.0,4.0,0.0,1.0,1.0,1.667,1.0,0.5,0.0,3.0,0.5,0.0,4.0,1.0,0.5,1.0,4.0,1.0,0.333,0.0,1.667,0.0,0.25,1.0,4.0,0.667,1.0,2.333,0.5,0.0,0.25,1.75,0.2,4.0,1.5,0.0,0.0,4.0,0.25,0.0,1.4,0.0,1.0,1.167,1.0,2.0,0.5,0.333,0.25,0.5,1.0,2.0,0.5,0.0,0.75,0.5,0.0,0.5,4.0,1.0,2.5,4.0,0.5,0.0,0.0,0.5,1.833,3.75,0.0,1.0,0.5,0.0,2.5,0.25,0.5,1.0,4.0,0.25,1.5,2.0,2.0,0.5,4.0,0.4,3.5,4.0,0.0,0.667,1.0,4.0,0.0,1.75,1.0,4.0,1.0,2.0,0.25,1.25,4.0,1.5,0.5,0.0,0.0,0.5,0.0,4.0,0.5,4.0,4.0,0.0,0.5,0.0,3.5,0.25,1.0,4.0,1.5,0.0,0.0,0.0,0.0,0.5,1.0,1.0,0.0,0.0,0.0,1.75,0.333,0.0,0.667,4.0,0.5,0.0,2.25,0.5,4.0,1.75,0.5,1.25,0.0,0.5,0.0,0.5,2.0,1.0,0.5,2.25,1.5,0.0,1.833,0.0,4.0,1.0,0.667,0.25,0.0,0.5,0.667,0.0,0.0,0.25];
+// woodblock-style click: higher on beat 1 of the bar
+// woodblock: a short noise tap through two body resonances plus a quick pitched knock
+let noiseBuf = null;
+function wood(t, accent){
+  if (!noiseBuf) { noiseBuf = actx.createBuffer(1, Math.floor(actx.sampleRate*.05), actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, 4); }
+  const vol = +$('mv').value/100 * (accent ? 1 : .7) + .0001, base = accent ? 1050 : 820;
+  const out = actx.createGain(); out.gain.value = vol; out.connect(actx.destination);
+  const n = actx.createBufferSource(); n.buffer = noiseBuf;
+  [[base, 14, .9], [base*2.7, 10, .35]].forEach(([f, q, a]) => { const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; const g = actx.createGain(); g.gain.value = a*2.2; n.connect(bp); bp.connect(g); g.connect(out); });
+  const o = actx.createOscillator(), og = actx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(base*1.08, t); o.frequency.exponentialRampToValueAtTime(base, t + .02);
+  og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.32, t + .001); og.gain.exponentialRampToValueAtTime(.0001, t + .05);
+  o.connect(og); og.connect(out);
+  n.start(t); o.start(t); o.stop(t + .07);
+  if (!grooving) { live.push({src:o, g:out}); live.push({src:n, g:out}); }
+}
+function click(t, accent, sub = false){
+  if (!sub) return wood(t, accent);
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = sub ? 'sine' : 'square'; o.frequency.setValueAtTime(sub ? 2200 : accent ? 1500 : 1000, t);
+  const v = +$('mv').value/100 * (sub ? .12 : accent ? .55 : .38) + .0001;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .001); g.gain.exponentialRampToValueAtTime(.0001, t + (sub ? .03 : .045));
+  o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + .06);
+  if (!grooving) live.push({src:o, g});
+}
+// Groove: in Auto and All 12 keys the metronome never stops; each lick drops onto the running beat at its own place in the bar
+let groove = null, grooving = false;
+const curSpb = () => 60/(+$('tp').value)*slow;
+function grooveOn(startIdx = 0, startTime = null){
+  if (groove || !actx) return;
+  // the groove is anchored to the first lick: its beat can lie slightly in the past so the first NOTE sounds at once
+  groove = {next: startTime == null ? actx.currentTime + .1 : startTime, idx: startIdx};
+  groove.iv = setInterval(grooveTick, 25); grooveTick();
+}
+function grooveOff(){ if (groove) { clearInterval(groove.iv); groove = null; } }
+function grooveTick(){
+  if (!groove) return;
+  if (!listening) { grooveOff(); return; }
+  const spb = curSpb(); grooving = true;
+  // if the tab slept, skip missed beats instead of firing them all at once
+  if (groove.next < actx.currentTime - .05) { const miss = Math.ceil((actx.currentTime - groove.next) / spb); groove.next += miss*spb; groove.idx += miss; }
+  while (groove.next < actx.currentTime + .2) {
+    if ($('met').checked) {
+      click(groove.next, groove.idx % 4 === 0);
+      if ($('trip').checked) { click(groove.next + spb/3, false, true); click(groove.next + 2*spb/3, false, true); }
+    }
+    groove.next += spb; groove.idx++;
+  }
+  grooving = false;
+}
+try { $('met').checked = localStorage.getItem('glow:met') === '1'; const v = localStorage.getItem('glow:mv'); if (v) $('mv').value = v; } catch(e){}
+try { if (localStorage.getItem('glow:trip') === '0') $('trip').checked = false; } catch(e){}
+$('trip').onchange = () => { try{localStorage.setItem('glow:trip', $('trip').checked ? '1' : '0')}catch(e){} };
+$('met').onchange = () => { try{localStorage.setItem('glow:met', $('met').checked ? '1' : '0')}catch(e){} };
+$('mv').oninput = () => { try{localStorage.setItem('glow:mv', $('mv').value)}catch(e){} };
+let slow = 1;
+try { const s = +localStorage.getItem('glow:slow'); if (s) slow = s; } catch(e){}
+document.querySelectorAll('.chip[data-sl]').forEach(b => {
+  b.setAttribute('aria-pressed', +b.dataset.sl === slow);
+  b.onclick = () => {
+    slow = +b.dataset.sl;
+    document.querySelectorAll('.chip[data-sl]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    try { localStorage.setItem('glow:slow', slow); } catch(e){}
+  };
+});
+
+/* ---------- audio (same piano as the other Music Lab apps) ---------- */
+let actx, master, live = [], timers = [], token = 0, loadP = null, listening = false, reps = 0, keyIdx = 0, curKey = 0;
+const KEYS = [0,5,10,3,8,1,6,11,4,9,2,7], KN = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number).sort((a,b)=>a-b), buffers = {};
+const b64 = url => { const bin = atob(url.slice(url.indexOf(',')+1)), u8 = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); return u8.buffer; };
+function audio(){
+  if (!actx){
+    actx = new (window.AudioContext||window.webkitAudioContext)({latencyHint:'playback'});
+    const comp = actx.createDynamicsCompressor(); comp.threshold.value=-8; comp.knee.value=6; comp.ratio.value=12; comp.attack.value=.003; comp.release.value=.25;
+    master = actx.createGain(); master.gain.value=.9; master.connect(comp); comp.connect(actx.destination);
+    droneBus = actx.createGain(); droneBus.gain.value = +$('dv').value/100; droneBus.connect(master);
+  }
+  if (actx.state==='suspended') actx.resume();
+  if (!loadP) loadP = Promise.all(Object.entries(PIANO).map(([m,url]) => new Promise(res => actx.decodeAudioData(b64(url), b => { buffers[m]=b; res(); }, () => res()))));
+  if (!droneLoad) droneLoad = new Promise(res => actx.decodeAudioData(b64(DRONE_URL), b => { droneBuf = seamless(b); res(); }, () => res()));
+  return Promise.all([loadP, droneLoad]);
+}
+let droneBuf = null, droneLoad = null, drone = null, droneBus = null;
+function seamless(b){
+  const sr = b.sampleRate, skip = Math.floor(sr*.03), X = Math.floor(sr*.4), L = b.length-skip-X;
+  const out = actx.createBuffer(b.numberOfChannels, L, sr);
+  for (let c=0;c<b.numberOfChannels;c++){
+    const src = b.getChannelData(c), dst = out.getChannelData(c);
+    for (let i=0;i<L;i++) dst[i] = src[skip+i];
+    for (let i=0;i<X;i++){ const f = i/X; dst[i] = src[skip+i]*Math.sin(f*Math.PI/2) + src[skip+L+i]*Math.cos(f*Math.PI/2); }
+  }
+  return out;
+}
+// the same tanpura-style C drone as the other Music Lab apps; it keeps sounding across licks
+// one drone per key: when the key changes, the old drone fades out as the new one fades in
+function droneOn(k = 0){
+  if (!droneBuf || !actx) return;
+  if (drone && drone.k === k) return;
+  const t = actx.currentTime, old = drone;
+  const g = actx.createGain(), src = actx.createBufferSource();
+  src.buffer = droneBuf; src.loop = true; src.playbackRate.value = Math.pow(2, (k>5?k-12:k)/12);
+  src.connect(g); g.connect(droneBus);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t+1.2);
+  src.start(t, Math.random()*droneBuf.duration*.8);
+  if (old) { try { old.g.gain.cancelScheduledValues(t); old.g.gain.setValueAtTime(old.g.gain.value, t); old.g.gain.setTargetAtTime(0, t, .35); old.src.stop(t+2.2); } catch(e){} }
+  drone = {g, src, k};
+}
+function droneOff(){
+  if (!drone) return; const t = actx.currentTime, {g, src} = drone; drone = null;
+  try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t+1.2); src.stop(t+1.3); } catch(e){}
+}
+function piano(m, t, dur, vel=.9, bus=null){
+  const s = SAMPLE_KEYS.reduce((b,k)=>Math.abs(k-m)<Math.abs(b-m)?k:b, SAMPLE_KEYS[0]), buf = buffers[s]; if (!buf) return;
+  const src = actx.createBufferSource(); src.buffer = buf; const rate = Math.pow(2,(m-s)/12); src.playbackRate.value = rate;
+  const g = actx.createGain(), end = Math.min(t+dur*1.1+.1, t+buf.duration/rate);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vel,t+.004);
+  g.gain.setValueAtTime(vel,Math.max(t+.01,end-.15)); g.gain.linearRampToValueAtTime(.0001,end);
+  src.connect(g); g.connect(bus || master); src.start(t); src.stop(end+.02);
+  live.push({src,g}); src.onended = () => { live = live.filter(x=>x.src!==src); };
+}
+function stopAll(){
+  token++; timers.forEach(clearTimeout); timers = []; listening = false; $('listen').classList.remove('on'); $('pl').classList.remove('on');
+  if (actx){ const now = actx.currentTime; live.forEach(({src,g})=>{ try{ g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value,now); g.gain.linearRampToValueAtTime(0,now+.03); src.stop(now+.04);}catch(e){} }); live = []; }
+}
+async function play(){
+  const keepListen = listening; stopAll(); listening = keepListen; if (listening && !$('allk').checked) $('listen').classList.add('on');
+  await audio(); const my = token, l = cur(); if (!l) return;
+  $('pl').classList.add('on');
+  const spb = 60/(+$('tp').value)*slow; let t0 = actx.currentTime + .1, end = 0;
+  // soft root under the lick so home is felt, not only seen
+  const sh = curKey>6 ? curKey-12 : curKey; showKey();
+  // the lick starts at its real place in the beat; clicks fall on whole beats from t0
+  const pos = PH[+$('sel').value] || 0, ph = pos % 1, bb = Math.floor(pos) % 4;
+  if (listening) {
+    if (!groove) {
+      // starting: put the beat where the lick's first note sounds right now
+      t0 = actx.currentTime + .1 - ph*spb;
+      grooveOn(bb, t0);
+    } else {
+      // running: come in on the very next beat (never wait a whole bar), and count that beat as the lick's place in the bar
+      let tb = groove.next, ib = groove.idx;
+      while (tb + ph*spb < actx.currentTime + .08) { tb += spb; ib++; }
+      groove.idx += ((bb - ib % 4) % 4 + 4) % 4;
+      t0 = tb;
+    }
+  } else grooveOff();
+  const lead = t0 - actx.currentTime;
+  if ($('met').checked && !listening) {
+    const lenB = Math.ceil(Math.max(...l.n.map(x => x[0]+x[1])) + ph + 1);
+    for (let j = 0; j < lenB; j++) {
+      click(t0 + j*spb, (j + bb) % 4 === 0);
+      if ($('trip').checked) { click(t0 + (j+1/3)*spb, false, true); click(t0 + (j+2/3)*spb, false, true); }
+    }
+  }
+  if (bg === 'drone') droneOn(curKey);
+  else {
+    droneOff();
+    if (bg === 'chord') {
+      // the home chord, soft, struck again every two beats under the whole lick (7th chord when the original was a dominant)
+      const len = Math.max(...l.n.map(x => x[0]+x[1])) + 1;
+      const up = l.h === 'm' ? [51,55,60] : /7$/.test(l.c) ? [52,55,58] : [52,55,60];
+      for (let b = 0; b < len; b += 2) {
+        const tt = t0 + b*spb, dd = Math.min(2, len-b)*spb;
+        piano(36+sh, tt, dd, .5, droneBus);
+        up.forEach((m, i) => piano(m+sh, tt+.012*(i+1), dd, .32, droneBus));
+      }
+    }
+  }
+  l.n.forEach(([t,d,m]) => {
+    end = Math.max(end, t+d);
+    piano(m+sh, t0 + (t+ph)*spb, d*spb);
+    timers.push(setTimeout(() => { if (my===token) hit(m, d*spb); }, (lead + (t+ph)*spb)*1000));
+  });
+  timers.push(setTimeout(() => {
+    if (my!==token) return;
+    $('pl').classList.remove('on');
+    if ($('loop').checked) play();
+    else if (listening) {
+      if ($('allk').checked) { if (++keyIdx < 12) { curKey = KEYS[keyIdx]; play(); } else next(); }
+      else if (++reps < 2) play(); else next();
+    }
+  }, (lead + (end+ph+(listening ? .25 : 1.5))*spb)*1000));
+}
+function next(){
+  reps = 0; keyIdx = 0; curKey = 0;
+  const k = view.indexOf(+$('sel').value); if (!view.length) return;
+  $('sel').value = view[(k+1)%view.length]; showMeta(); try{localStorage.setItem('glow:sel',$('sel').value)}catch(e){}
+  play();
+}
+// Play turns into Pause while anything is playing (single lick, Auto ×2 or All 12 keys)
+$('pl').onclick = () => {
+  if ($('pl').classList.contains('on') || listening) { stopAll(); droneOff(); showKey(); return; }
+  // with All 12 keys switched on, Play starts the all-keys run; otherwise it plays the one lick
+  listening = $('allk').checked; if (listening) { reps = 0; keyIdx = 0; curKey = 0; }
+  play();
+};
+new MutationObserver(() => { $('pl').textContent = $('pl').classList.contains('on') ? '❚❚ Pause' : '▶ Play'; }).observe($('pl'), {attributes: true, attributeFilter: ['class']});
+$('nx').onclick = () => { next(); };
+$('listen').onclick = () => { if (listening && !$('allk').checked) { stopAll(); return; } $('allk').checked = false; try{localStorage.setItem('glow:allk','0')}catch(e){} listening = true; reps = 0; keyIdx = 0; curKey = 0; play(); };
+function showKey(){ $('keyNow').textContent = 'Key: ' + KN[curKey] + ($('allk').checked && listening ? '  ·  ' + (keyIdx+1) + ' of 12' : ''); }
+$('dv').oninput = () => { if (droneBus) droneBus.gain.setTargetAtTime(+$('dv').value/100, actx.currentTime, .05); try{localStorage.setItem('glow:dv',$('dv').value)}catch(e){} };
+try { const v = localStorage.getItem('glow:dv'); if (v) $('dv').value = v; } catch(e){}
+// All 12 keys: switching it on starts playing right away and keeps going (every key, then the next lick) until switched off
+$('allk').onchange = () => {
+  try { localStorage.setItem('glow:allk', $('allk').checked ? '1' : '0'); } catch(e){}
+  if ($('allk').checked) { listening = true; reps = 0; keyIdx = 0; curKey = 0; play(); }
+  else { stopAll(); showKey(); }
+};
+// remembered between sessions (browsers need a tap before sound, so press Play to start)
+try { if (localStorage.getItem('glow:allk') === '1') $('allk').checked = true; } catch(e){}
+$('st').onclick = () => { stopAll(); droneOff(); showKey(); };
+// Under the lick: Chord (whole home triad) → Drone (root only) → Silence (hold home inside)
+let bg = 'drone';
+try { const v = localStorage.getItem('glow:bg'); if (v) bg = v; } catch(e){}
+document.querySelectorAll('.chip[data-bg]').forEach(b => {
+  b.setAttribute('aria-pressed', b.dataset.bg === bg);
+  b.onclick = async () => {
+    bg = b.dataset.bg;
+    document.querySelectorAll('.chip[data-bg]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    try { localStorage.setItem('glow:bg', bg); } catch(e){}
+    if (bg === 'drone') { if ($('pl').classList.contains('on') || listening) { await audio(); droneOn(curKey); } }
+    else droneOff();
+  };
+});
+
+/* ---------- picture ---------- */
+const cv = $('cv'), ctx = cv.getContext('2d');
+let W, H, dpr = window.devicePixelRatio||1;
+let S = 1;  // circle scale: bigger in full screen
+function size(){ W = cv.clientWidth; H = cv.clientHeight; cv.width = W*dpr; cv.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  S = document.body.classList.contains('focus') ? Math.max(1, Math.min(2.4, H/430, W/240)) : 1; }
+size(); addEventListener('resize', size);
+// Full screen: only the circles. Tap the picture or press Esc to come back.
+let hintUntil = 0;
+const inFocus = () => document.body.classList.contains('focus');
+function setFocus(on){
+  if (on === inFocus()) return;
+  document.body.classList.toggle('focus', on);
+  aways = []; threads = []; lastAway = null;
+  if (on) {
+    hintUntil = performance.now() + 2500;
+    const st = $('stage'), rq = st.requestFullscreen || st.webkitRequestFullscreen;
+    try { const p = rq && rq.call(st); if (p && p.catch) p.catch(() => {}); } catch(e){}
+  } else {
+    try { if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch(e){}
+  }
+  requestAnimationFrame(size); setTimeout(size, 300);
+}
+$('fs').onclick = () => setFocus(true);
+// In full screen: ← → (or swipe left/right) change lick, ↑ ↓ (or swipe up/down) change tempo, tap or Esc exits
+let flashTxt = '', flashUntil = 0;
+function flash(t){ flashTxt = t; flashUntil = performance.now() + 1600; }
+function step(dir){
+  if (!view.length) return;
+  const k = view.indexOf(+$('sel').value);
+  reps = 0; keyIdx = 0; curKey = 0;
+  $('sel').value = view[(k + dir + view.length) % view.length]; showMeta();
+  try { localStorage.setItem('glow:sel', $('sel').value); } catch(e){}
+  if ($('allk').checked) listening = true;
+  const l = cur(); flash((view.indexOf(+$('sel').value)+1) + ' of ' + view.length + ' · ' + l.p + ' — ' + l.t);
+  play();
+}
+function speed(d){
+  const v = Math.max(40, Math.min(240, +$('tp').value + d));
+  $('tp').value = v; $('tp').oninput();
+  flash(v + ' bpm' + (slow > 1 ? ' · slowed ÷' + slow : ''));
+}
+let sx = 0, sy = 0;
+cv.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; });
+cv.addEventListener('pointerup', e => {
+  if (!inFocus()) return;
+  const dx = e.clientX - sx, dy = e.clientY - sy;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) {
+    const r = cv.getBoundingClientRect();
+    if (e.clientX > r.right - 80 && e.clientY < r.top + 80) { favToggle(); return; }   // the star in the corner
+    setFocus(false); return;
+  }
+  if (Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1); else speed(dy < 0 ? 5 : -5);
+});
+addEventListener('keydown', e => {
+  // arrows work everywhere, except while typing in the search box or using a slider or menu
+  const tg = e.target, busy = tg && (tg.tagName === 'SELECT' || tg.tagName === 'TEXTAREA' || (tg.tagName === 'INPUT' && tg.type !== 'checkbox'));
+  if (busy || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { if (inFocus()) setFocus(false); }
+  else if (e.key === ' ' || e.code === 'Space') {
+    // space = Play / Pause (and never clicks whatever button happens to have focus)
+    e.preventDefault(); if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    $('pl').click();
+  }
+  else if (e.key === 'f' || e.key === 's') { favToggle(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); speed(5); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); speed(-5); }
+});
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && inFocus()) setFocus(false); });
+let mode = 'M', HOME = [], homeB = [], homeMem = [], aways = [], threads = [], awayLevel = 0, lastAway = null, T = 0;
+function setHome(m){ if (m===mode && HOME.length) return; mode = m; HOME = m==='M'?[48,52,55,60,64,67,72,76,79]:[48,51,55,60,63,67,72,75,79]; homeB = HOME.map(()=>0); homeMem = HOME.map(()=>0); }
+const y = m => H-30-(m-46)/(82-46)*(H-60), cx = () => W/2;
+function hit(m, d){
+  const pc = ((m%12)+12)%12, [ten,col] = infoFor(pc, mode), lab = DEG[pc];
+  if (ten===0){
+    const hi = HOME.indexOf(m), k = hi>=0 ? hi : HOME.reduce((b,h,i)=>Math.abs(h-m)<Math.abs(HOME[b]-m)?i:b,0);
+    homeB[k] = 1; homeMem[k] = Math.min(1, homeMem[k]+.35);
+    if (lastAway && lastAway.life>0) threads.push({x1:lastAway.x,y1:lastAway.y,x2:cx(),y2:y(HOME[k]),a:1,c:lastAway.c});
+    awayLevel = Math.max(0, awayLevel-.5); lastAway = null;
+  } else {
+    const near = HOME.reduce((b,h)=>Math.abs(h-m)<Math.abs(b-m)?h:b, HOME[0]), side = near>m?-1:1;
+    const a = {x:cx()+side*(28+ten*4)*S, y:y(m), c:col, dk:DK[col], lab, ten, life:1, dur:d, t:0, seed:Math.random()*10};
+    aways.push(a); lastAway = a; awayLevel = Math.min(1, awayLevel+.08*ten);
+  }
+}
+const rgba = (h,a) => { const n = parseInt(h.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`; };
+function blobPath(x,yy,r,amp,speed,seed){
+  ctx.beginPath();
+  for (let i=0;i<=64;i++){
+    const th = i/64*Math.PI*2, t = T*speed;
+    const w = Math.sin(3*th+t+seed)*.5 + Math.sin(5*th-t*1.3+seed*2)*.3 + Math.sin(8*th+t*.7+seed*3)*.2;
+    const rr = r*(1+amp*w), px = x+Math.cos(th)*rr, py = yy+Math.sin(th)*rr;
+    i ? ctx.lineTo(px,py) : ctx.moveTo(px,py);
+  }
+  ctx.closePath();
+}
+function voice(x,yy,r,col,a,amp,speed,seed,lab,dk,labA){
+  const h = ctx.createRadialGradient(x,yy,r*.6,x,yy,r*1.9); h.addColorStop(0,rgba(col,a*.22)); h.addColorStop(1,rgba(col,0));
+  ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x,yy,r*1.9,0,7); ctx.fill();
+  [[1.18,.18,1.4],[1.06,.32,1.1],[.94,.85,1]].forEach(([s,al,am],j)=>{ blobPath(x,yy,r*s,amp*am,speed*(1+j*.15),seed+j*1.7); ctx.fillStyle = rgba(col,a*al); ctx.fill(); });
+  blobPath(x,yy,r*.55,amp*.6,speed*.8,seed+5); ctx.fillStyle = rgba('#FFF6E0',a*.25); ctx.fill();
+  if (lab && $('num').checked && labA>.02){
+    const jx = Math.sin(T*speed*1.1+seed)*amp*r*.25, jy = Math.cos(T*speed*.9+seed)*amp*r*.25;
+    ctx.font = `500 ${Math.round(r*.9)}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = rgba(dk,labA); ctx.fillText(lab, x+jx, yy+jy+1);
+  }
+}
+let prev = performance.now();
+function frame(now){
+  const dt = Math.min(.05,(now-prev)/1000); prev = now; T += dt;
+  const lv = $('dark').checked ? awayLevel : 0;
+  ctx.fillStyle = `rgb(${Math.round(36-28*lv)},${Math.round(30-23*lv)},${Math.round(18-8*lv)})`; ctx.fillRect(0,0,W,H);
+  awayLevel = Math.max(0, awayLevel-dt*.04);
+  const mem = $('mem').checked;
+  if ($('thr').checked) threads = threads.filter(t => { t.a -= dt*1.2; if (t.a<=0) return false; ctx.strokeStyle = rgba(t.c,t.a*.6); ctx.lineWidth = 2*S; ctx.beginPath(); ctx.moveTo(t.x1,t.y1); ctx.quadraticCurveTo((t.x1+t.x2)/2+(t.x1<t.x2?-6:6),(t.y1+t.y2)/2,t.x2,t.y2); ctx.stroke(); return true; });
+  else threads = [];
+  HOME.forEach((m,i) => {
+    homeB[i] = Math.max(0, homeB[i]-dt*2); homeMem[i] = Math.max(0, homeMem[i]-dt*(mem?.12:2));
+    const a = Math.min(1, .28+(mem?homeMem[i]*.4:0)+homeB[i]*.7), r = (15+homeB[i]*6+(mem?homeMem[i]*2:0))*S;
+    voice(cx(), y(m), r, '#FAC775', a, .05+homeB[i]*.12, 1.2+homeB[i]*6, i*2.3, DEG[m%12], '#633806', .18+homeB[i]*.4);
+  });
+  aways = aways.filter(a => { a.t += dt; if (a.t>a.dur) a.life -= dt*5; if (a.life<=0) return false; voice(a.x,a.y,13*S,a.c,a.life,.07+a.ten*.045,4+a.ten*4,a.seed,a.lab,a.dk,a.life*.6); return true; });
+  if (performance.now() < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Tap: exit · ← → licks · ↑ ↓ speed · ☆ save', W/2, H-16); }
+  if (performance.now() < flashUntil) { const a = Math.min(1, (flashUntil - performance.now())/400); ctx.fillStyle = `rgba(243,236,228,${.6*a})`; ctx.font = '15px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(flashTxt, W/2, 18); }
+  if (inFocus()) { ctx.font = '28px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = favOn ? 'rgba(233,185,110,.85)' : 'rgba(243,236,228,.28)'; ctx.fillText(favOn ? '★' : '☆', W - 38, 38); }
+  requestAnimationFrame(frame);
+}
+/* ---------- favorites: saved to the Lab's shared ★ Favorite licks ---------- */
+let favOn = false;
+const favApi = () => window.MusicLab && window.MusicLab.favs;
+function favOf(i){
+  const l = LICKS[i], hs = l.h === 'm' ? [0,3,7] : [0,4,7], ph = (PH[i] || 0) % 1;
+  return { id: 'glow-' + i + '-' + l.b, app: 'glow', title: l.p + ' — ' + l.t, src: 'bar ' + l.b + ', over ' + l.c + ' · Home Glow',
+    fam: l.h === 'm' ? 'minor' : /7$/.test(l.c) ? 'dominant' : 'major',
+    notes: l.n.map(([t,d,m]) => ({ t: +(t+ph).toFixed(3), d, rel: m - 60, tri: hs.includes(((m%12)+12)%12) })) };
+}
+function favMark(){
+  const F = favApi(), l = cur();
+  favOn = !!(F && l && F.has(favOf(+$('sel').value).id));
+  $('fav').textContent = favOn ? '★ Favorited' : '☆ Favorite'; $('fav').classList.toggle('on', favOn);
+}
+function favToggle(){
+  const F = favApi(); if (!F || !cur()) { flash('Favorites are still loading'); return; }
+  const on = F.toggle(favOf(+$('sel').value)); favMark();
+  flash(on ? '★ Saved to Favorite licks' : 'Removed from Favorite licks');
+}
+$('fav').onclick = favToggle;
+const _showMeta = showMeta; showMeta = function(){ _showMeta(); favMark(); };
+window.addEventListener('load', () => { favMark(); const F = favApi(); if (F && F.onChange) F.onChange(favMark); if (F && F.ready) F.ready().then(favMark).catch(() => {}); });
+rebuild();
+requestAnimationFrame(frame);
+</script>
+<script src="lab.js"></script>
+</body>
+</html>

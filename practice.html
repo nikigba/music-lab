@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Today's Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110f; --panel:#1d1916; --line:#2e2824; --ink:#f3ece4; --mute:#a3978b; --dim:#6d635a;
+    --home:#e9b96e; --dep:#e0715a; --ret:#8fc4a4; --you:#9db4e8; --away:#8ec5e6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:560px;margin:0 auto;padding:22px 16px 70px}
+  h1{font-family:Fraunces,serif;font-weight:700;font-size:28px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--mute);font-size:14px;margin:6px 0 14px;line-height:1.45}
+  .topline{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .streak{color:var(--home);font-size:13px;font-weight:600;white-space:nowrap}
+  .banner{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--home);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.5;color:var(--ink);margin:0 0 14px}
+  .banner.warn{border-left-color:var(--dep)}
+  .banner.ok{border-left-color:var(--ret)}
+  .cellcard{background:linear-gradient(135deg,#231c13,#1d1916);border:1px solid #5a4a33;border-radius:14px;padding:13px 14px;margin:0 0 16px}
+  .cellcard .k{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--home)}
+  .cellcard .deg{font-family:Fraunces,serif;font-size:30px;font-weight:700;margin:4px 0 2px}
+  .cellcard .d{color:var(--mute);font-size:13px;line-height:1.45}
+  #cellBlk .hint{margin-top:8px}
+  #cellBlk .deg{font-family:Fraunces,serif;font-size:22px;font-weight:700;color:var(--ink);margin:0 0 3px}
+  .dronebtn{margin-left:auto;height:34px;padding:0 14px;border-radius:999px;border:1px solid #5a4a33;background:#181512;color:var(--home);font:600 13px Inter,sans-serif;cursor:pointer;white-space:nowrap}
+  .dronebtn[aria-pressed=true]{background:#3a2f22;border-color:var(--home)}
+  .week{display:flex;gap:5px;margin:0 0 18px;align-items:center}
+  .week .dot{flex:1;height:7px;border-radius:4px;background:#241f1b;border:1px solid var(--line)}
+  .week .dot.full{background:var(--ret);border-color:var(--ret)}
+  .week .dot.part{background:#5a4a33;border-color:#5a4a33}
+  .week .dot.today{outline:1.5px solid var(--home);outline-offset:1px}
+  .blk{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;transition:opacity .25s,border-color .25s}
+  .blk.done{opacity:.55;border-color:#2c3b31}
+  .blk .hd{display:flex;align-items:center;gap:9px}
+  .blk .dotc{width:10px;height:10px;border-radius:50%;flex:none}
+  .blk .nm{font-weight:600;font-size:15px;flex:1}
+  .blk .min{color:var(--dim);font-size:12px;white-space:nowrap}
+  .blk .task{color:var(--mute);font-size:13.5px;line-height:1.5;margin:8px 0 10px}
+  .blk .task b{color:var(--ink);font-weight:600}
+  .row{display:flex;gap:8px}
+  .row a,.row button{flex:1;height:44px;border-radius:11px;border:1px solid var(--line);background:#181512;color:var(--ink);font-size:13.5px;font-weight:600;font-family:Inter;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;gap:6px}
+  .row a{color:var(--home);border-color:#5a4a33}
+  .row button.timer.running{color:var(--you);border-color:#3b4a66}
+  .row button.timer.break{color:var(--ret);border-color:#2c3b31}
+  .row button.check{flex:0 0 44px;font-size:18px;color:var(--dim)}
+  .blk.done .row button.check{color:var(--ret);border-color:#2c3b31}
+  .total{text-align:center;color:var(--mute);font-size:13px;margin:16px 0 4px}
+  .alldone{display:none;text-align:center;color:var(--ret);font-weight:600;font-size:15px;margin:10px 0}
+  body.complete .alldone{display:block}
+  details{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-top:16px}
+  summary{padding:12px 14px;cursor:pointer;font-weight:600;font-size:14px;color:var(--mute)}
+  .body{padding:0 14px 14px;color:var(--mute);font-size:13.5px;line-height:1.55}
+  .set{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0}
+  .set select{background:#181512;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px;font-size:13px}
+  .tg{border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:8px 13px;font-size:13px;cursor:pointer;display:inline-block}
+  .tg.on{background:#3a2f22;border-color:var(--home);color:var(--home);font-weight:600}
+  .syncline{text-align:center;color:var(--dim);font-size:11.5px;margin-top:14px}
+  .lkbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin:0 0 16px}
+  .lkbox .k{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--you)}
+  .lkbox .hint{color:var(--mute);font-size:13px;line-height:1.45;margin:6px 0 10px}
+  .lkctl{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
+  .lkctl button,.lkctl select{height:38px;border-radius:10px;border:1px solid var(--line);background:#181512;color:var(--ink);font:600 13px Inter;padding:0 12px;cursor:pointer}
+  .lkctl button.on{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .lkctl button.go{color:var(--home);border-color:#5a4a33}
+  .lk{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;background:#181512;transition:border-color .2s}
+  .lk.playing{border-color:var(--you)}
+  .lk .top{display:flex;align-items:center;gap:10px}
+  .lk .play{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid #5a4a33;background:#231c13;color:var(--home);font-size:14px;cursor:pointer}
+  .lk .tt{font-weight:600;font-size:14px;flex:1}
+  .lk .deg{display:flex;flex-wrap:wrap;gap:4px;margin:9px 0 2px;min-height:26px}
+  .lk .deg span{min-width:26px;height:26px;border-radius:7px;background:#221d19;color:var(--mute);font:600 13px Fraunces,serif;display:flex;align-items:center;justify-content:center;padding:0 5px}
+  .lk .deg span.r{background:none;color:var(--dim)}
+  .lk .deg span.c{color:var(--home);background:#33281a}
+  .lk .deg span.now{outline:2px solid var(--you)}
+  .lk .deg span.hid{color:transparent;background:#221d19}
+  .lk .nt{color:var(--dim);font-size:12.5px;line-height:1.4;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="week" id="weekRow" title="Last 7 days"></div>
+  <div class="topline"><h1>Today's Practice</h1><span class="streak" id="streak"></span><button class="dronebtn" id="droneBtn" type="button" aria-pressed="false">♪ Drone on C</button></div>
+  <p class="sub" id="dateline"></p>
+  <div class="banner" id="banner"></div>
+  <div class="blk" id="cellBlk"><div class="hd"><span class="dotc" style="background:var(--home)"></span><span class="nm">Cell of the week</span><span class="min">any time today</span></div>
+    <div class="task"><div class="deg" id="cellDeg"></div><span id="cellD"></span><div class="hint" id="cellHint"></div></div>
+    <div class="row"><a href="home-base.html#home-base" id="cellGo">Hear it in Home Base →</a><button class="check" id="cellChk" type="button"></button></div></div>
+  <div id="blocks"></div>
+  <div class="total" id="total"></div>
+  <div class="alldone">All blocks done. Go live your life — your ears keep working without you. ✓</div>
+  <details>
+    <summary>Settings</summary>
+    <div class="body">
+      <div class="set"><span>Blocks per day (10 min + 5 break each)</span>
+        <select id="nblocks"><option value="4">4 · 60 min</option><option value="5" selected>5 · 75 min</option><option value="6">6 · 90 min</option><option value="7">7 · 105 min</option></select></div>
+      <div class="set"><span>Third triad (adds C ↔ F to the triad block)</span><span class="tg" id="thirdT">I'm ready</span></div>
+      <div>There are six areas. With fewer blocks than that, the area you've practiced most this week sits out for the day (Baby never does, and nothing you skipped yesterday does). With 7, the most neglected area gets a second block.</div>
+    </div>
+  </details>
+  <details>
+    <summary>How this works</summary>
+    <div class="body">
+      Each block is one pomodoro: 10 minutes on one thing, 5 minutes away from the instrument. Check the box only if you actually did it — the plan reads your checks. Skip a block and it comes back first tomorrow, by name. The cell of the week is three notes; it lives inside the free-improv block, and anywhere else you can sneak it in.
+    </div>
+  </details>
+  <div class="syncline" id="sync"></div>
+</div>
+
+<script>
+/* ---------- Today's Practice: a daily plan that reads your checks ----------
+   Data: localStorage practice:state + account doc data/users/<uid>/practice/state/main {v,at}.
+   state = { days:{ "YYYY-MM-DD":{at,plan:["ear",...],done:[bool...],} }, set:{n:5,third:false}, at } */
+const $=id=>document.getElementById(id);
+const DAY=864e5;
+const dkey=d=>{const x=d||new Date();return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");};
+const today=dkey(), yesterday=dkey(new Date(Date.now()-DAY));
+
+/* ---------- cells of the week: three notes, held for a week ---------- */
+const CELLS=[
+ {deg:"1 · 2 · 3",d:"The first steps away from home and back. Every nursery rhyme owns these; so did Armstrong."},
+ {deg:"1 · ♭3 · 3",d:"The blues rub. Lean on the ♭3, let it melt into 3. The oldest trick in the music."},
+ {deg:"3 · 5 · 6",d:"The bright middle of the triad with the sun note. Pure 1920s — listen for it in your early solos."},
+ {deg:"5 · 6 · 1",d:"The pentatonic turn home from above. Sing it before you play it."},
+ {deg:"5 · ♭7 · 1",d:"The dominant backdoor into home. Darker; makes every arrival feel earned."},
+ {deg:"7 · 1 · 2",d:"The leaning notes around home. 7 pulls up, 2 falls down — home from both sides."},
+ {deg:"1 · 6 · 5",d:"Falling home through the sun note. The sound of early-jazz endings."},
+ {deg:"♭3 · 3 · 5",d:"The blues rub resolved upward into the chord. Say it slow, then fast."}
+];
+const cellIx=Math.floor(Date.now()/(7*DAY))%CELLS.length;
+const CELL=CELLS[cellIx];
+$("cellDeg").textContent=CELL.deg;
+$("cellD").textContent=CELL.d+" Just these three notes, all week.";
+
+/* ---------- areas ---------- */
+const AREAS={
+ baby:{nm:"Baby: the three tunes",c:"#d4a5e0",app:"Baby",href:"baby.html",
+   tasks:["<b>Baby</b> — today's step: one exercise, sung before you play it, check questions answered honestly. Turn on <b>All keys</b> and take it round as many keys as the block allows; the numbers never change."]},
+ ear:{nm:"Ear",c:"#9db4e8",app:"Baby Solfege",href:"baby-solfege.html",
+   tasks:["<b>Baby Solfege</b> — one screen, sung back until it's easy. Stop while it still feels like a game.",
+          "<b>Triad Trainer</b> — one round of arpeggio recognition. Sing each answer before you check it.",
+          "<b>Solo Ear</b> — one phrase from a solo, by ear only. Loop it, sing it, then find it."],
+   hrefs:["baby-solfege.html","triad-trainer.html","solo-ear.html"]},
+ rhythm:{nm:"Rhythm",c:"#e0715a",app:"Metronome",href:"metronome.html",
+   tasks:["<b>Metronome</b> straight at 60. Improvise rhythms over it — clap, cymbal, or one note. No pitches to think about; just say things in time.",
+          "<b>Polyrhythm</b> — 3 against 2 with the metronome. Clap it, walk it, then tap one side and sing the other.",
+          "<b>Metronome on 2 &amp; 4</b> — sing one of your three heads against it. Where does it want to sit?"]},
+ triads:{nm:"Two triads",c:"#e9b96e",app:"Triad Home Base",href:"home-base.html",
+   tasks:["<b>Home Base · 1b (C ↔ G)</b> — Auto, just listen first, then sing each away before it plays. Feel the movement, not the names."],
+   third:["<b>Home Base · 1c (C ↔ F)</b> — the other direction: 1 stays, 3 and 5 lift. Same game, softer pull.",
+          "<b>Home Base · 1b then 1c</b> — five minutes each. Can you tell the pull (G) from the lift (F) with eyes closed?"]},
+ tunes:{nm:"Tunes",c:"#8fc4a4",app:"Solo Ear",href:"solo-ear.html",
+   tasks:["<b>Billie's Bounce</b> — play over it like it's the jam. Wrong notes welcome; keep the form.",
+          "<b>There'll Never Be Another You</b> — play over it. When lost, land on a triad note and wait.",
+          "<b>Pent-Up House</b> — play over it. It's all home-and-away; lean on your two triads."]},
+ free:{nm:"Free improv",c:"#8ec5e6",app:"Home Base drone",href:"home-base.html",
+   tasks:["<b>Drone on C.</b> Only your current triads and the cell of the week ("+CELL.deg+"). Home, away from home, home. Make little melodies — nothing to get right."]}
+};
+const ORDER=["baby","ear","rhythm","triads","tunes","free"];
+
+/* ---------- state ---------- */
+let state={days:{},set:{n:5,third:false},at:0};
+try{const v=JSON.parse(localStorage.getItem("practice:state")||"null");if(v&&v.days)state=v;}catch(e){}
+function save(){ state.at=Date.now(); try{localStorage.setItem("practice:state",JSON.stringify(state));}catch(e){} cloudSave(); }
+
+/* account copy, same pattern as the rest of the Lab */
+let cloudDoc=null, cloudTimer=null;
+async function cloudConnect(){
+  try{
+    if(!window.claude||!claude.use) return;
+    const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
+    const uid=user?await user.id():null;
+    if(!db||!uid) return;
+    cloudDoc=db.doc("data/users/"+uid+"/practice/state/main");
+    const snap=await cloudDoc.get().catch(()=>null);
+    const rv=snap&&snap.data&&snap.data()||null;
+    if(rv&&rv.v){ const theirs=JSON.parse(rv.v);
+      if(theirs&&theirs.days&&(theirs.at||0)>(state.at||0)){
+        for(const k in theirs.days){ const a=state.days[k],b=theirs.days[k]; if(!a||(b.at||0)>(a.at||0)) state.days[k]=b; }
+        if((theirs.at||0)>(state.at||0)) state.set=theirs.set||state.set;
+        try{localStorage.setItem("practice:state",JSON.stringify(state));}catch(e){}
+        render();
+      }}
+    $("sync").textContent="Synced to your account.";
+  }catch(e){}
+}
+function cloudSave(){ if(!cloudDoc) return; clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(()=>{ cloudDoc.set({v:JSON.stringify(state),at:state.at}).catch(()=>{}); },800); }
+
+/* ---------- plan ---------- */
+const dayN=Math.floor(Date.now()/DAY);
+function minutes7(a){ let m=0; for(let i=1;i<=7;i++){ const d=state.days[dkey(new Date(Date.now()-i*DAY))]; if(!d) continue;
+  d.plan.forEach((ar,j)=>{ if(ar===a&&d.done[j]) m+=10; }); } return m; }
+function makePlan(){
+  const n=+state.set.n||5;
+  const skipped=[]; const y=state.days[yesterday];
+  if(y) y.plan.forEach((a,j)=>{ if(!y.done[j]&&!skipped.includes(a)) skipped.push(a); });
+  let areas=[...ORDER];
+  // fewer blocks than areas: the area practiced most this week sits out (never Baby, never one skipped yesterday)
+  while(areas.length>n){ const drop=areas.filter(a=>a!=="baby"&&!skipped.includes(a)).sort((a,b)=>minutes7(b)-minutes7(a))[0]; if(!drop) break; areas=areas.filter(a=>a!==drop); }
+  // skipped areas first, rest in order
+  areas.sort((a,b)=>(skipped.includes(b)?1:0)-(skipped.includes(a)?1:0));
+  // more blocks than areas: the most neglected area gets a second block
+  while(areas.length<n){ const worst=ORDER.filter(a=>areas.filter(x=>x===a).length<2).sort((a,b)=>minutes7(a)-minutes7(b))[0]; if(!worst) break; areas.push(worst); }
+  return {plan:areas,skipped};
+}
+function taskFor(a,slot){
+  const A=AREAS[a];
+  if(a==="triads"&&state.set.third){ const t=A.third[dayN%A.third.length]; return {html:t,href:A.href}; }
+  const list=A.tasks, i=(dayN+slot)%list.length;
+  return {html:list[i],href:A.hrefs?A.hrefs[i]:A.href};
+}
+/* sub-app links carry their #tag; Solo Ear opens in the full Music Lab page */
+const LAB_URL="https://claude.ai/artifact/UwAj6f8fmZgHbjyfUqemrP";
+function hrefOf(h){ const tag=h.replace(/\.html$/,''); return tag==="solo-ear"?LAB_URL+"#solo-ear":h+"#"+tag; }
+function ensureToday(){
+  // a plan made before Baby joined, with nothing checked yet, is remade
+  const old=state.days[today]; if(old&&!old.done.some(Boolean)&&!old.cell&&!old.plan.includes("baby")) delete state.days[today];
+  if(!state.days[today]||state.days[today].plan.length!==(+state.set.n||5)+( +state.set.n===6?0:0)){
+    if(!state.days[today]){ const {plan}=makePlan(); state.days[today]={at:Date.now(),plan,done:plan.map(()=>false)}; save(); }
+  }
+}
+
+/* ---------- pomodoro ---------- */
+let tmr=null, tLeft=0, tPhase=null, tBlk=-1;
+function chime(n){ try{ const ac=new (window.AudioContext||window.webkitAudioContext)();
+  for(let i=0;i<n;i++){ const o=ac.createOscillator(),g=ac.createGain(); o.frequency.value=i%2?660:880; o.connect(g); g.connect(ac.destination);
+    const t=ac.currentTime+i*.35; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.18,t+.03); g.gain.exponentialRampToValueAtTime(.001,t+.3); o.start(t); o.stop(t+.32);} }catch(e){} }
+function fmt(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function startTimer(i){
+  if(tmr&&tBlk===i){ clearInterval(tmr); tmr=null; tPhase=null; tBlk=-1; render(); return; }
+  clearInterval(tmr); tBlk=i; tPhase="work"; tLeft=600;
+  tmr=setInterval(()=>{ tLeft--;
+    if(tLeft<=0){
+      if(tPhase==="work"){ chime(2); tPhase="break"; tLeft=300; }
+      else{ chime(3); clearInterval(tmr); tmr=null; tPhase=null; tBlk=-1; }
+    }
+    render(); document.title=(tPhase?fmt(tLeft)+(tPhase==="break"?" · break":" · focus")+" — ":"")+"Today's Practice";
+  },1000);
+  render();
+}
+
+/* ---------- render ---------- */
+function streakCount(){ let s=0; for(let i=0;;i++){ const d=state.days[dkey(new Date(Date.now()-i*DAY))];
+  const full=d&&d.done.length&&d.done.every(Boolean);
+  if(full) s++; else if(i===0&&d) continue; else break; } return s; }
+function render(){
+  ensureToday();
+  const d=state.days[today], {skipped}=makePlan();
+  $("dateline").textContent=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})+" · "+d.plan.length+" blocks · "+(d.plan.length*15)+" minutes with breaks";
+  const sc=streakCount();
+  $("streak").textContent=sc>0?("🔥 "+sc+" day"+(sc>1?"s":"")):"";
+  // banner: plain words about yesterday
+  const y=state.days[yesterday], b=$("banner");
+  const doneToday=d.done.filter(Boolean).length;
+  if(skipped.length&&!(y&&y.done.every(Boolean))){ b.className="banner warn";
+    b.innerHTML="Yesterday you skipped <b>"+skipped.map(a=>AREAS[a].nm).join("</b> and <b>")+"</b>. "+(skipped.length>1?"They go":"It goes")+" first today."; }
+  else if(y&&y.done.length&&y.done.every(Boolean)){ b.className="banner ok"; b.textContent="Yesterday: all done. Same again — nothing new, just today's reps."; }
+  else if(y){ b.className="banner"; b.textContent="Pick up where you left off. The first block is the hardest part."; }
+  else { b.className="banner"; b.textContent="No practice logged yesterday. Start small: just do the first block, then decide."; }
+  // week dots
+  const wk=$("weekRow"); wk.innerHTML="";
+  for(let i=6;i>=0;i--){ const dd=state.days[dkey(new Date(Date.now()-i*DAY))], el=document.createElement("div");
+    el.className="dot"+(i===0?" today":"");
+    if(dd&&dd.done.every(Boolean)&&dd.done.length) el.classList.add("full");
+    else if(dd&&(dd.done.some(Boolean)||dd.cell)) el.classList.add("part");
+    wk.appendChild(el); }
+  // blocks
+  const bl=$("blocks"); bl.innerHTML="";
+  d.plan.forEach((a,i)=>{
+    const A=AREAS[a], t=taskFor(a,i), done=d.done[i];
+    const el=document.createElement("div"); el.className="blk"+(done?" done":"");
+    const timing=tBlk===i&&tPhase?(tPhase==="break"?"☕ "+fmt(tLeft):"● "+fmt(tLeft)):"▶ 10:00";
+    el.innerHTML=`<div class="hd"><span class="dotc" style="background:${A.c}"></span><span class="nm">${A.nm}</span><span class="min">block ${i+1}</span></div>
+      <div class="task">${t.html}</div>
+      <div class="row"><a href="${hrefOf(t.href)}"${/^https:/.test(hrefOf(t.href))?' target="_blank" rel="noopener"':''}>Open ${A.app}</a>
+        <button class="timer${tBlk===i&&tPhase?(tPhase==="break"?" break":" running"):""}" data-i="${i}">${timing}</button>
+        <button class="check" data-c="${i}">${done?"✓":"○"}</button></div>`;
+    bl.appendChild(el);
+  });
+  bl.querySelectorAll(".timer").forEach(x=>x.onclick=()=>startTimer(+x.dataset.i));
+  bl.querySelectorAll(".check").forEach(x=>x.onclick=()=>{ const i=+x.dataset.c; d.done[i]=!d.done[i]; d.at=Date.now(); save(); render(); });
+  { const cc=$("cellBlk"), cb=$("cellChk"), on=!!d.cell;
+    cc.classList.toggle("done",on); cb.textContent=on?"✓":"○"; cb.title="Mark the cell of the week as worked on today"; cb.setAttribute("aria-label","Worked on the cell of the week today");
+    $("cellGo").onclick=()=>{ try{localStorage.setItem("thb.tab","c");}catch(e){} };
+    cb.setAttribute("aria-pressed",String(on));
+    cb.onclick=()=>{ d.cell=!d.cell; d.at=Date.now(); save(); render(); }; }
+  $("total").textContent=(doneToday*10)+" / "+(d.plan.length*10)+" focused minutes checked off";
+  document.body.classList.toggle("complete",d.done.length&&d.done.every(Boolean));
+  // settings
+  $("nblocks").value=String(state.set.n||5);
+  $("thirdT").classList.toggle("on",!!state.set.third);
+  $("thirdT").textContent=state.set.third?"✓ Third triad in":"I'm ready";
+}
+$("nblocks").onchange=e=>{ state.set.n=+e.target.value;
+  const d=state.days[today]; if(d&&!d.done.some(Boolean)&&!d.cell){ delete state.days[today]; } save(); render(); };
+$("thirdT").onclick=()=>{ state.set.third=!state.set.third; save(); render(); };
+
+/* prune old days (keep 90) */
+for(const k in state.days){ if((Date.now()-new Date(k+"T12:00").getTime())>90*DAY) delete state.days[k]; }
+
+render();
+cloudConnect();
+</script>
+<script src="cell-licks.js"></script>
+<script>
+/* Cell of the week in use: the player lives in Triad Home Base → Cells (cell-licks.js). The cell block only points there. */
+(function(){
+  const has=window.CellsPlayer&&CellsPlayer.cells.some(c=>c.ix===cellIx);
+  document.getElementById("cellHint").textContent=has?'Real lines with this cell inside, shuffled over a C drone. In Home Base, press Listen and just listen. Every cell you\u2019ve studied stays there.':'No lines made yet for this cell. Ask Claude and they will show up in Home Base \u2192 Cells.';
+})();
+</script>
+<script src="drone.js"></script>
+<script>
+/* Drone on C: the same shared drone loop as Home Base, one button, stays on while you move through the blocks */
+(function(){
+  const btn=document.getElementById("droneBtn"); let ac=null,buf=null,node=null,loading=null;
+  function seamless(b){ const sr=b.sampleRate,skip=Math.floor(sr*.03),X=Math.floor(sr*.4),L=b.length-skip-X,out=ac.createBuffer(b.numberOfChannels,L,sr);
+    for(let c=0;c<b.numberOfChannels;c++){ const src=b.getChannelData(c),dst=out.getChannelData(c);
+      for(let i=0;i<L;i++) dst[i]=src[skip+i];
+      for(let i=0;i<X;i++){ const f=i/X; dst[i]=src[skip+i]*Math.sin(f*Math.PI/2)+src[skip+L+i]*Math.cos(f*Math.PI/2); } }
+    return out; }
+  function load(){ if(!loading) loading=new Promise((res,rej)=>{ const bin=atob(DRONE_URL.slice(DRONE_URL.indexOf(",")+1)),u=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+      ac.decodeAudioData(u.buffer,b=>{buf=seamless(b);res();},rej); }); return loading; }
+  async function on(){
+    if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)({latencyHint:"playback"});
+    if(ac.state==="suspended") ac.resume();
+    btn.setAttribute("aria-pressed","true"); btn.textContent="♪ Drone on";
+    try{ await load(); }catch(e){ loading=null; btn.setAttribute("aria-pressed","false"); btn.textContent="♪ Drone did not load, tap to retry"; return; }
+    if(btn.getAttribute("aria-pressed")!=="true"||node) return;
+    const g=ac.createGain(),src=ac.createBufferSource(),t=ac.currentTime;
+    src.buffer=buf; src.loop=true; src.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.7,t+2); src.start(t); node={g,src};
+  }
+  function off(){ btn.setAttribute("aria-pressed","false"); btn.textContent="♪ Drone on C";
+    if(!node) return; const {g,src}=node,t=ac.currentTime; node=null;
+    g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(0,t+1.2); src.stop(t+1.3); }
+  btn.onclick=()=>{ btn.getAttribute("aria-pressed")==="true"?off():on(); };
+})();
+</script>
+<script src="lab.js"></script>
+</body>
+</html>

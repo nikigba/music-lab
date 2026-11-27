@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Major Triad Trainer</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #000; --fg: #f2f2f2; --muted: #a3a3a8; --dim: #6e6e73; --line: #2c2c2e; --card-line: #3a3a3c; --panel: #111113; --ink: #1c1c1e;
+  --home: #EED27A; --two: #A9C4DE; --t1: #E8B49A; --t2: #EC8160; --t3: #DC5478; --step: #F5B85C; --good: #8FD19E; --bad: #EF8A80;
+  --pent: #7FD4C1; --appr: #C9A6F2; --focus: hsl(205 60% 70%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px var(--font);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 22px);
+  padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: clamp(26px, 4.4vw, 34px); font-weight: 600; letter-spacing: -.01em; margin: 0; }
+.sub { margin: -8px 0 0; color: var(--muted); line-height: 1.5; max-width: 66ch; }
+button, select, input { font: inherit; color: inherit; touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tabs { display: flex; border: 1px solid var(--card-line); border-radius: 999px; overflow: hidden; align-self: flex-start; max-width: 100%; overflow-x: auto; }
+.tabs button { background: transparent; border: 0; padding: 9px 16px; color: var(--muted); cursor: pointer; white-space: nowrap; font-size: 14px; }
+.tabs button[aria-pressed="true"] { background: #2c2c2f; color: var(--fg); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--card-line); border-radius: 999px; overflow: hidden; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
+.seg button { background: transparent; border: 0; padding: 6px 12px; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: #2c2c2f; color: var(--fg); }
+.row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13px; color: var(--muted); }
+.row label { display: inline-flex; gap: 7px; align-items: center; cursor: pointer; }
+.row input[type=range] { width: 104px; accent-color: var(--home); }
+.row input[type=checkbox] { accent-color: var(--home); width: 15px; height: 15px; }
+.row select { background: var(--panel); border: 1px solid var(--card-line); border-radius: 8px; padding: 5px 8px; font-size: 13px; }
+.tnum { font-variant-numeric: tabular-nums; color: var(--fg); min-width: 2.4em; display: inline-block; }
+.lab { font-size: 12px; color: var(--dim); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.panel { display: flex; flex-direction: column; gap: 14px; }
+.panel[hidden] { display: none; }
+.note { font-size: 13px; color: var(--muted); line-height: 1.55; margin: 0; max-width: 72ch; }
+.note b { color: var(--fg); }
+
+/* cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.card { background: #000; border: 1.5px solid var(--card-line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;
+  text-align: left; padding: 0; cursor: pointer; transition: transform .12s ease, box-shadow .2s ease, border-color .15s; min-width: 0; }
+.card:active { transform: scale(.98); }
+.card .strip { padding: 8px 10px; color: var(--ink); background: var(--c); display: flex; align-items: baseline; gap: 8px; }
+.card .strip b { font-size: 20px; font-weight: 700; }
+.card .strip span { font-size: 12px; font-weight: 600; opacity: .62; }
+.card .body { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px; }
+.card .deg { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.card .sn { font-size: 12px; color: var(--dim); }
+.card.playing { border-color: #fff; box-shadow: 0 0 0 3px var(--c), 0 0 22px -2px var(--c); }
+.card.right { border-color: var(--good); box-shadow: 0 0 0 3px var(--good); }
+.card.wrong { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad); }
+.card.masked .deg, .card.masked .sn { visibility: hidden; }
+
+/* chips */
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip { background: #1a1a1c; border: 1px solid var(--card-line); border-radius: 999px; padding: 6px 12px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { color: var(--ink); background: var(--home); border-color: var(--home); }
+.chip.now { border-color: #fff; color: var(--fg); box-shadow: 0 0 0 2px var(--home); }
+.chip small { font-weight: 500; opacity: .7; margin-left: 4px; }
+
+/* pitch line */
+.view { border: 1.5px solid var(--line); border-radius: 20px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.view .vh { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.view .vh b { font-size: 16px; }
+.view .vh span { font-size: 12.5px; color: var(--dim); }
+.vscroll { overflow-x: auto; }
+svg.pl { display: block; width: 100%; overflow: visible; }
+.pl .ch { fill: var(--fg); font: 600 14px var(--font); }
+.pl .ch tspan { fill: var(--muted); font-weight: 500; font-size: 12px; }
+.pl .bl { stroke: #3a3a3e; stroke-width: 1.5; }
+.pl .lk { stroke: #3a3a3e; stroke-width: 2; }
+.pl .lk.half { stroke: var(--step); stroke-width: 2.5; }
+.pl .n circle { fill: #161618; stroke: #5a5a5f; stroke-width: 1.8; }
+.pl .n.tone circle { fill: color-mix(in srgb, var(--home) 16%, #111); stroke: color-mix(in srgb, var(--home) 70%, #333); }
+.pl .n.chrom circle { stroke: var(--appr); stroke-dasharray: 4 3; }
+.pl .n.on circle { stroke: #fff; stroke-width: 3; fill: #2a2a2e; }
+.pl .n text { fill: var(--fg); font-weight: 700; text-anchor: middle; dominant-baseline: central; font-family: var(--font); pointer-events: none; }
+.pl .n text.t { fill: var(--muted); font-weight: 650; }
+.pl .n { cursor: pointer; }
+
+/* lick list */
+.cells { display: flex; flex-direction: column; gap: 8px; }
+.cell { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; cursor: pointer; }
+.cell.sel { border-color: var(--home); box-shadow: 0 0 0 1px var(--home); }
+.cell .tk { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.cell .tk i { font-style: normal; color: var(--appr); }
+.cell .meta { grid-column: 1 / -1; font-size: 12.5px; color: var(--dim); line-height: 1.45; }
+.cell .meta b { color: var(--muted); font-weight: 600; }
+.cell .btns { display: flex; gap: 6px; }
+.mini { background: #1a1a1c; border: 1px solid var(--card-line); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--muted); white-space: nowrap; }
+.mini:hover { color: var(--fg); background: #26262a; }
+.mini.on { border-color: #fff; color: var(--fg); box-shadow: 0 0 0 2px var(--home); }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 650; color: var(--ink); background: var(--c, var(--home)); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
+
+/* quiz */
+.qbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { background: #1e1e20; border: 1px solid var(--card-line); border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--home); color: var(--ink); border-color: var(--home); }
+.btn[hidden] { display: none; }
+.score { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fb { font-size: 15px; line-height: 1.5; min-height: 1.5em; }
+.fb .ok { color: var(--good); } .fb .no { color: var(--bad); }
+
+.dock { position: sticky; bottom: 0; z-index: 5; margin: 4px -14px 0;
+  padding: 10px max(14px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgb(10 10 11 / .94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
+.dock .in { max-width: 980px; margin: 0 auto; display: flex; gap: 12px; align-items: center; }
+.readout { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.45; color: var(--muted); min-height: 2.9em; }
+.readout b { color: var(--fg); }
+@media (max-width: 620px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .readout { font-size: 12.5px; } .card .strip b { font-size: 18px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Major triad trainer</h1>
+  <p class="sub">Hear what a major triad does over a bass note, drill it in patterns through every key, then find it in your own licks and solos.</p>
+
+  <div class="tabs" role="group" aria-label="Section">
+    <button data-tab="colours" aria-pressed="true">Colours</button>
+    <button data-tab="patterns" aria-pressed="false">Patterns</button>
+    <button data-tab="licks" aria-pressed="false">Your licks</button>
+    <button data-tab="quiz" aria-pressed="false">Quiz</button>
+  </div>
+
+  <div class="row">
+    <label>Tempo <input type="range" id="tempo" min="40" max="240" value="96"> <span class="tnum" id="tempoN">96</span></label>
+    <label><input type="checkbox" id="swing"> Swing 8ths</label>
+    <label><input type="checkbox" id="bassOn" checked> Bass</label>
+    <label><input type="checkbox" id="loop"> Loop</label>
+    <label>Piano vol <input type="range" id="vol" min="0" max="100" value="75"></label>
+  </div>
+
+  <!-- COLOURS -->
+  <section class="panel" id="p-colours">
+    <p class="note">Every major triad over one <b>C</b> bass note. The numbers say what the three notes are over C; the word says what it sounds like. Tap a card to hear the bass, the triad rolled up, then all of it together.</p>
+    <div class="grid" id="colourGrid"></div>
+  </section>
+
+  <!-- PATTERNS -->
+  <section class="panel" id="p-patterns" hidden>
+    <div class="chips" role="group" aria-label="Pattern family" id="famSeg"></div>
+    <div class="chips" id="patChips"></div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="Keys" id="keysSeg">
+        <button data-keys="cycle" aria-pressed="true">Cycle of 4ths</button>
+        <button data-keys="one" aria-pressed="false">One key</button>
+      </div>
+      <label id="oneKeyWrap" style="display:none">Key <select id="oneKey"></select></label>
+      <div class="seg" role="group" aria-label="Bass" id="bassSeg">
+        <button data-bass="root" aria-pressed="true">Bass on the triad's root</button>
+        <button data-bass="c" aria-pressed="false">C pedal</button>
+      </div>
+    </div>
+    <div class="chips" id="keyChips"></div>
+    <div class="view" id="patView"><div class="vh"><b id="patTitle"></b><span id="patSub"></span></div><div class="vscroll"><svg class="pl" id="patSvg"></svg></div></div>
+    <p class="note" id="patNote"></p>
+  </section>
+
+  <!-- LICKS -->
+  <section class="panel" id="p-licks" hidden>
+    <p class="note">Every major-triad cell found in your <b>Stitt, Parker and Kellen</b> ii–V licks and the <b>Hargrove</b> and <b>Cherokee</b> solos (both read in C). Numbers are degrees of the triad: <b>1 3 5</b> are triad notes, <span style="color:var(--appr)"><b>purple</b></span> ones are approach or passing notes. <b>▶</b> plays it as it was played; <b>12 keys</b> drills it around the cycle of 4ths, keeping the same relation to the chord.</p>
+    <div class="chips" id="roleChips"></div>
+    <div class="row"><label><input type="checkbox" id="onlyAppr"> Only cells with approach or passing notes</label></div>
+    <div class="view" id="lickView" hidden><div class="vh"><b id="lickTitle"></b><span id="lickSub"></span></div><div class="vscroll"><svg class="pl" id="lickSvg"></svg></div></div>
+    <div class="cells" id="cellList"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="panel" id="p-quiz" hidden>
+    <div class="seg" role="group" aria-label="Quiz" id="quizSeg">
+      <button data-quiz="sound" aria-pressed="true">Which triad over C?</button>
+      <button data-quiz="inv" aria-pressed="false">Which inversion?</button>
+      <button data-quiz="lick" aria-pressed="false">Which sound in the lick?</button>
+    </div>
+    <div class="row" id="levelRow">
+      <span>Choices</span>
+      <div class="seg" role="group" aria-label="Level" id="levelSeg">
+        <button data-level="3" aria-pressed="true">3</button>
+        <button data-level="6" aria-pressed="false">6</button>
+        <button data-level="12" aria-pressed="false">All 12</button>
+      </div>
+    </div>
+    <div class="row" id="invRow" style="display:none"><label><input type="checkbox" id="invBlock"> Hard: play it as a chord only</label></div>
+    <div class="qbar">
+      <button class="btn primary" id="qPlay">Play a mystery</button>
+      <button class="btn" id="qAgain" hidden>Hear it again</button>
+      <button class="btn" id="qNext" hidden>Next</button>
+      <span class="score" id="qScore"></span>
+    </div>
+    <div class="fb" id="qFb"></div>
+    <div class="grid" id="qCards"></div>
+    <div class="view" id="qView" hidden><div class="vh"><b id="qvTitle"></b><span id="qvSub"></span></div><div class="vscroll"><svg class="pl" id="qSvg"></svg></div></div>
+  </section>
+
+  <div class="dock"><div class="in">
+    <button class="btn primary" id="playBtn">▶ Play</button>
+    <div class="readout" id="readout" aria-live="polite"></div>
+  </div></div>
+</div>
+
+<script src="piano.js"></script>
+<script>
+
+const CELLS = [{"offs": [7, 4, 0], "toks": ["5", "3", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 55, "name": "G"}, {"q": 0.25, "dur": 0.25, "midi": 52, "name": "E"}, {"q": 0.5, "dur": 0.5, "midi": 48, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Parker lick 14"}, {"notes": [{"q": 0.0, "dur": 0.25, "midi": 55, "name": "G"}, {"q": 0.25, "dur": 0.25, "midi": 52, "name": "E"}, {"q": 0.5, "dur": 0.5, "midi": 48, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Parker lick 14"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 72, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": "7"}, "triad": "C", "src": "Cherokee, bar 20"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 80, "name": "G♯"}, {"q": 0.5, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 1.0, "dur": 0.5, "midi": 73, "name": "C♯"}], "chord": {"root": "C♯", "pc": 1, "suffix": ""}, "triad": "C♯", "src": "Cherokee, bar 99"}]}, {"offs": [0, 4, 7], "toks": ["1", "3", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.0, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "G", "src": "Kellen lick 2"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 64, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Kellen lick 2"}, {"notes": [{"q": 0.0, "dur": 0.25, "midi": 55, "name": "G"}, {"q": 0.25, "dur": 0.25, "midi": 59, "name": "B"}, {"q": 0.5, "dur": 0.25, "midi": 62, "name": "D"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "G", "src": "Parker lick 6"}, {"notes": [{"q": 0, "dur": 4, "midi": 72, "name": "C"}, {"q": 4, "dur": 2, "midi": 76, "name": "E"}, {"q": 6, "dur": 2, "midi": 79, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 9"}]}, {"offs": [12, 7, 4], "toks": ["1", "5", "3"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 1.0, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 1.5, "dur": 1.5, "midi": 64, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Stitt lick 16"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 55, "name": "G"}, {"q": 1.0, "dur": 0.5, "midi": 52, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Parker lick 17"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 69, "name": "A"}], "chord": {"root": "F", "pc": 5, "suffix": ""}, "triad": "F", "src": "Cherokee, bar 21"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 69, "name": "A"}], "chord": {"root": "F", "pc": 5, "suffix": ""}, "triad": "F", "src": "Cherokee, bar 134"}]}, {"offs": [7, 5, 4, 0], "toks": ["5", "4", "3", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 62, "name": "D"}, {"q": 0.5, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 59, "name": "B"}, {"q": 1.5, "dur": 0.5, "midi": 55, "name": "G"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "G", "src": "Parker lick 12"}, {"notes": [{"q": 0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 1, "dur": 0.5, "midi": 78, "name": "F♯"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "D", "pc": 2, "suffix": "7"}, "triad": "D", "src": "Cherokee, bar 46"}, {"notes": [{"q": 0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 1, "dur": 0.5, "midi": 78, "name": "F♯"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "D", "pc": 2, "suffix": "7"}, "triad": "D", "src": "Cherokee, bar 155"}]}, {"offs": [16, 12, 7], "toks": ["3", "1", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 1.0, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.5, "dur": 1.5, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Stitt lick 5"}, {"notes": [{"q": 0.0, "dur": 1.0, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.5, "dur": 1.5, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Stitt lick 11"}]}, {"offs": [11, 12, 16, 19], "toks": ["7", "1", "3", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 59, "name": "B"}, {"q": 0.5, "dur": 0.3333, "midi": 60, "name": "C"}, {"q": 0.8333, "dur": 0.3333, "midi": 64, "name": "E"}, {"q": 1.1667, "dur": 0.3333, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Kellen lick 4"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 0.5, "dur": 0.3333, "midi": 77, "name": "F"}, {"q": 0.8333, "dur": 0.3333, "midi": 81, "name": "A"}, {"q": 1.1667, "dur": 0.3333, "midi": 84, "name": "C"}], "chord": {"root": "F", "pc": 5, "suffix": ""}, "triad": "F", "src": "Cherokee, bar 117"}]}, {"offs": [7, 4, 2, 0], "toks": ["5", "3", "2", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 78, "name": "F♯"}, {"q": 1.0, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "D", "pc": 2, "suffix": "7"}, "triad": "D", "src": "Cherokee, bar 76"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 78, "name": "F♯"}, {"q": 1.0, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "D", "pc": 2, "suffix": "7"}, "triad": "D", "src": "Cherokee, bar 110"}]}, {"offs": [11, 12, 14, 16, 19], "toks": ["7", "1", "2", "3", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 0.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 1.5, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 2.0, "dur": 0.5, "midi": 79, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 121"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 0.5, "dur": 0.3333, "midi": 72, "name": "C"}, {"q": 0.8333, "dur": 0.3333, "midi": 74, "name": "D"}, {"q": 1.1667, "dur": 0.3333, "midi": 76, "name": "E"}, {"q": 1.5, "dur": 0.3333, "midi": 79, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 186"}]}, {"offs": [16, 7, 12], "toks": ["3", "5", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 1.0, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 1.5, "dur": 1.5, "midi": 72, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Stitt lick 4"}]}, {"offs": [7, 0, 4], "toks": ["5", "1", "3"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 0.5, "dur": 1.0, "midi": 72, "name": "C"}, {"q": 1.5, "dur": 0.5, "midi": 76, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Stitt 1 & 3 · lick 3"}]}, {"offs": [7, 12, 16], "toks": ["5", "1", "3"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 1.0, "midi": 79, "name": "G"}, {"q": 1.0, "dur": 1.0, "midi": 84, "name": "C"}, {"q": 2.0, "dur": 0.5, "midi": 88, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Stitt 1 & 3 · lick 7"}]}, {"offs": [0, 2, 4, 7], "toks": ["1", "2", "3", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 62, "name": "D"}, {"q": 1.0, "dur": 0.5, "midi": 64, "name": "E"}, {"q": 1.5, "dur": 1.5, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Lick set 4 · lick 6"}]}, {"offs": [7, 12, 16, 19], "toks": ["5", "1", "3", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 1, "dur": 0.5, "midi": 88, "name": "E"}, {"q": 1.5, "dur": 1.5, "midi": 91, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 89"}]}, {"offs": [12, 7, 5, 4], "toks": ["1", "5", "4", "3"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 1.5, "midi": 84, "name": "C"}, {"q": 1.5, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 2.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 2.5, "dur": 0.5, "midi": 76, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 82"}]}, {"offs": [11, 12, 7, 4, 0], "toks": ["7", "1", "5", "3", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 83, "name": "B"}, {"q": 0.5, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 1.5, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 2.0, "dur": 0.5, "midi": 72, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 153"}]}, {"offs": [17, 16, 14, 12, 7], "toks": ["4", "3", "2", "1", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 1.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 2.0, "dur": 0.5, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 95"}]}, {"offs": [7, 5, 7, 4, 0], "toks": ["5", "4", "5", "3", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 91, "name": "G"}, {"q": 0.5, "dur": 1, "midi": 89, "name": "F"}, {"q": 1.5, "dur": 1, "midi": 91, "name": "G"}, {"q": 2.5, "dur": 0.5, "midi": 88, "name": "E"}, {"q": 3.0, "dur": 0.5, "midi": 84, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 113"}]}, {"offs": [12, 11, 12, 16, 19], "toks": ["1", "7", "1", "3", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.0, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.5, "dur": 1.5, "midi": 76, "name": "E"}, {"q": 3.0, "dur": 0.5, "midi": 79, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 137"}]}, {"offs": [12, 7, 12, 12, 16, 12], "toks": ["1", "5", "1", "1", "3", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 55, "name": "G"}, {"q": 1.0, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 1.5, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 2.0, "dur": 0.5, "midi": 64, "name": "E"}, {"q": 2.5, "dur": 0.5, "midi": 60, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Parker lick 19"}]}, {"offs": [4, 7, 9, 7, 12, 4], "toks": ["3", "5", "6", "5", "1", "3"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 64, "name": "E"}, {"q": 0.5, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 1.0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 2.0, "dur": 1.0, "midi": 72, "name": "C"}, {"q": 3.0, "dur": 0.5, "midi": 64, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "C", "src": "Stitt 1 & 3 · lick 1"}]}, {"offs": [4, 0, 4, 7, 4, 7], "toks": ["3", "1", "3", "5", "3", "5"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 73, "name": "C♯"}, {"q": 0.25, "dur": 0.25, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.25, "midi": 73, "name": "C♯"}, {"q": 0.75, "dur": 0.25, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.25, "midi": 73, "name": "C♯"}, {"q": 1.25, "dur": 0.25, "midi": 76, "name": "E"}], "chord": {"root": "A", "pc": 9, "suffix": "7♭9"}, "triad": "A", "src": "Hargrove, bar 17"}]}, {"offs": [12, 12, 14, 12, 7, 4], "toks": ["1", "1", "2", "1", "5", "3"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0, "dur": 1, "midi": 84, "name": "C"}, {"q": 1, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 1.5, "dur": 0.25, "midi": 86, "name": "D"}, {"q": 1.75, "dur": 0.25, "midi": 84, "name": "C"}, {"q": 2, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 2.5, "dur": 0.5, "midi": 76, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 145"}]}, {"offs": [11, 12, 16, 19, 24, 28, 24], "toks": ["7", "1", "3", "5", "1", "3", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 0.5, "dur": 0.25, "midi": 77, "name": "F"}, {"q": 0.75, "dur": 0.25, "midi": 81, "name": "A"}, {"q": 1.0, "dur": 0.25, "midi": 84, "name": "C"}, {"q": 1.25, "dur": 0.25, "midi": 89, "name": "F"}, {"q": 1.5, "dur": 0.5, "midi": 93, "name": "A"}, {"q": 2.0, "dur": 0.5, "midi": 89, "name": "F"}], "chord": {"root": "F", "pc": 5, "suffix": ""}, "triad": "F", "src": "Cherokee, bar 54"}]}, {"offs": [12, 0, 0, 7, 5, 4, 7, 12], "toks": ["1", "1", "1", "5", "4", "3", "5", "1"], "role": "1–3–5", "sound": "the chord’s own triad", "rootRel": 0, "ex": [{"notes": [{"q": 0, "dur": 1, "midi": 84, "name": "C"}, {"q": 1, "dur": 1, "midi": 72, "name": "C"}, {"q": 2, "dur": 1, "midi": 72, "name": "C"}, {"q": 3, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 3.5, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 4, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 4.5, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 5, "dur": 1, "midi": 84, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 43"}]}, {"offs": [0, 2, 4, 7], "toks": ["1", "2", "3", "5"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Lick set 4 · lick 5"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Parker lick 15"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "G", "src": "Cherokee, bar 25"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "B♯", "pc": 0, "suffix": ""}, "triad": "G", "src": "Cherokee, bar 36"}]}, {"offs": [0, 4, 7], "toks": ["1", "3", "5"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 67, "name": "G"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 2.0, "midi": 74, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Parker lick 16"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 55, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 59, "name": "B"}, {"q": 1.0, "dur": 0.5, "midi": 62, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Parker lick 17"}, {"notes": [{"q": 0.0, "dur": 0.3333, "midi": 67, "name": "G"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Stitt 1 & 3 · lick 4"}, {"notes": [{"q": 0, "dur": 1, "midi": 72, "name": "C"}, {"q": 1, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 1.5, "dur": 1.5, "midi": 79, "name": "G"}], "chord": {"root": "F", "pc": 5, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 117"}]}, {"offs": [7, 4, 12], "toks": ["5", "3", "1"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 74, "name": "D"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 1, "midi": 79, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "G", "src": "Cherokee, bar 127"}, {"notes": [{"q": 0.0, "dur": 0.3333, "midi": 74, "name": "D"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 1, "midi": 79, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "G", "src": "Cherokee, bar 191"}]}, {"offs": [7, 4, 2, 0], "toks": ["5", "3", "2", "1"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0, "dur": 1, "midi": 74, "name": "D"}, {"q": 1, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 1.3333, "dur": 0.3333, "midi": 69, "name": "A"}, {"q": 1.6667, "dur": 1.3333, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Hargrove, bar 8"}, {"notes": [{"q": 0.0, "dur": 0.25, "midi": 74, "name": "D"}, {"q": 0.25, "dur": 0.25, "midi": 71, "name": "B"}, {"q": 0.5, "dur": 0.25, "midi": 69, "name": "A"}, {"q": 0.75, "dur": 0.25, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Hargrove, bar 16"}]}, {"offs": [7, 4, 0], "toks": ["5", "3", "1"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0, "dur": 0.3333, "midi": 74, "name": "D"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 0.3333, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "G", "src": "Cherokee, bar 128"}]}, {"offs": [0, 4, 7, 4], "toks": ["1", "3", "5", "3"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 67, "name": "G"}, {"q": 0.25, "dur": 0.25, "midi": 71, "name": "B"}, {"q": 0.5, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 1.0, "dur": 0.5, "midi": 71, "name": "B"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "G", "src": "Cherokee, bar 31"}]}, {"offs": [8, 7, 5, 4, 0], "toks": ["♭6", "5", "4", "3", "1"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 1.5, "dur": 0.5, "midi": 73, "name": "C♯"}, {"q": 2.0, "dur": 0.5, "midi": 69, "name": "A"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "A", "src": "Stitt set 2 · lick 12"}]}, {"offs": [0, 4, 7, 5, 4], "toks": ["1", "3", "5", "4", "3"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 67, "name": "G"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 1.1667, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.6667, "dur": 0.5, "midi": 71, "name": "B"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Parker lick 4"}]}, {"offs": [0, 7, 4, 5, 7], "toks": ["1", "5", "3", "4", "5"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 73, "name": "C♯"}, {"q": 1.5, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 2.0, "dur": 0.5, "midi": 76, "name": "E"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "A", "src": "Stitt 1 & 3 · lick 2"}]}, {"offs": [15, 16, 14, 12, 7], "toks": ["♭3", "3", "2", "1", "5"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 80, "name": "A♭"}, {"q": 0.3333, "dur": 0.3333, "midi": 81, "name": "A"}, {"q": 0.6667, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 1.1667, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 1.6667, "dur": 1, "midi": 72, "name": "C"}], "chord": {"root": "B♭", "pc": 10, "suffix": "7"}, "triad": "F", "src": "Cherokee, bar 119"}]}, {"offs": [0, 4, 7, 4, 5, 7], "toks": ["1", "3", "5", "3", "4", "5"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 67, "name": "G"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 1.1667, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.6667, "dur": 0.3333, "midi": 72, "name": "C"}, {"q": 2.0, "dur": 0.3333, "midi": 74, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Parker lick 1"}]}, {"offs": [12, 16, 19, 16, 12, 7], "toks": ["1", "3", "5", "3", "1", "5"], "role": "5–7–9", "sound": "the triad on the 5th: maj9", "rootRel": 7, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 67, "name": "G"}, {"q": 0.3333, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 0.6667, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 1.1667, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.6667, "dur": 0.5, "midi": 67, "name": "G"}, {"q": 2.1667, "dur": 0.5, "midi": 62, "name": "D"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "G", "src": "Parker lick 8"}]}, {"offs": [7, 4, 0], "toks": ["5", "3", "1"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 77, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt lick 4"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 77, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt lick 8"}, {"notes": [{"q": 0, "dur": 0.5, "midi": 83, "name": "B"}, {"q": 0.5, "dur": 0.5, "midi": 80, "name": "G♯"}, {"q": 1, "dur": 0.5, "midi": 76, "name": "E"}], "chord": {"root": "C♯", "pc": 1, "suffix": "m7"}, "triad": "E", "src": "Cherokee, bar 101"}, {"notes": [{"q": 0, "dur": 1, "midi": 81, "name": "A"}, {"q": 1, "dur": 0.3333, "midi": 78, "name": "F♯"}, {"q": 1.3333, "dur": 0.3333, "midi": 74, "name": "D"}], "chord": {"root": "B", "pc": 11, "suffix": "m7"}, "triad": "D", "src": "Cherokee, bar 105"}]}, {"offs": [0, 4, 7], "toks": ["1", "3", "5"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 84, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt lick 1"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 65, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 72, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Parker lick 17"}, {"notes": [{"q": 0.0, "dur": 0.25, "midi": 65, "name": "F"}, {"q": 0.25, "dur": 0.3333, "midi": 69, "name": "A"}, {"q": 0.5833, "dur": 0.3333, "midi": 72, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Parker lick 8"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 84, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt 1 & 3 · lick 5"}]}, {"offs": [4, 7, 4, 0], "toks": ["3", "5", "3", "1"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 77, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt set 2 · lick 1"}, {"notes": [{"q": 0.0, "dur": 1.0, "midi": 81, "name": "A"}, {"q": 1.0, "dur": 1.0, "midi": 84, "name": "C"}, {"q": 2.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 2.5, "dur": 0.5, "midi": 77, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt 1 & 3 · lick 5"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 77, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Cherokee, bar 61"}]}, {"offs": [11, 12, 16, 19], "toks": ["7", "1", "3", "5"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 64, "name": "E"}, {"q": 0.5, "dur": 0.3333, "midi": 65, "name": "F"}, {"q": 0.8333, "dur": 0.3333, "midi": 69, "name": "A"}, {"q": 1.1667, "dur": 0.3333, "midi": 72, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Kellen lick 4"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 52, "name": "E"}, {"q": 0.5, "dur": 0.3333, "midi": 53, "name": "F"}, {"q": 0.8333, "dur": 0.3333, "midi": 57, "name": "A"}, {"q": 1.1667, "dur": 0.3333, "midi": 60, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Parker lick 6"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 64, "name": "E"}, {"q": 0.5, "dur": 0.3333, "midi": 65, "name": "F"}, {"q": 0.8333, "dur": 0.3333, "midi": 69, "name": "A"}, {"q": 1.1667, "dur": 0.3333, "midi": 72, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt 1 & 3 · lick 1"}]}, {"offs": [4, 7, 12, 16], "toks": ["3", "5", "1", "3"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 1.5, "dur": 0.5, "midi": 81, "name": "A"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt lick 7"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 1.5, "dur": 0.5, "midi": 81, "name": "A"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt lick 13"}]}, {"offs": [0, 2, 4, 7], "toks": ["1", "2", "3", "5"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 1.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 84, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt lick 11"}, {"notes": [{"q": 0, "dur": 1.5, "midi": 77, "name": "F"}, {"q": 1.5, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 2, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 2.5, "dur": 0.5, "midi": 84, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Cherokee, bar 37"}]}, {"offs": [4, 3, 4, 7, 4, 0], "toks": ["3", "♭3", "3", "5", "3", "1"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 80, "name": "G♯"}, {"q": 1.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 2.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 2.5, "dur": 0.5, "midi": 77, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Lick set 4 · lick 4"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 80, "name": "G♯"}, {"q": 1.0, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 1.5, "dur": 1.0, "midi": 84, "name": "C"}, {"q": 2.5, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 3.0, "dur": 0.5, "midi": 77, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt 1 & 3 · lick 6"}]}, {"offs": [12, 4, 7], "toks": ["1", "3", "5"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1, "dur": 0.5, "midi": 72, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Cherokee, bar 79"}]}, {"offs": [0, 4, 7, 4], "toks": ["1", "3", "5", "3"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 65, "name": "F"}, {"q": 0.25, "dur": 0.25, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.25, "midi": 72, "name": "C"}, {"q": 0.75, "dur": 0.25, "midi": 69, "name": "A"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Parker lick 11"}]}, {"offs": [12, 7, 4, 0], "toks": ["1", "5", "3", "1"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 65, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 57, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 53, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Parker lick 14"}]}, {"offs": [0, 4, 6, 7], "toks": ["1", "3", "♭5", "5"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 65, "name": "F"}, {"q": 0.25, "dur": 0.25, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.25, "midi": 71, "name": "B"}, {"q": 0.75, "dur": 0.25, "midi": 72, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Parker lick 9"}]}, {"offs": [12, 4, 7, 4], "toks": ["1", "3", "5", "3"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.5, "dur": 0.5, "midi": 69, "name": "A"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Stitt 1 & 3 · lick 3"}]}, {"offs": [11, 12, 14, 16, 19], "toks": ["7", "1", "2", "3", "5"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 0.5, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 1.0, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 1.5, "dur": 0.5, "midi": 81, "name": "A"}, {"q": 2.0, "dur": 0.5, "midi": 84, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Kellen lick 5"}]}, {"offs": [11, 12, 16, 19, 16], "toks": ["7", "1", "3", "5", "3"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 64, "name": "E"}, {"q": 0.25, "dur": 0.25, "midi": 65, "name": "F"}, {"q": 0.5, "dur": 0.25, "midi": 69, "name": "A"}, {"q": 0.75, "dur": 0.25, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.25, "midi": 69, "name": "A"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Parker lick 5"}]}, {"offs": [7, 7, 6, 4, 0], "toks": ["5", "5", "♭5", "3", "1"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0, "dur": 0.5, "midi": 93, "name": "A"}, {"q": 0.5, "dur": 0.25, "midi": 93, "name": "A"}, {"q": 0.75, "dur": 0.25, "midi": 92, "name": "G♯"}, {"q": 1, "dur": 0.5, "midi": 90, "name": "F♯"}, {"q": 1.5, "dur": 0.5, "midi": 86, "name": "D"}], "chord": {"root": "B", "pc": 11, "suffix": "m7"}, "triad": "D", "src": "Cherokee, bar 169"}]}, {"offs": [16, 19, 16, 12, 11, 12], "toks": ["3", "5", "3", "1", "7", "1"], "role": "♭3–5–♭7", "sound": "relative major over minor", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 65, "name": "F"}, {"q": 2.0, "dur": 0.3333, "midi": 64, "name": "E"}, {"q": 2.3333, "dur": 0.3333, "midi": 65, "name": "F"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "F", "src": "Kellen lick 3"}]}, {"offs": [7, 4, 12], "toks": ["5", "3", "1"], "role": "11–13–1", "sound": "the triad on the 4th", "rootRel": 5, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 0.5, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.0, "dur": 0.5, "midi": 79, "name": "G"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "G", "src": "Cherokee, bar 47"}, {"notes": [{"q": 0.0, "dur": 0.3333, "midi": 72, "name": "C"}, {"q": 0.3333, "dur": 0.3333, "midi": 69, "name": "A"}, {"q": 0.6667, "dur": 1, "midi": 77, "name": "F"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "F", "src": "Cherokee, bar 128"}, {"notes": [{"q": 0.0, "dur": 0.3333, "midi": 72, "name": "C"}, {"q": 0.3333, "dur": 0.3333, "midi": 69, "name": "A"}, {"q": 0.6667, "dur": 1, "midi": 77, "name": "F"}], "chord": {"root": "C", "pc": 0, "suffix": ""}, "triad": "F", "src": "Cherokee, bar 192"}]}, {"offs": [7, 5, 4, 0], "toks": ["5", "4", "3", "1"], "role": "11–13–1", "sound": "the triad on the 4th", "rootRel": 5, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 67, "name": "G"}, {"q": 0.25, "dur": 0.25, "midi": 65, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 64, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 60, "name": "C"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "C", "src": "Parker lick 10"}, {"notes": [{"q": 0.0, "dur": 0.1667, "midi": 67, "name": "G"}, {"q": 0.1667, "dur": 0.1667, "midi": 65, "name": "F"}, {"q": 0.3333, "dur": 0.25, "midi": 64, "name": "E"}, {"q": 0.5833, "dur": 0.25, "midi": 60, "name": "C"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "C", "src": "Parker lick 11"}, {"notes": [{"q": 0.0, "dur": 0.1667, "midi": 67, "name": "G"}, {"q": 0.1667, "dur": 0.1667, "midi": 65, "name": "F"}, {"q": 0.3333, "dur": 0.25, "midi": 64, "name": "E"}, {"q": 0.5833, "dur": 0.25, "midi": 60, "name": "C"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "C", "src": "Parker lick 5"}]}, {"offs": [0, 2, 4, 7], "toks": ["1", "2", "3", "5"], "role": "11–13–1", "sound": "the triad on the 4th", "rootRel": 5, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 67, "name": "G"}, {"q": 0.3333, "dur": 0.3333, "midi": 69, "name": "A"}, {"q": 0.6667, "dur": 0.3333, "midi": 71, "name": "B"}, {"q": 1.0, "dur": 0.5, "midi": 74, "name": "D"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "G", "src": "Parker lick 1"}, {"notes": [{"q": 0.0, "dur": 1, "midi": 79, "name": "G"}, {"q": 1.0, "dur": 0.25, "midi": 81, "name": "A"}, {"q": 1.25, "dur": 0.25, "midi": 83, "name": "B"}, {"q": 1.5, "dur": 0.5, "midi": 86, "name": "D"}], "chord": {"root": "D", "pc": 2, "suffix": "7"}, "triad": "G", "src": "Cherokee, bar 92"}]}, {"offs": [7, 12, 16], "toks": ["5", "1", "3"], "role": "11–13–1", "sound": "the triad on the 4th", "rootRel": 5, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 67, "name": "G"}, {"q": 0.25, "dur": 0.25, "midi": 72, "name": "C"}, {"q": 0.5, "dur": 0.25, "midi": 76, "name": "E"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "C", "src": "Stitt set 2 · lick 8"}]}, {"offs": [0, 4, 7], "toks": ["1", "3", "5"], "role": "11–13–1", "sound": "the triad on the 4th", "rootRel": 5, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 53, "name": "F"}, {"q": 0.5, "dur": 0.3333, "midi": 57, "name": "A"}, {"q": 0.8333, "dur": 0.3333, "midi": 60, "name": "C"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "F", "src": "Parker lick 2"}]}, {"offs": [7, 4, 0], "toks": ["5", "3", "1"], "role": "11–13–1", "sound": "the triad on the 4th", "rootRel": 5, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 78, "name": "F♯"}, {"q": 0.5, "dur": 0.5, "midi": 75, "name": "D♯"}, {"q": 1.0, "dur": 0.5, "midi": 71, "name": "B"}], "chord": {"root": "F♯", "pc": 6, "suffix": "7"}, "triad": "B", "src": "Cherokee, bar 103"}]}, {"offs": [7, 4, 0], "toks": ["5", "3", "1"], "role": "♭7–9–11", "sound": "sus sound", "rootRel": 10, "ex": [{"notes": [{"q": 0.0, "dur": 1.5, "midi": 72, "name": "C"}, {"q": 1.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 2.0, "dur": 0.5, "midi": 65, "name": "F"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "F", "src": "Parker lick 1"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 0.5, "dur": 0.25, "midi": 57, "name": "A"}, {"q": 0.75, "dur": 0.25, "midi": 53, "name": "F"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "F", "src": "Parker lick 14"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 60, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 57, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 53, "name": "F"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "F", "src": "Parker lick 2"}, {"notes": [{"q": 0, "dur": 1, "midi": 81, "name": "A"}, {"q": 1, "dur": 0.3333, "midi": 78, "name": "F♯"}, {"q": 1.3333, "dur": 0.3333, "midi": 74, "name": "D"}], "chord": {"root": "E", "pc": 4, "suffix": "7"}, "triad": "D", "src": "Cherokee, bar 106"}]}, {"offs": [12, 4, 7], "toks": ["1", "3", "5"], "role": "♭7–9–11", "sound": "sus sound", "rootRel": 10, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 65, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 57, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 60, "name": "C"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "F", "src": "Parker lick 4"}]}, {"offs": [12, 7, 4], "toks": ["1", "5", "3"], "role": "♭7–9–11", "sound": "sus sound", "rootRel": 10, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 69, "name": "A"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "F", "src": "Cherokee, bar 62"}]}, {"offs": [0, 4, 7], "toks": ["1", "3", "5"], "role": "♭7–9–11", "sound": "sus sound", "rootRel": 10, "ex": [{"notes": [{"q": 0, "dur": 0.3333, "midi": 70, "name": "B♭"}, {"q": 0.3333, "dur": 0.3333, "midi": 74, "name": "D"}, {"q": 0.6667, "dur": 0.3333, "midi": 77, "name": "F"}], "chord": {"root": "C", "pc": 0, "suffix": "7"}, "triad": "B♭", "src": "Cherokee, bar 68"}]}, {"offs": [11, 12, 16, 19], "toks": ["7", "1", "3", "5"], "role": "♭7–9–11", "sound": "sus sound", "rootRel": 10, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 0.5, "dur": 0.3333, "midi": 72, "name": "C"}, {"q": 0.8333, "dur": 0.3333, "midi": 76, "name": "E"}, {"q": 1.1667, "dur": 0.3333, "midi": 79, "name": "G"}], "chord": {"root": "D", "pc": 2, "suffix": "m7"}, "triad": "C", "src": "Stitt set 2 · lick 13"}]}, {"offs": [0, 4, 7, 4, 2, 0], "toks": ["1", "3", "5", "3", "2", "1"], "role": "9–♯11–13", "sound": "Lydian (dominant)", "rootRel": 2, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 88, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 91, "name": "G"}, {"q": 1.5, "dur": 0.5, "midi": 88, "name": "E"}, {"q": 2.0, "dur": 0.25, "midi": 86, "name": "D"}, {"q": 2.25, "dur": 0.25, "midi": 84, "name": "C"}], "chord": {"root": "B♭", "pc": 10, "suffix": "7"}, "triad": "C", "src": "Cherokee, bar 87"}, {"notes": [{"q": 0.0, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 88, "name": "E"}, {"q": 1.0, "dur": 0.5, "midi": 91, "name": "G"}, {"q": 1.5, "dur": 0.5, "midi": 88, "name": "E"}, {"q": 2.0, "dur": 0.25, "midi": 86, "name": "D"}, {"q": 2.25, "dur": 0.25, "midi": 84, "name": "C"}], "chord": {"root": "B♭", "pc": 10, "suffix": "7"}, "triad": "C", "src": "Cherokee, bar 88"}]}, {"offs": [7, 12, 14, 16, 19], "toks": ["5", "1", "2", "3", "5"], "role": "9–♯11–13", "sound": "Lydian (dominant)", "rootRel": 2, "ex": [{"notes": [{"q": 0, "dur": 0.5, "midi": 66, "name": "F♯"}, {"q": 0.5, "dur": 0.25, "midi": 71, "name": "B"}, {"q": 0.75, "dur": 0.25, "midi": 73, "name": "C♯"}, {"q": 1, "dur": 0.25, "midi": 75, "name": "D♯"}, {"q": 1.25, "dur": 0.75, "midi": 78, "name": "F♯"}], "chord": {"root": "A", "pc": 9, "suffix": "7♭9"}, "triad": "B", "src": "Hargrove, bar 9"}]}, {"offs": [0, 4, 7, 5, 4], "toks": ["1", "3", "5", "4", "3"], "role": "9–♯11–13", "sound": "Lydian (dominant)", "rootRel": 2, "ex": [{"notes": [{"q": 0.0, "dur": 0.3333, "midi": 84, "name": "C"}, {"q": 0.3333, "dur": 0.3333, "midi": 88, "name": "E"}, {"q": 0.6667, "dur": 0.5, "midi": 91, "name": "G"}, {"q": 1.1667, "dur": 0.5, "midi": 89, "name": "F"}, {"q": 1.6667, "dur": 0.5, "midi": 88, "name": "E"}], "chord": {"root": "B♭", "pc": 10, "suffix": ""}, "triad": "C", "src": "Cherokee, bar 71"}]}, {"offs": [7, 12, 4], "toks": ["5", "1", "3"], "role": "13–♭9–3", "sound": "13♭9", "rootRel": 9, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 74, "name": "D"}, {"q": 0.5, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 1.0, "dur": 0.5, "midi": 71, "name": "B"}], "chord": {"root": "B♭", "pc": 10, "suffix": ""}, "triad": "G", "src": "Cherokee, bar 72"}]}, {"offs": [7, 5, 4, 12], "toks": ["5", "4", "3", "1"], "role": "13–♭9–3", "sound": "13♭9", "rootRel": 9, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.0, "dur": 0.5, "midi": 68, "name": "A♭"}, {"q": 1.5, "dur": 1, "midi": 76, "name": "E"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "E", "src": "Cherokee, bar 48"}]}, {"offs": [5, 4, 12, 12, 7], "toks": ["4", "3", "1", "1", "5"], "role": "13–♭9–3", "sound": "13♭9", "rootRel": 9, "ex": [{"notes": [{"q": 0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 0.5, "dur": 0.5, "midi": 68, "name": "A♭"}, {"q": 1, "dur": 1, "midi": 76, "name": "E"}, {"q": 2, "dur": 0.5, "midi": 76, "name": "E"}, {"q": 2.5, "dur": 0.5, "midi": 71, "name": "B"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "E", "src": "Cherokee, bar 30"}]}, {"offs": [0, 4, 7], "toks": ["1", "3", "5"], "role": "♯9–5–♭7", "sound": "♯9 sound", "rootRel": 3, "ex": [{"notes": [{"q": 0, "dur": 0.5, "midi": 65, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1, "dur": 0.5, "midi": 72, "name": "C"}], "chord": {"root": "D", "pc": 2, "suffix": "7"}, "triad": "F", "src": "Cherokee, bar 75"}, {"notes": [{"q": 0, "dur": 0.5, "midi": 79, "name": "G"}, {"q": 0.5, "dur": 0.5, "midi": 83, "name": "B"}, {"q": 1, "dur": 0.5, "midi": 86, "name": "D"}], "chord": {"root": "E", "pc": 4, "suffix": "7"}, "triad": "G", "src": "Cherokee, bar 170"}]}, {"offs": [12, 7, 4], "toks": ["1", "5", "3"], "role": "♯9–5–♭7", "sound": "♯9 sound", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 75, "name": "E♭"}, {"q": 0.5, "dur": 0.5, "midi": 70, "name": "B♭"}, {"q": 1.0, "dur": 0.5, "midi": 67, "name": "G"}], "chord": {"root": "C", "pc": 0, "suffix": "7"}, "triad": "E♭", "src": "Cherokee, bar 52"}]}, {"offs": [7, 4, 12, 14, 12], "toks": ["5", "3", "1", "2", "1"], "role": "♯9–5–♭7", "sound": "♯9 sound", "rootRel": 3, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 65, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 62, "name": "D"}, {"q": 1.0, "dur": 0.1667, "midi": 70, "name": "B♭"}, {"q": 1.1667, "dur": 0.1667, "midi": 72, "name": "C"}, {"q": 1.3333, "dur": 0.1667, "midi": 70, "name": "B♭"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "B♭", "src": "Parker lick 7"}]}, {"offs": [7, 12, 4], "toks": ["5", "1", "3"], "role": "♭13–1–♭3", "sound": "♭13 colour", "rootRel": 8, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 79, "name": "G"}, {"q": 0.25, "dur": 0.5, "midi": 84, "name": "C"}, {"q": 0.75, "dur": 0.5, "midi": 76, "name": "E"}], "chord": {"root": "E", "pc": 4, "suffix": "m7"}, "triad": "C", "src": "Hargrove, bar 22"}]}, {"offs": [7, 9, 7, 4, 0], "toks": ["5", "6", "5", "3", "1"], "role": "♭9–11–♭13", "sound": "Phrygian colour", "rootRel": 1, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 75, "name": "E♭"}, {"q": 0.25, "dur": 0.25, "midi": 77, "name": "F"}, {"q": 0.5, "dur": 0.25, "midi": 75, "name": "E♭"}, {"q": 0.75, "dur": 0.25, "midi": 72, "name": "C"}, {"q": 1.0, "dur": 0.5, "midi": 68, "name": "A♭"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "A♭", "src": "Stitt 1 & 3 · lick 2"}]}, {"offs": [8, 7, 5, 4, 12], "toks": ["♭6", "5", "4", "3", "1"], "role": "3–♯5–7", "sound": "maj7♯5", "rootRel": 4, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 72, "name": "C"}, {"q": 0.5, "dur": 0.5, "midi": 71, "name": "B"}, {"q": 1.0, "dur": 0.5, "midi": 69, "name": "A"}, {"q": 1.5, "dur": 0.5, "midi": 68, "name": "A♭"}, {"q": 2.0, "dur": 1.5, "midi": 76, "name": "E"}], "chord": {"root": "C", "pc": 0, "suffix": "maj7"}, "triad": "E", "src": "Stitt 1 & 3 · lick 4"}]}, {"offs": [7, 4, 0], "toks": ["5", "3", "1"], "role": "♭5–♭7–♭9", "sound": "altered", "rootRel": 6, "ex": [{"notes": [{"q": 0.0, "dur": 0.25, "midi": 56, "name": "A♭"}, {"q": 0.25, "dur": 0.25, "midi": 53, "name": "F"}, {"q": 0.5, "dur": 0.5, "midi": 49, "name": "C♯"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "C♯", "src": "Parker lick 14"}]}, {"offs": [12, 4, 7], "toks": ["1", "3", "5"], "role": "7–♯9–♯11", "sound": "outside", "rootRel": 11, "ex": [{"notes": [{"q": 0.0, "dur": 0.5, "midi": 66, "name": "F♯"}, {"q": 0.5, "dur": 0.5, "midi": 58, "name": "B♭"}, {"q": 1.0, "dur": 0.5, "midi": 61, "name": "C♯"}], "chord": {"root": "G", "pc": 7, "suffix": "7"}, "triad": "F♯", "src": "Kellen lick 3"}]}];
+
+/* ---------- Cells from your Music Lab solo library ----------
+   Every solo in the library (built-in and uploaded) is read live: each major triad played under one chord,
+   with at most one passing or neighbour note between triad notes, becomes a cell here, grouped with the
+   same pattern. Lick-set cells (Stitt, Parker, Kellen) stay as they were. */
+const LIB_FL = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const LIB_TOK = { 0: '1', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♯4', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7' };
+function libDeg(semi, q) {
+  const s = ((semi % 12) + 12) % 12;
+  if (s === 3 && q === 'dom') return '♯9';
+  if (s === 6 && (q === 'hd' || q === 'dim')) return '♭5';
+  return { 0: '1', 1: '♭9', 2: '9', 3: '♭3', 4: '3', 5: '11', 6: '♯11', 7: '5', 8: '♭13', 9: '13', 10: '♭7', 11: '7' }[s];
+}
+let libCellsDone = false;
+async function addLibraryCells() {
+  if (libCellsDone || !window.MusicLab || !window.SoloProcessor) return;
+  libCellsDone = true;
+  const P = window.SoloProcessor, md = (a, n) => ((a % n) + n) % n;
+  const SOUND = {}; CELLS.forEach(c => { SOUND[c.role] = SOUND[c.role] || c.sound; });
+  // the solo examples baked in earlier (Cherokee, Hargrove) are rebuilt from the library, so drop the old copies
+  for (let i = CELLS.length - 1; i >= 0; i--) { CELLS[i].ex = CELLS[i].ex.filter(e => !/^(Cherokee|Hargrove), bar/.test(e.src)); if (!CELLS[i].ex.length) CELLS.splice(i, 1); }
+  const byKey = new Map(CELLS.map(c => [c.toks.join(' ') + '|' + c.offs.join(',') + '|' + c.role, c]));
+  let solos = []; try { solos = await MusicLab.solos(); } catch (e) { return; }
+  let added = 0, fromSolos = 0;
+  for (const so of solos) {
+    let S; try { S = P.parse(so.xml); } catch (e) { continue; }
+    if (S.chords.length < 4) continue;
+    const conc = so.pitch != null ? (so.pitch === 'bb' ? -2 : 0) : (S.transpose === -2 || S.transpose === -9 ? S.transpose : 0);
+    // read in C, like the rest of the app: move the solo so its key (from the key signature, in concert pitch) is C
+    const tonic = S.fifths != null ? md(S.fifths * 7 + conc, 12) : 0, toC = tonic > 6 ? 12 - tonic : -tonic;
+    const sh = conc + toC;
+    const parts = (so.name || '').split(' · '), label = parts.length > 1 ? `${parts[0]} · ${parts[1].split(' ').pop()}` : (so.name || 'Your solo');
+    let hit = false;
+    for (const ph of P._ex.phrases(S.notes)) {
+      const cands = [];
+      for (let a = 0; a < ph.length; a++) for (let b = a + 2; b < ph.length && b - a < 6; b++) {
+        const win = ph.slice(a, b + 1), ch = win[0].chord;
+        if (!ch || win.some(n => n.chord !== ch)) break;
+        const pcs = new Set(win.map(n => md(n.p, 12)));
+        for (const rt of pcs) {
+          if (!pcs.has((rt + 4) % 12) || !pcs.has((rt + 7) % 12)) continue;
+          const isT = n => [0, 4, 7].includes(md(n.p - rt, 12));
+          if (!isT(win[0]) || !isT(win[win.length - 1])) continue;
+          let ok = true, pass = 0;
+          win.forEach((n, k) => { if (isT(n)) return; const p0 = win[k - 1], p1 = win[k + 1];
+            if (isT(p0) && isT(p1) && Math.abs(n.p - p0.p) <= 2 && Math.abs(p1.p - n.p) <= 2) pass++; else ok = false; });
+          const nT = win.length - pass;
+          if (!ok || pass > Math.floor(nT / 2)) continue;
+          cands.push({ a, b, rt, win, ch, score: nT * 10 - pass * 12 });
+        }
+      }
+      cands.sort((x, y) => y.score - x.score || x.a - y.a);
+      const used = new Set();
+      for (const c of cands) {
+        let clash = false; for (let z = c.a; z <= c.b; z++) if (used.has(z)) clash = true;
+        if (clash) continue; for (let z = c.a; z <= c.b; z++) used.add(z);
+        const lo = Math.min(...c.win.map(n => n.p)); let ref = lo; while (md(ref - c.rt, 12)) ref--;
+        const toks = c.win.map(n => LIB_TOK[md(n.p - c.rt, 12)]), offs = c.win.map(n => n.p - ref);
+        const q = c.ch.q, rootRel = md(c.rt - c.ch.root, 12);
+        const role = [0, 4, 7].map(x => libDeg(rootRel + x, q)).join('–');
+        let suf = c.ch.name.slice(1); while (['♭', '♯', '𝄪', '𝄫'].includes(suf[0])) suf = suf.slice(1);
+        const t0 = c.win[0].t, cr = md(c.ch.root + sh, 12);
+        const ex = { notes: c.win.map(n => ({ q: Math.round((n.t - t0) * 1e4) / 1e4, dur: Math.round(n.dur * 1e4) / 1e4, midi: n.p + sh, name: LIB_FL[md(n.p + sh, 12)] })),
+          chord: { root: LIB_FL[cr], pc: cr, suffix: suf }, triad: LIB_FL[md(c.rt + sh, 12)], src: `${label}, bar ${c.win[0].bar}`, lib: true, asPlayed: !!so.test };
+        const key = toks.join(' ') + '|' + offs.join(',') + '|' + role;
+        let cell = byKey.get(key);
+        if (!cell) { cell = { offs, toks, role, sound: SOUND[role] || `major triad on the ${libDeg(rootRel, q)}`, rootRel, ex: [] }; byKey.set(key, cell); CELLS.push(cell); added++; }
+        cell.ex.push(ex); fromSolos++; hit = true;
+      }
+    }
+  }
+  // most-heard patterns first within each role, as before; lick-set examples keep their place at the front
+  CELLS.sort((x, y) => y.ex.length - x.ex.length);
+  // Focus tunes (Music Lab sidebar): examples from solos on them lead each cell, and cells that have one come first
+  try { const F = MusicLab.focus; if (F && F.active()) { CELLS.forEach(c => { c.ex = F.front(c.ex, e => e.src); }); const f = CELLS.filter(c => F.is(c.ex[0].src)), r = CELLS.filter(c => !F.is(c.ex[0].src)); CELLS.length = 0; CELLS.push(...f, ...r); } } catch (e) {}
+  const n = solos.length;
+  const note = document.querySelector('#p-licks .note');
+  if (note) note.innerHTML = `Every major-triad cell found in your <b>Stitt, Parker and Kellen</b> ii–V licks and in all <b>${n} solos</b> of your Music Lab library (${fromSolos} from the solos, all read in C). New solos you add show up here automatically. Numbers are degrees of the triad: <b>1 3 5</b> are triad notes, <span style="color:var(--appr)"><b>purple</b></span> ones are approach or passing notes. <b>▶</b> plays it as it was played; <b>12 keys</b> drills it around the cycle of 4ths, keeping the same relation to the chord.`;
+  try { renderLicks(); } catch (e) {}
+}
+window.addEventListener('load', () => { setTimeout(addLibraryCells, 50); });
+if (window.MusicLab && MusicLab.onChange) MusicLab.onChange(() => { location.reload(); });
+window.addEventListener('musiclab:focus', () => { location.reload(); });
+</script>
+<script>
+const $ = id => document.getElementById(id);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const mod = (a, n) => ((a % n) + n) % n;
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function readout(h) { $('readout').innerHTML = h; }
+
+/* ---------- Note names ---------- */
+const LET = 'CDEFGAB', LPC = [0, 2, 4, 5, 7, 9, 11];
+const accs = a => a === 0 ? '' : a === 1 ? '♯' : a === -1 ? '♭' : a === 2 ? '𝄪' : '𝄫';
+// spell pitch class pc on the letter `l` (0–6)
+const spellOn = (l, pc) => LET[l] + accs(mod(pc - LPC[l] + 6, 12) - 6);
+// a triad degree token's letter step above the triad root, and its semitones
+const TOKSTEP = { '1': 0, '♭2': 1, '2': 1, '♭3': 2, '3': 2, '4': 3, '♭5': 4, '5': 4, '♭6': 5, '6': 5, '♭7': 6, '7': 6 };
+const TOKSEMI = { '1': 0, '♭2': 1, '2': 2, '♭3': 3, '3': 4, '4': 5, '♭5': 6, '5': 7, '♭6': 8, '6': 9, '♭7': 10, '7': 11 };
+const TONE = new Set(['1', '3', '5']);
+// roots in the cycle of fourths, spelled the usual way
+const CYCLE = [['C', 0, 0], ['F', 3, 5], ['B♭', 6, 10], ['E♭', 2, 3], ['A♭', 5, 8], ['D♭', 1, 1], ['G♭', 4, 6], ['B', 6, 11], ['E', 2, 4], ['A', 5, 9], ['D', 1, 2], ['G', 4, 7]];  // name, letter, pc
+const noteName = (root, tok) => spellOn(mod(root[1] + TOKSTEP[tok], 7), root[2] + TOKSEMI[tok]);
+
+/* ---------- Audio ---------- */
+let ctx, master, live = [], timers = [], token = 0;
+const buffers = {}; let pianoLoad = null;
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number).sort((a, b) => a - b);
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  if (!pianoLoad) pianoLoad = Promise.all(Object.entries(PIANO).map(([m, url]) => new Promise(res => {
+    const bin = atob(url.slice(url.indexOf(',') + 1)), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    ctx.decodeAudioData(u8.buffer, b => { buffers[m] = b; res(); }, () => res());
+  })));
+  return pianoLoad;
+}
+function piano(m, t, dur, scale = 1) {
+  const s = SAMPLE_KEYS.reduce((b, k) => Math.abs(k - m) < Math.abs(b - m) ? k : b, SAMPLE_KEYS[0]);
+  const buf = buffers[s]; if (!buf) return;
+  const src = ctx.createBufferSource(); src.buffer = buf; const rate = Math.pow(2, (m - s) / 12); src.playbackRate.value = rate;
+  const g = ctx.createGain(), v = ($('vol').value / 100) * scale, end = Math.min(t + dur, t + buf.duration / rate);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.004);
+  g.gain.setValueAtTime(v, Math.max(t + 0.01, end - Math.min(0.12, dur * 0.3))); g.gain.linearRampToValueAtTime(0.0001, end);
+  src.connect(g); g.connect(master); src.start(t); src.stop(end + 0.02);
+  live.push({ src, g }); src.onended = () => { live = live.filter(x => x.src !== src); };
+}
+const bassOf = pc => { let m = 36 + mod(pc, 12); if (m < 40) m += 12; return m; };
+const at = (time, fn) => { const id = setTimeout(() => { timers = timers.filter(x => x !== id); fn(); }, Math.max(0, (time - ctx.currentTime) * 1000)); timers.push(id); };
+let playing = false, onStop = null;
+function stopAll() {
+  curAsPlayed = false;
+  token++; timers.forEach(clearTimeout); timers = [];
+  if (ctx) { const now = ctx.currentTime; live.forEach(({ src, g }) => { try { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0, now + 0.03); src.stop(now + 0.04); } catch (e) {} }); }
+  live = [];
+  document.querySelectorAll('.playing, .n.on, .chip.now, .mini.on').forEach(e => e.classList.remove('playing', 'on', 'now'));
+  playing = false; $('playBtn').textContent = '▶ Play';
+}
+const beat = () => 60 / $('tempo').value;
+let curAsPlayed = false;   // Weimar testing-group licks are timed as played: no extra swing
+const swingT = (q) => { if (curAsPlayed || !$('swing').checked) return q; const b = Math.floor(q + 1e-9), f = q - b; return b + (f <= 0.5 ? f * 1.24 : 0.62 + (f - 0.5) * 0.76); };
+
+/* ---------- Pitch line: one circle per note ---------- */
+function drawLine(svg, notes, { chords = [], total = null } = {}) {
+  // notes: {q, dur, midi, big, small, kind: 'tone'|'chrom'|''}; chords: {q, name, sub}
+  const NS = 'http://www.w3.org/2000/svg', mk = (t, a, p = svg) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; };
+  svg.innerHTML = '';
+  if (!notes.length) return [];
+  const end = total ?? Math.max(...notes.map(n => n.q + n.dur));
+  const box = svg.parentElement.clientWidth || 600, R = 17, minGap = 2 * R + 6;
+  let gap = Infinity; notes.forEach((n, i) => { if (i) gap = Math.min(gap, n.q - notes[i - 1].q); });
+  const need = gap === Infinity ? 0 : minGap / gap;
+  const pad = R + 8, W = Math.max(box, need * end + 2 * pad), u = (W - 2 * pad) / Math.max(end, 0.5);
+  const H = 190, TOP = 44, BOT = H - 10;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = W > box ? W + 'px' : '100%';
+  const lo = Math.min(...notes.map(n => n.midi)), hi = Math.max(...notes.map(n => n.midi)), span = Math.max(hi - lo, 12);
+  const x = q => pad + q * u, y = m => BOT - R - (m - lo) / span * (BOT - TOP - 2 * R - 12);
+  chords.forEach(c => { mk('line', { class: 'bl', x1: x(c.q) - R - 2, x2: x(c.q) - R - 2, y1: 4, y2: H - 4 });
+    const t = mk('text', { class: 'ch', x: x(c.q) - R + 4, y: 18 }); t.textContent = c.name; if (c.sub) { const s = mk('tspan', {}, t); s.textContent = ' ' + c.sub; } });
+  notes.forEach((n, i) => { if (!i) return; const p = notes[i - 1];
+    mk('line', { class: 'lk' + (Math.abs(n.midi - p.midi) === 1 ? ' half' : ''), x1: x(p.q), y1: y(p.midi), x2: x(n.q), y2: y(n.midi) }); });
+  return notes.map(n => {
+    const g = mk('g', { class: 'n ' + (n.kind || '') });
+    mk('circle', { cx: x(n.q), cy: y(n.midi), r: R }, g);
+    const a = mk('text', { x: x(n.q), y: y(n.midi) + 0.5, 'font-size': n.big.length > 2 ? 12 : 14 }, g); a.textContent = n.big;
+    if (n.small) { const b = mk('text', { class: 't', x: x(n.q), y: y(n.midi) - R - 9, 'font-size': 12 }, g); b.textContent = n.small; }
+    g.addEventListener('click', async () => { stopAll(); await audio(); const t = ctx.currentTime + 0.02; piano(n.midi, t, 1.2, 0.85); g.classList.add('on'); at(t + 0.9, () => g.classList.remove('on')); });
+    return g;
+  });
+}
+const light = (el, from, to) => { if (!el) return; at(from, () => el.classList.add('on')); at(to, () => el.classList.remove('on')); };
+
+/* ---------- Colours over C ---------- */
+const COLOURS = [
+  ['C', 0, 0, '1–3–5', 'home', 'var(--home)'], ['G', 4, 7, '5–7–9', 'maj9', 'var(--home)'], ['D', 1, 2, '9–♯11–13', 'Lydian', 'var(--home)'],
+  ['E', 2, 4, '3–♯5–7', 'maj7♯5', 'var(--home)'], ['F', 3, 5, '11–13–1', 'sus (IV over I)', 'var(--t1)'], ['B♭', 6, 10, '♭7–9–11', '9sus', 'var(--t1)'],
+  ['A', 5, 9, '13–♭9–3', '13♭9', 'var(--t2)'], ['G♭', 4, 6, '♭5–♭7–♭9', 'altered', 'var(--t3)'], ['E♭', 2, 3, '♭3–5–♭7', 'minor 7', 'var(--two)'],
+  ['A♭', 5, 8, '♭13–1–♭3', 'minor ♭6', 'var(--two)'], ['D♭', 1, 1, '♭9–11–♭13', 'Phrygian', 'var(--two)'], ['B', 6, 11, '7–♯9–♯11', 'outside', 'var(--appr)']];
+function triadMidis(pc, low = 60) { let r = pc; while (r < low) r += 12; return [r, r + 4, r + 7]; }
+function renderColours() {
+  $('colourGrid').innerHTML = COLOURS.map(([n, l, pc, deg, word, col], k) => `<button class="card" data-k="${k}" style="--c:${col}">
+    <div class="strip"><b>${n}</b><span>over C</span></div><div class="body"><span class="deg">${deg}</span><span class="sn">${word}</span></div></button>`).join('');
+  $('colourGrid').querySelectorAll('.card').forEach(c => c.addEventListener('click', () => playColour(+c.dataset.k, c)));
+}
+async function playColour(k, el, { reveal = true } = {}) {
+  stopAll(); await audio();
+  return scheduleColour(k, el, ctx.currentTime + 0.03, reveal);
+}
+function scheduleColour(k, el, t0, reveal = true) {
+  const [n, l, pc, deg, word] = COLOURS[k], ms = triadMidis(pc, 60), st = Math.min(0.32, beat() * 0.5);
+  if ($('bassOn').checked) piano(bassOf(0), t0, st * 3 + 2.4, 0.6);
+  ms.forEach((m, j) => piano(m, t0 + j * st, st * 3 + 1.6 - j * st, 0.8));
+  ms.forEach(m => piano(m, t0 + st * 3 + 0.25, 1.6, 0.55));
+  if (el) { at(t0, () => el.classList.add('playing')); at(t0 + st * 3 + 1.9, () => el.classList.remove('playing')); }
+  if (reveal) at(t0, () => readout(`<b>${n} over C</b> · ${deg} · ${word}. Notes: ${ms.map(m => noteName(CYCLE.find(c => c[2] === pc), ['1', '3', '5'][ms.indexOf(m)])).join('–')}.`));
+  return t0 + st * 3 + 1.9;
+}
+
+/* ---------- Patterns ---------- */
+const FAMS = {
+  inv: { name: 'Inversions', pats: [['1 3 5 ↑', [0, 4, 7, 12]], ['3 5 1 ↑', [4, 7, 12, 16]], ['5 1 3 ↑', [7, 12, 16, 19]], ['5 3 1 ↓', [7, 4, 0, -5]], ['1 5 3 ↓', [12, 7, 4, 0]], ['3 1 5 ↓', [16, 12, 7, 4]],
+    ['All inversions ↑↓', [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4]]] },
+  two: { name: 'Triad + 2', pats: [['1 2 3 5', [0, 2, 4, 7]], ['5 3 2 1', [7, 4, 2, 0]], ['2 3 5 1', [2, 4, 7, 12]], ['3 5 1 2', [4, 7, 12, 14]], ['1 2 3 5 ↑ 5 3 2 1 ↓', [0, 2, 4, 7, 12, 14, 16, 19, 19, 16, 14, 12, 7, 4, 2, 0]]] },
+  six: { name: 'Triad + 6', pats: [['1 3 5 6', [0, 4, 7, 9]], ['6 5 3 1', [9, 7, 4, 0]], ['5 6 1 3', [7, 9, 12, 16]], ['3 5 6 1', [4, 7, 9, 12]], ['1 2 3 5 6', [0, 2, 4, 7, 9]]] },
+  chr: { name: 'Chromatic approach', pats: [['♭5 5 3 1', [6, 7, 4, 0]], ['5 ♭3 3 1', [7, 3, 4, 0]], ['7 1 3 5', [-1, 0, 4, 7]], ['♭3 3 5 1', [3, 4, 7, 12]], ['1 3 ♭6 5', [0, 4, 8, 7]],
+    ['4 ♭3 3 1 · enclosure of 3', [5, 3, 4, 0]], ['♭6 ♭5 5 3 · enclosure of 5', [8, 6, 7, 4]], ['♭2 7 1 3 5 · enclosure of 1', [1, -1, 0, 4, 7]], ['5 ♭5 4 3 1 · chromatic down', [7, 6, 5, 4, 0]]] },
+};
+const semiTok = s => ({ 0: '1', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7' })[mod(s, 12)];
+let fam = store.get('mt.fam', 'inv'), pat = store.get('mt.pat', 0), keysMode = 'cycle', oneKey = 0, bassMode = 'root';
+function renderPatterns() {
+  $('famSeg').innerHTML = Object.entries(FAMS).map(([k, f]) => `<button class="chip" data-fam="${k}" aria-pressed="${k === fam}" style="font-size:14.5px">${f.name}</button>`).join('');
+  $('famSeg').querySelectorAll('button').forEach(b => b.onclick = () => { fam = b.dataset.fam; pat = 0; store.set('mt.fam', fam); store.set('mt.pat', 0); stopAll(); renderPatterns(); });
+  if (!FAMS[fam].pats[pat]) pat = 0;
+  $('patChips').innerHTML = FAMS[fam].pats.map(([n], k) => `<button class="chip" data-p="${k}" aria-pressed="${k === pat}">${esc(n)}</button>`).join('');
+  $('patChips').querySelectorAll('.chip').forEach(b => b.onclick = () => { pat = +b.dataset.p; store.set('mt.pat', pat); stopAll(); renderPatterns(); });
+  $('oneKey').innerHTML = CYCLE.map((c, k) => `<option value="${k}">${c[0]}</option>`).join(''); $('oneKey').value = oneKey;
+  $('oneKeyWrap').style.display = keysMode === 'one' ? '' : 'none';
+  const keys = patKeys();
+  $('keyChips').innerHTML = keys.map(k => `<button class="chip" data-k="${k}">${CYCLE[k][0]}</button>`).join('');
+  $('keyChips').querySelectorAll('.chip').forEach(b => b.onclick = () => { showPatKey(+b.dataset.k); playPattern([+b.dataset.k]); });
+  showPatKey(keys[0]);
+  const [pn, offs] = FAMS[fam].pats[pat];
+  $('patNote').innerHTML = {
+    inv: 'The same three notes, starting from each one. Listen for which note is on top: <b>5</b> in root position, <b>1</b> in 1st inversion, <b>3</b> in 2nd.',
+    two: 'The triad with the <b>2</b> (the 9th) added. <b>1 2 3 5</b> is Coltrane’s cell; it works as a pentatonic fragment too.',
+    six: 'The triad with the <b>6</b> added: four of the five notes of the major pentatonic, so it sounds like the triad and the pentatonic at once.',
+    chr: 'Purple notes aren’t in the triad. They lean into a triad note from a half step away (or close in from both sides, an enclosure), the way Stitt and Parker do.' }[fam];
+}
+const patKeys = () => keysMode === 'cycle' ? CYCLE.map((_, k) => k) : [oneKey];
+function patNotes(k) {   // one key's pattern: notes with names and degrees
+  const root = CYCLE[k], offs = FAMS[fam].pats[pat][1];
+  let base = root[2] + 60; if (base > 66) base -= 12;          // keep it around the middle of the piano
+  return offs.map((o, j) => { const tok = semiTok(o); return { q: j * 0.5, dur: 0.5, midi: base + o, big: noteName(root, tok), small: tok, kind: TONE.has(tok) ? 'tone' : 'chrom' }; });
+}
+let patEls = [];
+function showPatKey(k) {
+  const root = CYCLE[k], [pn] = FAMS[fam].pats[pat];
+  $('patTitle').textContent = `${root[0]} major · ${pn}`;
+  $('patSub').textContent = bassMode === 'c' ? `over a C bass: ${COLOURS.find(c => c[2] === root[2])[3]}, ${COLOURS.find(c => c[2] === root[2])[4]}` : 'bass on the root';
+  patEls = drawLine($('patSvg'), patNotes(k));
+  document.querySelectorAll('#keyChips .chip').forEach(c => c.classList.toggle('now', +c.dataset.k === k));
+}
+async function playPattern(keys = patKeys()) {
+  stopAll(); await audio();
+  const my = token; playing = true; $('playBtn').textContent = '■ Stop';
+  const b = beat(), t0 = ctx.currentTime + 0.08;
+  const len = FAMS[fam].pats[pat][1].length, slot = Math.ceil(len / 4) * 2;   // beats per key: patterns of 4 notes get 2 beats
+  keys.forEach((k, i) => {
+    const s = i * slot, tk = s => t0 + swingT(s) * b, ns = patNotes(k), root = CYCLE[k];
+    at(tk(s) - 0.02, () => { if (my === token) showPatKey(k); });
+    if ($('bassOn').checked) piano(bassOf(bassMode === 'c' ? 0 : root[2]), tk(s), slot * b + 0.15, 0.55);
+    ns.forEach((n, j) => { const a = tk(s + n.q), e = tk(s + n.q + n.dur); piano(n.midi, a, e - a + 0.08, 0.85); at(a, () => { if (my === token && patEls[j]) patEls[j].classList.add('on'); }); at(e, () => patEls[j] && patEls[j].classList.remove('on')); });
+  });
+  const end = t0 + swingT(keys.length * slot) * b;
+  at(end, () => { if (my !== token) return; if ($('loop').checked) { playPattern(keys); return; } playing = false; $('playBtn').textContent = '▶ Play'; });
+  readout(`${keys.length > 1 ? 'Cycle of 4ths' : CYCLE[keys[0]][0] + ' major'} · <b>${esc(FAMS[fam].pats[pat][0])}</b>${bassMode === 'c' ? ' over a C bass' : ''}. Space stops.`);
+}
+$('keysSeg').querySelectorAll('button').forEach(b => b.onclick = () => { keysMode = b.dataset.keys; $('keysSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); stopAll(); renderPatterns(); });
+$('bassSeg').querySelectorAll('button').forEach(b => b.onclick = () => { bassMode = b.dataset.bass; $('bassSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderPatterns(); });
+$('oneKey').onchange = e => { oneKey = +e.target.value; stopAll(); renderPatterns(); };
+
+/* ---------- Your licks ---------- */
+const ROLECOL = { '1–3–5': 'var(--home)', '5–7–9': 'var(--home)', '♭3–5–♭7': 'var(--two)', '11–13–1': 'var(--t1)', '♭7–9–11': 'var(--t1)', '9–♯11–13': 'var(--pent)', '13–♭9–3': 'var(--t2)', '♯9–5–♭7': 'var(--t3)' };
+const roleCol = r => ROLECOL[r] || 'var(--appr)';
+let roleFilter = 'all', selCell = -1;
+const hasExtra = c => c.toks.some(t => !TONE.has(t));
+function renderLicks() {
+  const roles = [...new Set(CELLS.map(c => c.role))];
+  const list = CELLS.filter(c => !$('onlyAppr').checked || hasExtra(c));
+  $('roleChips').innerHTML = `<button class="chip" data-r="all" aria-pressed="${roleFilter === 'all'}">All <small>${list.length}</small></button>` +
+    roles.map(r => { const n = list.filter(c => c.role === r).length; return n ? `<button class="chip" data-r="${esc(r)}" aria-pressed="${roleFilter === r}">${esc(r)} <small>${n}</small></button>` : ''; }).join('');
+  $('roleChips').querySelectorAll('.chip').forEach(b => b.onclick = () => { roleFilter = b.dataset.r; renderLicks(); });
+  const shown = CELLS.map((c, k) => ({ c, k })).filter(({ c }) => (roleFilter === 'all' || c.role === roleFilter) && (!$('onlyAppr').checked || hasExtra(c)));
+  $('cellList').innerHTML = shown.map(({ c, k }) => {
+    const e = c.ex[0], srcs = c.ex.map(x => x.src).slice(0, 3).join(' · ') + (c.ex.length > 3 ? ' …' : '');
+    return `<div class="cell${k === selCell ? ' sel' : ''}" data-k="${k}">
+      <div class="tk">${c.toks.map(t => TONE.has(t) ? t : `<i>${t}</i>`).join(' ')}</div>
+      <div class="btns"><button class="mini" data-a="orig" data-k="${k}">▶</button><button class="mini" data-a="keys" data-k="${k}">12 keys</button></div>
+      <div class="meta"><span class="tag" style="--c:${roleCol(c.role)}">${esc(c.role)}</span><b>${esc(e.triad)} over ${esc(e.chord.root + e.chord.suffix)}</b> · ${esc(c.sound)} · ${esc(srcs)}${c.ex.length > 1 ? ` (${c.ex.length}×)` : ''}</div></div>`;
+  }).join('') || '<p class="note">Nothing here with these filters.</p>';
+  $('cellList').querySelectorAll('.cell').forEach(el => el.addEventListener('click', ev => {
+    const k = +el.dataset.k, a = ev.target.closest('[data-a]');
+    selCell = k; $('cellList').querySelectorAll('.cell').forEach(x => x.classList.toggle('sel', x === el));
+    if (a && a.dataset.a === 'keys') playCellKeys(k, a); else playCellOrig(k, a);
+  }));
+}
+$('onlyAppr').onchange = () => renderLicks();
+function cellOrigNotes(c, ex = c.ex[0]) {
+  const r = mod(ex.notes[0].midi - c.offs[0], 12);
+  return ex.notes.map((n, j) => ({ q: n.q, dur: n.dur, midi: n.midi, big: n.name, small: c.toks[j], kind: TONE.has(c.toks[j]) ? 'tone' : 'chrom' }));
+}
+let lickEls = [];
+async function playCellOrig(k, btn) {
+  stopAll(); await audio();
+  const c = CELLS[k], e = c.ex[0], ns = cellOrigNotes(c), my = token; curAsPlayed = !!e.asPlayed;
+  $('lickView').hidden = false;
+  $('lickTitle').textContent = `${e.triad} over ${e.chord.root}${e.chord.suffix} · ${c.toks.join(' ')}`;
+  $('lickSub').textContent = `${e.src} · ${c.role}, ${c.sound}`;
+  lickEls = drawLine($('lickSvg'), ns, { chords: [{ q: 0, name: e.chord.root, sub: e.chord.suffix }] });
+  const b = beat(), t0 = ctx.currentTime + 0.06, T = q => t0 + swingT(q) * b, end = Math.max(...ns.map(n => n.q + n.dur));
+  if ($('bassOn').checked) piano(bassOf(e.chord.pc), t0, T(end) - t0 + 0.6, 0.55);
+  ns.forEach((n, j) => { const a = T(n.q), z = T(n.q + n.dur); piano(n.midi, a, z - a + 0.06, 0.85); light(lickEls[j], a, z); });
+  if (btn) { btn.classList.add('on'); at(T(end) + 0.2, () => btn.classList.remove('on')); }
+  readout(`<b>${esc(e.triad)} over ${esc(e.chord.root + e.chord.suffix)}</b>: ${c.toks.join(' ')} · the triad is the <b>${esc(c.role)}</b> of the chord (${esc(c.sound)}) · ${esc(e.src)}${c.ex.length > 1 ? `, and ${c.ex.length - 1} more place${c.ex.length > 2 ? 's' : ''}` : ''}.`);
+}
+async function playCellKeys(k, btn) {
+  stopAll(); await audio();
+  const c = CELLS[k], e = c.ex[0], my = token; curAsPlayed = !!e.asPlayed;
+  // walk the chord root around the cycle, starting from the lick's own chord; the triad keeps its place over it
+  const startIdx = CYCLE.findIndex(x => x[2] === e.chord.pc);
+  const ref0 = e.notes[0].midi - c.offs[0];               // the triad root under the cell, in the original register
+  const slot = Math.ceil(c.offs.length / 4) * 2, b = beat(), t0 = ctx.currentTime + 0.08;
+  $('lickView').hidden = false; playing = true; $('playBtn').textContent = '■ Stop';
+  for (let i = 0; i < 12; i++) {
+    const ch = CYCLE[(startIdx + i) % 12], d0 = mod(ch[2] - e.chord.pc, 12), d = d0 > 6 ? d0 - 12 : d0;
+    const triRoot = CYCLE.find(x => x[2] === mod(ch[2] + c.rootRel, 12));
+    const ns = c.offs.map((o, j) => ({ q: j * 0.5, dur: 0.5, midi: ref0 + d + o, big: noteName(triRoot, c.toks[j]), small: c.toks[j], kind: TONE.has(c.toks[j]) ? 'tone' : 'chrom' }));
+    const s = i * slot, tk = q => t0 + swingT(q) * b;
+    at(tk(s) - 0.02, () => { if (my !== token) return;
+      $('lickTitle').textContent = `${triRoot[0]} over ${ch[0]}${e.chord.suffix} · ${c.toks.join(' ')}`;
+      $('lickSub').textContent = `key ${i + 1} of 12 · ${c.role}, ${c.sound} · from ${e.src}`;
+      lickEls = drawLine($('lickSvg'), ns, { chords: [{ q: 0, name: ch[0], sub: e.chord.suffix }], total: Math.max(slot, c.offs.length * 0.5) }); });
+    if ($('bassOn').checked) piano(bassOf(ch[2]), tk(s), slot * b + 0.15, 0.55);
+    ns.forEach((n, j) => { const a = tk(s + n.q), z = tk(s + n.q + n.dur); piano(n.midi, a, z - a + 0.08, 0.85); at(a, () => { if (my === token && lickEls[j]) lickEls[j].classList.add('on'); }); at(z, () => lickEls[j] && lickEls[j].classList.remove('on')); });
+  }
+  if (btn) btn.classList.add('on');
+  const end = t0 + swingT(12 * slot) * b;
+  at(end, () => { if (my !== token) return; if ($('loop').checked) { playCellKeys(k, btn); return; } if (btn) btn.classList.remove('on'); playing = false; $('playBtn').textContent = '▶ Play'; });
+  readout(`<b>${c.toks.join(' ')}</b> around the cycle of 4ths: the chord moves, the triad stays the <b>${esc(c.role)}</b> of it. Space stops.`);
+}
+
+/* ---------- Quiz ---------- */
+let quiz = 'sound', level = store.get('mt.level', 3), Q = null;
+const LEVELS = { 3: [0, 1, 4], 6: [0, 1, 2, 4, 5, 6], 12: COLOURS.map((_, k) => k) };
+const scores = store.get('mt.scores', {});
+const skey = () => quiz === 'sound' ? 'sound' + level : quiz;
+const recent = () => (scores[skey()] || []).slice(-10);
+function showScore() { const r = recent(); $('qScore').textContent = r.length ? `${r.filter(Boolean).length} of your last ${r.length} right` + (r.length >= 10 && r.filter(Boolean).length >= 8 ? ' · got it' : '') : ''; }
+function renderQuiz() {
+  $('quizSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.quiz === quiz));
+  $('levelSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.level === level));
+  $('levelRow').style.display = quiz === 'sound' ? '' : 'none';
+  $('invRow').style.display = quiz === 'inv' ? '' : 'none';
+  Q = null; $('qAgain').hidden = true; $('qNext').hidden = true; $('qView').hidden = true;
+  $('qFb').innerHTML = { sound: 'You’ll hear C in the bass and a major triad on top. Which one? Tap a card first to hear it, if you like.',
+    inv: 'You’ll hear a major triad from bottom to top. Is it in root position, 1st or 2nd inversion? Hint: listen to the top note.',
+    lick: 'You’ll hear a real triad cell from your licks over its chord. What is the triad over that chord?' }[quiz];
+  let cards = '';
+  if (quiz === 'sound') cards = LEVELS[level].map(k => { const [n, l, pc, deg, word, col] = COLOURS[k]; return `<button class="card" data-a="${k}" style="--c:${col}"><div class="strip"><b>${n}</b><span>over C</span></div><div class="body"><span class="deg">${deg}</span><span class="sn">${word}</span></div></button>`; }).join('');
+  if (quiz === 'inv') cards = [['Root position', '1 3 5 · 5 on top'], ['1st inversion', '3 5 1 · 1 on top'], ['2nd inversion', '5 1 3 · 3 on top']].map(([a, b], k) => `<button class="card" data-a="${k}" style="--c:var(--home)"><div class="strip"><b style="font-size:16px">${a}</b></div><div class="body"><span class="deg">${b}</span></div></button>`).join('');
+  if (quiz === 'lick') cards = '';
+  $('qCards').innerHTML = cards;
+  $('qCards').querySelectorAll('.card').forEach(c => c.addEventListener('click', () => answer(c.dataset.a, c)));
+  showScore();
+}
+$('quizSeg').querySelectorAll('button').forEach(b => b.onclick = () => { quiz = b.dataset.quiz; stopAll(); renderQuiz(); });
+$('levelSeg').querySelectorAll('button').forEach(b => b.onclick = () => { level = +b.dataset.level; store.set('mt.level', level); stopAll(); renderQuiz(); });
+async function playInv(root, inv, block) {
+  stopAll(); await audio();
+  const base = mod(root, 12) + 55; const ms = [[0, 4, 7], [4, 7, 12], [7, 12, 16]][inv].map(o => base + o);
+  const t0 = ctx.currentTime + 0.04, st = Math.min(0.36, beat() * 0.55);
+  if ($('bassOn').checked) piano(bassOf(root), t0, 3.2, 0.5);
+  if (!block) ms.forEach((m, j) => piano(m, t0 + j * st, 2.6 - j * st, 0.82));
+  ms.forEach(m => piano(m, t0 + (block ? 0 : st * 3 + 0.2), 1.8, block ? 0.75 : 0.55));
+}
+async function playQ() {
+  if (!Q) return;
+  if (Q.type === 'sound') { const el = $('qCards').querySelector(`[data-a="${Q.ans}"]`); playColour(Q.ans, Q.done ? el : null, { reveal: false }); }
+  if (Q.type === 'inv') playInv(Q.root, Q.ans, $('invBlock').checked && !Q.done);
+  if (Q.type === 'lick') playLickQ(Q.cell, Q.done);
+}
+async function playLickQ(k, show) {
+  stopAll(); await audio();
+  const c = CELLS[k], e = c.ex[0], ns = cellOrigNotes(c); curAsPlayed = !!e.asPlayed;
+  if (show) { $('qView').hidden = false; $('qvTitle').textContent = `${e.triad} over ${e.chord.root}${e.chord.suffix} · ${c.toks.join(' ')}`; $('qvSub').textContent = e.src; }
+  const els = show ? drawLine($('qSvg'), ns, { chords: [{ q: 0, name: e.chord.root, sub: e.chord.suffix }] }) : [];
+  const b = beat(), t0 = ctx.currentTime + 0.06, T = q => t0 + swingT(q) * b, end = Math.max(...ns.map(n => n.q + n.dur));
+  if ($('bassOn').checked || !show) piano(bassOf(e.chord.pc), t0, T(end) - t0 + 0.6, 0.6);   // the chord is the question, so its bass always plays
+  ns.forEach((n, j) => { const a = T(n.q), z = T(n.q + n.dur); piano(n.midi, a, z - a + 0.06, 0.85); if (els[j]) light(els[j], a, z); });
+}
+$('qPlay').onclick = () => {
+  stopAll();
+  if (quiz === 'sound') { const opts = LEVELS[level]; let a; do { a = opts[Math.floor(Math.random() * opts.length)]; } while (Q && Q.ans === a && opts.length > 1); Q = { type: 'sound', ans: a, done: false }; }
+  if (quiz === 'inv') Q = { type: 'inv', root: Math.floor(Math.random() * 12), ans: Math.floor(Math.random() * 3), done: false };
+  if (quiz === 'lick') {
+    const k = Math.floor(Math.random() * CELLS.length), c = CELLS[k];
+    const roles = [...new Set(CELLS.map(x => x.role))].filter(r => r !== c.role).sort(() => Math.random() - 0.5).slice(0, 3);
+    const opts = [c.role, ...roles].sort(() => Math.random() - 0.5);
+    Q = { type: 'lick', cell: k, ans: c.role, done: false };
+    $('qCards').innerHTML = opts.map(r => { const ex = CELLS.find(x => x.role === r); return `<button class="card" data-a="${esc(r)}" style="--c:${roleCol(r)}"><div class="strip"><b style="font-size:16px">${esc(r)}</b></div><div class="body"><span class="sn">${esc(ex.sound)}</span></div></button>`; }).join('');
+    $('qCards').querySelectorAll('.card').forEach(el => el.addEventListener('click', () => answer(el.dataset.a, el)));
+    $('qView').hidden = true;
+  }
+  $('qCards').querySelectorAll('.card').forEach(c => c.classList.remove('right', 'wrong'));
+  $('qFb').innerHTML = 'Listen, then tap your answer.';
+  $('qAgain').hidden = false; $('qNext').hidden = true;
+  playQ();
+};
+$('qAgain').onclick = () => playQ();
+$('qNext').onclick = () => $('qPlay').click();
+function answer(a, el) {
+  if (!Q || Q.done) {   // before or after a question, tapping a card plays it
+    if (quiz === 'sound') playColour(+a, el);
+    if (quiz === 'inv') playInv(Q ? Q.root : 0, +a, false);
+    return;
+  }
+  const ok = String(a) === String(Q.ans);
+  Q.done = true;
+  (scores[skey()] = scores[skey()] || []).push(ok); store.set('mt.scores', scores); showScore();
+  const right = $('qCards').querySelector(`[data-a="${CSS.escape(String(Q.ans))}"]`);
+  if (right) right.classList.add('right'); if (!ok) el.classList.add('wrong');
+  let what = '';
+  if (Q.type === 'sound') { const c = COLOURS[Q.ans]; what = `<b>${c[0]} over C</b>: ${c[3]}, ${c[4]}`; }
+  if (Q.type === 'inv') { const nm = ['Root position', '1st inversion', '2nd inversion'][Q.ans], r = CYCLE.find(x => x[2] === Q.root);
+    what = `<b>${nm}</b> of ${r[0]} (${[['1', '3', '5'], ['3', '5', '1'], ['5', '1', '3']][Q.ans].map(t => noteName(r, t)).join('–')}), with the ${['5', '1', '3'][Q.ans]} on top`; }
+  if (Q.type === 'lick') { const c = CELLS[Q.cell], e = c.ex[0]; what = `<b>${esc(e.triad)} over ${esc(e.chord.root + e.chord.suffix)}</b>: ${esc(c.role)}, ${esc(c.sound)} · ${esc(e.src)}`; }
+  $('qFb').innerHTML = (ok ? '<span class="ok"><b>Yes.</b></span> ' : '<span class="no"><b>Not quite.</b></span> It was ') + what + '. Tap cards to compare.';
+  $('qNext').hidden = false;
+  if (Q.type === 'lick') playLickQ(Q.cell, true);
+}
+
+/* ---------- Tabs, transport ---------- */
+let tab = store.get('mt.tab', 'colours');
+function setTab(t) {
+  tab = t; store.set('mt.tab', t); stopAll();
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === t));
+  ['colours', 'patterns', 'licks', 'quiz'].forEach(x => $('p-' + x).hidden = x !== t);
+  if (t === 'patterns') renderPatterns();
+  if (t === 'licks') renderLicks();
+  if (t === 'quiz') renderQuiz();
+  readout({ colours: 'Tap a colour to hear it over C.', patterns: 'Pick a pattern and press <b>Play</b> (or Space). Tap a key to hear just that one.',
+    licks: `${CELLS.length} triad cells from your licks and solos. Tap one to hear it.`, quiz: 'Press <b>Play a mystery</b>.' }[t]);
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+async function playPause() {
+  if (playing) { stopAll(); return; }
+  if (tab === 'patterns') return playPattern();
+  if (tab === 'licks') { if (selCell >= 0) return playCellKeys(selCell, null); const first = $('cellList').querySelector('.cell'); if (first) first.click(); return; }
+  if (tab === 'quiz') { if (Q && !Q.done) return playQ(); return $('qPlay').click(); }
+  if (tab === 'colours') {   // all twelve, one after another
+    stopAll(); await audio(); playing = true; $('playBtn').textContent = '■ Stop'; const my = token;
+    let t = ctx.currentTime + 0.05;
+    COLOURS.forEach((_, k) => { t = scheduleColour(k, $('colourGrid').children[k], t) + 0.25; });
+    at(t, () => { if (my !== token) return; playing = false; $('playBtn').textContent = '▶ Play'; });
+  }
+}
+$('playBtn').onclick = playPause;
+document.addEventListener('keydown', e => {
+  if (e.code !== 'Space' && e.key !== ' ') return;
+  if (e.target.matches && e.target.matches('select, input:not([type=range]):not([type=checkbox])')) return;
+  e.preventDefault(); if (!e.repeat) playPause();
+});
+document.addEventListener('keyup', e => { if ((e.code === 'Space' || e.key === ' ') && e.target.closest && e.target.closest('button')) e.preventDefault(); });
+$('tempo').oninput = e => $('tempoN').textContent = e.target.value;
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (tab === 'patterns') renderPatterns(); }, 150); });
+
+renderColours();
+setTab(tab);
+</script>
+<script src="processor.js"></script>
+<script src="lab.js"></script>
+</body></html>

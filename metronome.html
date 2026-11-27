@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metronome · Music Lab</title>
+<style>
+  :root{--bg:#14110f;--card:#1a1613;--card2:#211c18;--line:#2e2824;--ink:#f3ece4;--soft:#d8cdc1;--mut:#a3978b;--dim:#6d635a;--acc:#e9b96e;--accbg:#2a2219;--red:#e0715a;--green:#8fc4a4}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+  main{max-width:780px;margin:0 auto;padding:18px 18px 64px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:4px 0 6px}
+  @media (max-width:899px){header{padding-right:52px}}
+  h1{font-family:Fraunces,Georgia,serif;font-weight:700;font-size:26px;margin:0}
+  .keys{font-size:12px;color:var(--dim)}
+  .keys b{color:var(--mut);font-weight:600}
+  @media (max-width:640px){.keys{display:none}}
+
+  .tempo{display:flex;align-items:center;justify-content:center;gap:18px;margin:14px 0 4px}
+  .step{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--soft);font-size:26px;cursor:pointer;line-height:1}
+  .step:hover{border-color:#5a4a33;color:var(--acc)}
+  .bpm{text-align:center;min-width:170px}
+  .bpm .num{font-family:Fraunces,Georgia,serif;font-size:76px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .bpm .unit{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-top:2px}
+  .live{text-align:center;font-size:14px;color:var(--mut);min-height:20px;font-variant-numeric:tabular-nums}
+  .live b{color:var(--acc);font-weight:600}
+  .live .up{color:#f3d39e}.live .dn{color:#9ec3e9}
+  input[type=range]{width:100%;accent-color:var(--acc)}
+  .slider{margin:10px 0 0}
+  .ctrls{display:flex;gap:10px;justify-content:center;margin:14px 0 6px}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--soft);border-radius:12px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;min-height:48px}
+  .btn:hover{border-color:#5a4a33}
+  .play{min-width:150px;background:var(--acc);color:#1a130b;border-color:var(--acc);font-size:17px}
+  .play:hover{background:#f3d39e;border-color:#f3d39e}
+  .play.on{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+
+  .beats{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin:22px 0 8px}
+  .beat{--sz:clamp(44px,13vw,70px);width:var(--sz);height:var(--sz);border-radius:50%;border:2px solid #4a3f35;background:#1d1916;color:var(--mut);font-size:15px;font-weight:600;cursor:pointer;position:relative;transition:transform .08s,background .12s,border-color .12s;font-variant-numeric:tabular-nums}
+  .beat.first{border-color:#7a6140}
+  .beat:hover{border-color:var(--acc)}
+  .beat.hit{background:var(--acc);border-color:var(--acc);color:#1a130b;transform:scale(1.1)}
+  .beat.first.hit{background:#f3d39e;border-color:#f3d39e}
+  .beat.cur{box-shadow:0 0 0 4px rgba(233,185,110,.18)}
+  .beat.muted{background:transparent;border-style:dashed;border-color:#3d352f;color:var(--dim)}
+  .beat.muted::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:2px;background:var(--dim);transform:rotate(-45deg)}
+  .beat.muted.hit{background:#3a2e22;border-color:var(--acc);color:var(--acc)}
+  .status{text-align:center;font-size:13.5px;color:var(--mut);min-height:22px;margin-top:4px}
+  .status .sil{display:inline-block;background:#2b1d19;color:#f0a08e;border:1px solid #5a2f27;border-radius:999px;padding:3px 10px;font-weight:600;font-size:12.5px}
+  .hint{text-align:center;font-size:12.5px;color:var(--dim);margin-top:4px}
+
+  .tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:26px}
+  .tab{position:relative;border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:999px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;min-height:40px}
+  .tab:hover{color:var(--ink);border-color:#5a4a33}
+  .tab[aria-expanded=true]{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+  .tab.live::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--acc);margin-left:8px;vertical-align:middle;opacity:.9}
+  .cards{display:grid;gap:14px;margin-top:12px}
+  .cards:empty{display:none}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .card h2{font-family:Fraunces,Georgia,serif;font-size:18px;margin:0 0 2px;font-weight:700}
+  .card .sub{font-size:13px;color:var(--mut);margin:0 0 12px;line-height:1.45}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid #241f1b;flex-wrap:wrap}
+  .row:first-of-type{border-top:0}
+  .row label,.row .lab{font-size:14px;color:var(--soft)}
+  .row .lab small{display:block;color:var(--dim);font-size:12px;margin-top:2px}
+  .seg{display:inline-flex;background:#120f0d;border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+  .seg button{border:0;background:none;color:var(--mut);padding:8px 12px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;min-height:36px}
+  .seg button:hover{color:var(--ink)}
+  .seg button[aria-pressed=true]{background:var(--accbg);color:var(--acc)}
+  .seg.big{display:flex;width:100%}
+  .seg.big button{flex:1}
+  .num-in{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:#120f0d;overflow:hidden}
+  .num-in button{width:36px;height:38px;border:0;background:none;color:var(--mut);font-size:18px;cursor:pointer}
+  .num-in button:hover{color:var(--acc)}
+  .num-in input{width:52px;height:38px;border:0;background:none;color:var(--ink);text-align:center;font-size:15px;font-weight:600;font-family:inherit;-moz-appearance:textfield}
+  .num-in input::-webkit-inner-spin-button,.num-in input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  .sentence{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;color:var(--soft)}
+  .sw{width:46px;height:28px;border-radius:999px;border:1px solid var(--line);background:#120f0d;position:relative;cursor:pointer;flex:none}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--dim);transition:left .15s,background .15s}
+  .sw[aria-checked=true]{background:var(--accbg);border-color:#5a4a33}
+  .sw[aria-checked=true]::after{left:21px;background:var(--acc)}
+  .vol{width:180px}
+  .warn{font-size:12.5px;color:var(--red);margin-top:6px}
+  .graph{margin-top:12px;background:#120f0d;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+  .graph .gl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);margin-bottom:4px}
+  canvas{display:block;width:100%;height:90px}
+  [hidden]{display:none!important}
+
+  /* triplet layer */
+  .tstrip{display:flex;justify-content:center;align-items:center;gap:8px;margin:2px 0 4px;min-height:26px}
+  .tstrip .tl{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-right:4px}
+  .tstrip.on .tl{color:#9ec3e9}
+  .tlamp{width:14px;height:14px;border-radius:50%;border:1.5px solid #3a4652;background:transparent;transition:background .08s,transform .08s}
+  .tlamp[data-l="3"]{width:18px;height:18px;border-color:#9ec3e9}
+  .tlamp[data-l="0"]{border-style:dashed;border-color:#333}
+  .tlamp.hit{background:#9ec3e9;transform:scale(1.25)}
+  .tdots{display:flex;gap:8px;flex-wrap:wrap}
+  .tdot{width:46px;height:46px;border-radius:12px;border:1.5px solid var(--line);background:#120f0d;color:var(--mut);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;font-weight:600;font-family:inherit}
+  .tdot i{display:block;width:10px;border-radius:2px;background:#9ec3e9}
+  .tdot[data-l="3"]{border-color:#9ec3e9;color:#cfe2f5}.tdot[data-l="3"] i{height:18px}
+  .tdot[data-l="2"] i{height:11px;opacity:.85}
+  .tdot[data-l="1"] i{height:5px;opacity:.6}
+  .tdot[data-l="0"]{border-style:dashed;color:var(--dim)}.tdot[data-l="0"] i{height:2px;background:var(--dim)}
+  .tstrip{flex-wrap:wrap}
+  .tg{display:inline-flex;gap:4px;padding:3px 5px;border-radius:999px;border:1px solid #232b33;align-items:center}
+  .tgrp{width:50px;height:52px;border-radius:12px;border:1.5px solid #3a4652;background:#120f0d;color:#cfe2f5;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-family:inherit}
+  .tgrp b{font-size:17px;font-family:Fraunces,Georgia,serif}
+  .tgrp span{display:flex;gap:4px}
+  .tgrp i{width:7px;height:7px;border-radius:50%;background:#3a4652}
+  .tgrp i.a{background:#9ec3e9;transform:scale(1.35)}
+  .tgrp.none{border-style:dashed;border-color:var(--line);color:var(--dim)}
+  .presets{display:flex;gap:6px;flex-wrap:wrap}
+  .gridpick{display:flex;gap:10px 18px;flex-wrap:wrap;margin-top:8px}
+  .gridpick>div,.pgroup{display:flex;flex-direction:column;gap:5px}
+  .pgroup{margin-top:12px}
+  .gk{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .chip.on{background:#18222c;color:#cfe2f5;border-color:#9ec3e9}
+  .chip.mine2{border-color:#2c3d4e}
+  .chip.add{border-style:dashed;color:#9ec3e9}
+  .padd{margin-top:8px;padding:10px 12px;border:1px dashed #3a4652;border-radius:12px;background:#11161b}
+  .padd p{margin:0 0 8px;font-size:12.5px;color:var(--mut)}
+  .pact{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--dim)}
+  .pact:empty{display:none}
+  .chip.danger{color:var(--red);border-color:#4a2a26}
+  .chip.danger.sure{background:#3a1f1c;color:#ffb4a8}
+  .saverow{display:flex;gap:8px;flex-wrap:wrap}
+  .saverow input{flex:1;min-width:160px;height:36px;border:1px solid var(--line);border-radius:10px;background:#120f0d;color:var(--ink);padding:0 12px;font-family:inherit;font-size:14px}
+  .chip.save{color:#cfe2f5;border-color:#3a4652}
+  .mine{display:inline-flex;align-items:center;border:1px solid #2c3d4e;border-radius:999px;background:#18222c}
+  .mine .chip{border:0;background:none;color:#cfe2f5}
+  .mine .del{border:0;background:none;color:var(--dim);cursor:pointer;padding:0 10px 0 2px;font-size:15px}
+  .mine .del:hover{color:var(--red)}
+  .savemsg{font-size:12px;color:var(--dim);margin-top:6px;min-height:16px}
+  .chip{border:1px solid var(--line);background:#120f0d;color:var(--mut);border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .chip:hover{color:#cfe2f5;border-color:#3a4652}
+  .status .tri{display:inline-block;background:#18222c;color:#9ec3e9;border:1px solid #2c3d4e;border-radius:999px;padding:3px 10px;font-weight:600;font-size:12.5px}
+  .status .tri.off{background:transparent;color:var(--dim);border-color:var(--line)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Metronome</h1>
+    <span class="keys"><b>Space</b> start/stop · <b>↑↓</b> tempo · <b>T</b> tap</span>
+  </header>
+
+  <div class="tempo">
+    <button class="step" data-d="-1" aria-label="Slower">−</button>
+    <div class="bpm"><div class="num" id="bpm">100</div><div class="unit">BPM</div></div>
+    <button class="step" data-d="1" aria-label="Faster">+</button>
+  </div>
+  <div class="live" id="live" aria-live="polite"></div>
+  <div class="slider"><input type="range" id="bpmRange" min="30" max="300" step="1" aria-label="Tempo"></div>
+  <div class="ctrls">
+    <button class="btn" id="tap">Tap</button>
+    <button class="btn play" id="play">Start</button>
+  </div>
+
+  <div class="beats" id="beats"></div>
+  <div class="tstrip" id="tstrip" hidden></div>
+  <div class="status" id="status"></div>
+  <div class="hint">Tap a circle to silence that beat. Tap again to bring it back.</div>
+
+  <div class="tabs" id="tabs" role="group" aria-label="Settings">
+    <button class="tab" data-card="beat" aria-expanded="false">Beat</button>
+    <button class="tab" data-card="accent" aria-expanded="false">Accent layer</button>
+    <button class="tab" data-card="tempo" aria-expanded="false">Tempo changes</button>
+    <button class="tab" data-card="silent" aria-expanded="false">Silent bars</button>
+  </div>
+
+  <div class="cards">
+    <section class="card" data-sec="beat" hidden>
+      <h2>Beat</h2>
+      <div class="row"><span class="lab">Beats per bar</span>
+        <span class="num-in"><button data-inc="beats" data-by="-1" aria-label="Fewer beats">−</button><input type="number" data-k="beats" min="1" max="12" aria-label="Beats per bar"><button data-inc="beats" data-by="1" aria-label="More beats">+</button></span></div>
+      <div class="row"><span class="lab">Subdivide</span>
+        <div class="seg" data-k="sub"><button data-v="1">Off</button><button data-v="2">8ths</button><button data-v="3">Triplets</button><button data-v="4">16ths</button></div></div>
+      <div class="row"><span class="lab">Accent beat 1</span><button class="sw" role="switch" data-k="accent" aria-label="Accent beat 1"></button></div>
+      <div class="row"><span class="lab">Sound</span>
+        <div class="seg" data-k="sound"><button data-v="click">Click</button><button data-v="wood">Wood</button><button data-v="block">Block</button><button data-v="beep">Beep</button></div></div>
+      <div class="row"><span class="lab">Volume<small>The main click only</small></span><input class="vol" type="range" data-k="vol" min="0" max="1" step="0.01" aria-label="Volume"></div>
+    </section>
+
+    <section class="card" data-sec="accent" hidden>
+      <h2>Accent layer</h2>
+      <p class="sub">A second voice that plays triplets, straight 8ths or 16ths over the click, and can come and go every few bars. Use the accents for shuffle feel, quarter-note triplets, 4-over-3 or dotted-quarter groupings.</p>
+      <div class="seg big" data-k="trip"><button data-v="off">Off</button><button data-v="always">Always on</button><button data-v="cycle">On / off</button></div>
+
+      <div data-show="trip!=off">
+        <div class="row" style="display:block" data-show="tripAlt=false"><span class="lab">Grid</span>
+          <div class="gridpick">
+            <div><span class="gk">Triplets</span><div class="seg" data-k="tripType"><button data-v="t8">8th (3 per beat)</button><button data-v="t4">Quarter (3 over 2)</button><button data-v="t16">16th (6 per beat)</button></div></div>
+            <div><span class="gk">Straight</span><div class="seg" data-k="tripType"><button data-v="e8">8ths (2 per beat)</button><button data-v="s16">16ths (4 per beat)</button></div></div>
+          </div></div>
+
+        <div class="row"><span class="lab">Alternate grids<small>Swap between triplet patterns and straight 8th or 16th patterns after a random stretch of bars</small></span><button class="sw" role="switch" data-k="tripAlt" aria-label="Alternate between triplet and 8th-note patterns"></button></div>
+
+        <div data-show="tripAlt=true">
+          <div class="row"><div class="sentence">Stay on each grid for
+            <span class="num-in"><button data-inc="altMin" data-by="-1">−</button><input type="number" data-k="altMin" min="1" max="64" aria-label="Minimum bars per grid"><button data-inc="altMin" data-by="1">+</button></span>
+            to
+            <span class="num-in"><button data-inc="altMax" data-by="-1">−</button><input type="number" data-k="altMax" min="1" max="64" aria-label="Maximum bars per grid"><button data-inc="altMax" data-by="1">+</button></span>
+            bars, picked at random</div></div>
+          <p class="sub" style="margin:8px 0 0">Tap patterns in each group below to include them (tap again to remove). Each time the layer swaps grids it picks one of your chosen patterns at random, so choose an 8th pattern <i>and</i> a 16th pattern to hear both. To make a new pattern, switch Alternate off, build and save it, then turn it back on.</p>
+        </div>
+
+        <div data-show="trip=cycle">
+          <div class="row"><div class="sentence">On for
+            <span class="num-in"><button data-inc="tripOnBars" data-by="-1">−</button><input type="number" data-k="tripOnBars" min="1" max="32" aria-label="Bars with triplets"><button data-inc="tripOnBars" data-by="1">+</button></span>
+            bars, off for
+            <span class="num-in"><button data-inc="tripOffBars" data-by="-1">−</button><input type="number" data-k="tripOffBars" min="1" max="32" aria-label="Bars without triplets"><button data-inc="tripOffBars" data-by="1">+</button></span>
+            bars</div></div>
+          <div class="row"><span class="lab">Start with triplets</span>
+            <div class="seg" data-k="tripStart"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+        </div>
+
+        <div class="row" style="display:block">
+          <div data-show="tripAlt=false">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <span class="lab">Accents</span>
+            <div class="seg" data-k="tripEdit"><button data-v="groups">Per beat</button><button data-v="steps">Note by note</button></div>
+          </div>
+
+          <div data-show="tripEdit=groups">
+            <p class="sub" style="margin:8px 0 0"><span id="grpHelp"></span></p>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+              <div class="tdots" id="tgroups"></div>
+              <span class="num-in"><button data-inc="tripGroupLen" data-by="-1" aria-label="Fewer groups">−</button><input type="number" data-k="tripGroupLen" min="1" max="16" aria-label="Triplets in pattern"><button data-inc="tripGroupLen" data-by="1" aria-label="More groups">+</button></span>
+            </div>
+            <div class="row" style="border:0;padding-bottom:0"><span class="lab">Other notes</span>
+              <div class="seg" data-k="tripOther"><button data-v="2">Normal</button><button data-v="1">Ghost</button></div></div>
+          </div>
+
+          <div data-show="tripEdit=steps">
+            <p class="sub" style="margin:8px 0 0">Tap a step to cycle: accent → normal → ghost → silent.</p>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+              <div class="tdots" id="tdots"></div>
+              <span class="num-in"><button data-inc="tripLen" data-by="-1" aria-label="Shorter pattern">−</button><input type="number" data-k="tripLen" min="1" max="16" aria-label="Accent pattern length"><button data-inc="tripLen" data-by="1" aria-label="Longer pattern">+</button></span>
+            </div>
+          </div>
+
+          <div class="row" style="border:0;padding-bottom:0"><span class="lab">Pattern restarts<small>"Keeps running" lets patterns that don't fit one bar flow across the bar line</small></span>
+            <div class="seg" data-k="tripRestart"><button data-v="bar">Every bar</button><button data-v="run">Keeps running</button></div></div>
+          </div>
+          <div class="pgroup"><span class="gk">Triplet patterns</span><div class="presets" id="presetsT"></div>
+            <div class="padd" id="addT" hidden></div><div class="pact" id="actT"></div></div>
+          <div class="pgroup"><span class="gk">Straight patterns (8ths &amp; 16ths)</span><div class="presets" id="presetsE"></div>
+            <div class="padd" id="addE" hidden></div><div class="pact" id="actE"></div></div>
+        </div>
+
+        <div class="row"><span class="lab">Triplet sound</span>
+          <div class="seg" data-k="tripSound"><button data-v="block">Block</button><button data-v="bell">Bell</button><button data-v="shaker">Shaker</button></div></div>
+        <div class="row"><span class="lab">Layer volume<small>The unaccented notes of the layer</small></span><input class="vol" type="range" data-k="tripVol" min="0" max="1" step="0.01" aria-label="Triplet volume"></div>
+        <div class="row"><span class="lab">Accent volume<small>Separate from the layer volume: with that at 0 you hear only the accents</small></span><input class="vol" type="range" data-k="tripAccVol" min="0" max="1" step="0.01" aria-label="Triplet accent volume"></div>
+        <div class="row"><span class="lab">Drop out in silent bars<small>Off = the layer keeps playing while the click is silent</small></span><button class="sw" role="switch" data-k="tripFollowSilent" aria-label="Triplets drop out in silent bars"></button></div>
+      </div>
+    </section>
+
+    <section class="card" data-sec="tempo" hidden>
+      <h2>Tempo changes</h2>
+      <p class="sub">A real band rarely sits on one tempo. Let the click move so you practise following it instead of leaning on it.</p>
+      <div class="seg big" data-k="mode"><button data-v="steady">Steady</button><button data-v="ramp">Ramp</button><button data-v="band">Band feel</button></div>
+
+      <div data-show="mode=ramp">
+        <div class="row"><span class="lab">Direction</span>
+          <div class="seg" data-k="rampDir"><button data-v="up">Speed up</button><button data-v="down">Slow down</button></div></div>
+        <div class="row"><div class="sentence">Change by
+          <span class="num-in"><button data-inc="rampBy" data-by="-1">−</button><input type="number" data-k="rampBy" min="1" max="40" aria-label="BPM per step"><button data-inc="rampBy" data-by="1">+</button></span>
+          BPM every
+          <span class="num-in"><button data-inc="rampEvery" data-by="-1">−</button><input type="number" data-k="rampEvery" min="1" max="64" aria-label="Bars per step"><button data-inc="rampEvery" data-by="1">+</button></span>
+          bars</div></div>
+        <div class="row"><div class="sentence">Stop at
+          <span class="num-in"><button data-inc="rampLimit" data-by="-5">−</button><input type="number" data-k="rampLimit" min="30" max="300" aria-label="Stop at BPM"><button data-inc="rampLimit" data-by="5">+</button></span>
+          BPM</div></div>
+        <div class="row"><span class="lab">Then</span>
+          <div class="seg" data-k="rampThen"><button data-v="hold">Hold</button><button data-v="back">Go back &amp; forth</button><button data-v="restart">Start over</button></div></div>
+        <div class="warn" id="rampWarn" hidden></div>
+      </div>
+
+      <div data-show="mode=band">
+        <div class="row"><span class="lab">The band…</span>
+          <div class="seg" data-k="driftWay"><button data-v="both">Pushes &amp; drags</button><button data-v="rush">Rushes</button><button data-v="drag">Drags</button></div></div>
+        <div class="row"><div class="sentence">Drifts up to ±
+          <span class="num-in"><button data-inc="driftRange" data-by="-1">−</button><input type="number" data-k="driftRange" min="1" max="40" aria-label="Drift range in BPM"><button data-inc="driftRange" data-by="1">+</button></span>
+          BPM from your tempo</div></div>
+        <div class="row"><div class="sentence">Changes feel every
+          <span class="num-in"><button data-inc="driftEvery" data-by="-1">−</button><input type="number" data-k="driftEvery" min="1" max="32" aria-label="Bars per change"><button data-inc="driftEvery" data-by="1">+</button></span>
+          bars, gliding there gradually</div></div>
+      </div>
+
+      <div data-show="mode!=steady">
+        <div class="row"><span class="lab">Show the live tempo<small>Turn off to feel the changes without seeing them</small></span><button class="sw" role="switch" data-k="showLive" aria-label="Show live tempo"></button></div>
+        <div class="graph" id="graphBox"><div class="gl"><span>Tempo this session (per bar)</span><span id="graphRange"></span></div><canvas id="graph"></canvas></div>
+      </div>
+    </section>
+
+    <section class="card" data-sec="silent" hidden>
+      <h2>Silent bars</h2>
+      <p class="sub">Whole bars where the click drops out. Keep your time, and see if you land back on beat 1 together.</p>
+      <div class="seg big" data-k="silent"><button data-v="off">Off</button><button data-v="pattern">Pattern</button><button data-v="random">Random</button></div>
+
+      <div data-show="silent=pattern">
+        <div class="row"><div class="sentence">Play
+          <span class="num-in"><button data-inc="playBars" data-by="-1">−</button><input type="number" data-k="playBars" min="1" max="32" aria-label="Bars played"><button data-inc="playBars" data-by="1">+</button></span>
+          bars, then silence
+          <span class="num-in"><button data-inc="muteBars" data-by="-1">−</button><input type="number" data-k="muteBars" min="1" max="32" aria-label="Bars silent"><button data-inc="muteBars" data-by="1">+</button></span>
+          bars</div></div>
+      </div>
+
+      <div data-show="silent=random">
+        <div class="row"><div class="sentence">
+          <span class="num-in"><button data-inc="randPct" data-by="-5">−</button><input type="number" data-k="randPct" min="5" max="90" aria-label="Percent of bars silent"><button data-inc="randPct" data-by="5">+</button></span>
+          % of bars go silent</div></div>
+        <div class="row"><div class="sentence">Always play the first
+          <span class="num-in"><button data-inc="firstBars" data-by="-1">−</button><input type="number" data-k="firstBars" min="0" max="16" aria-label="Bars always played at start"><button data-inc="firstBars" data-by="1">+</button></span>
+          bars</div></div>
+      </div>
+
+      <div data-show="silent!=off">
+        <div class="row"><span class="lab">Hide the lights too<small>So the circles can't keep time for you</small></span><button class="sw" role="switch" data-k="hideLights" aria-label="Hide the lights in silent bars"></button></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  /* ---------- settings (kept in this browser) ---------- */
+  const KEY = 'lab:metronome';
+  const DEF = { bpm: 100, beats: 4, sub: 1, accent: true, sound: 'click', vol: 0.8, muted: [],
+    mode: 'steady', rampDir: 'up', rampBy: 2, rampEvery: 4, rampLimit: 140, rampThen: 'hold',
+    driftWay: 'both', driftRange: 5, driftEvery: 4, showLive: true,
+    silent: 'off', playBars: 2, muteBars: 2, randPct: 25, firstBars: 2, hideLights: true,
+    trip: 'off', tripType: 't8', tripOnBars: 4, tripOffBars: 4, tripStart: 'on', tripLen: 3, tripAcc: [3, 2, 2],
+    tripSound: 'block', tripVol: 0.7, tripAccVol: 0.8, tripFollowSilent: true,
+    tripSaved: [], tripActive: null, tripEdit: 'steps', tripGroups: [1, 2, 3, 0], tripGroupLen: 4, tripOther: 2, tripRestart: 'bar',
+    tripAlt: false, altMin: 4, altMax: 8, altPatT: { p: 0 }, altPatE: { p: 1 }, altSelT: null, altSelE: null, openCard: null };
+  let S = Object.assign({}, DEF);
+  try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+  // the '1 3 – 1 3 – 1 –' pattern is really straight 8ths (1 & – 1 & – 1 –)
+  if (Array.isArray(S.tripGroups) && ['1,3,0,1,3,1,0', '1,3,0,1,3,0,1,0'].includes(S.tripGroups.join())) {
+    S.tripGroups = [1, 2, 0, 1, 2, 0, 1, 0]; if (S.tripEdit === 'groups') S.tripType = 'e8';
+  }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const NUM_KEYS = ['bpm', 'beats', 'sub', 'vol', 'rampBy', 'rampEvery', 'rampLimit', 'driftRange', 'driftEvery', 'playBars', 'muteBars', 'randPct', 'firstBars', 'tripOnBars', 'tripOffBars', 'tripLen', 'tripVol', 'tripAccVol', 'tripGroupLen', 'tripOther', 'altMin', 'altMax'];
+  // triplet grids as a fraction of a beat: num/den beats between notes
+  const TRIP = { t8: [1, 3], t4: [2, 3], t16: [1, 6], e8: [1, 2], s16: [1, 4] };
+  const straight = () => S.tripType === 'e8' || S.tripType === 's16';
+  const G = () => (S.tripType === 's16' ? 4 : S.tripType === 'e8' ? 2 : 3);   // notes per group: a triplet, a pair of 8ths, or four 16ths
+  const gLabel = a => (!a ? '–' : S.tripType === 's16' ? ['', '1', 'e', '&', 'a'][a] : straight() ? ['', '1', '&'][a] : String(a));
+  const tname = t => (t === 's16' ? '16ths' : t === 'e8' ? '8ths' : 'Triplets');
+  const gVal = a => Math.min(a, G());     // a triplet '3' becomes the '&' on the 8th grid
+  const TLEV = [0, 0.22, 0.55, 1];   // silent, ghost, normal, accent
+  const TNAME = ['off', 'ghost', 'norm', 'ACC'];
+  // [name, grid, kind, data, restart]. grid 't' = triplets, 'e' = straight 8ths.
+  // kind 'g' = accent position per beat-group (0 = none), 's' = note-by-note levels
+  const PRESETS = [
+    ['Rolling 1 2 3 –', 't', 'g', [1, 2, 3, 0], 'run'],
+    ['1 & – 1 & – 1 – (dotted quarters, 2 bars)', 'e', 'g', [1, 2, 0, 1, 2, 0, 1, 0], 'run'],
+    ['. > . >  . > . >  . > . >  . . . .  (every other 16th)', 'e', 's', [2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 2, 2, 2], 'run', 's16']];
+  // the pattern actually played, as one level per triplet note
+  const tripPat = () => S.tripEdit === 'groups'
+    ? S.tripGroups.flatMap(a => Array.from({ length: G() }, (_, k) => (k + 1 === gVal(a) ? 3 : S.tripOther)))
+    : S.tripAcc;
+  /* alternating grids: swap between one triplet pattern and one 8th pattern, chosen by chip */
+  const altOn = () => S.tripAlt && S.trip !== 'off';
+  function patOf(ref, gr) {   // resolve a chip reference ({p:i} built-in, {u:id} saved) to a playable pattern
+    if (ref && ref.u) { const p = S.tripSaved.find(x => x.id === ref.u); if (p && grOf(p.type) === gr) return p; }
+    if (ref && ref.p != null && PRESETS[ref.p] && PRESETS[ref.p][1] === gr) {
+      const [, , kind, data, restart, ptype] = PRESETS[ref.p];
+      return { type: ptype || (gr === 'e' ? 'e8' : 't8'), kind, data, restart, other: 2 };
+    }
+    const f = PRESETS.find(p => p[1] === gr);
+    return { type: f[5] || (gr === 'e' ? 'e8' : 't8'), kind: f[2], data: f[3], restart: f[4], other: 2 };
+  }
+  const patLevels = p => p.kind === 'g'
+    ? p.data.flatMap(a => { const n = p.type === 'e8' ? 2 : p.type === 's16' ? 4 : 3, v = Math.min(a, n); return Array.from({ length: n }, (_, k) => (k + 1 === v ? 3 : (p.other == null ? 2 : +p.other))); })
+    : p.data;
+  /* each group can have several chosen patterns (e.g. an 8th one and a 16th one); every swap into the group picks one at random */
+  const selOf = g => { const a = g === 'e' ? S.altSelE : S.altSelT; return Array.isArray(a) && a.length ? a : [g === 'e' ? S.altPatE : S.altPatT]; };
+  const refEq = (a, b) => !!a && !!b && (a.u ? a.u === b.u : a.p != null && a.p === b.p);
+  const pickAlt = (g, last) => { const a = selOf(g), o = a.filter(r => !refEq(r, last)); const c = o.length ? o : a; return c[Math.floor(Math.random() * c.length)]; };
+  const altNew = () => ({ t: pickAlt('t'), e: pickAlt('e') });
+  const altPat = g => patOf((R && R.altCur && R.altCur[g]) || selOf(g)[0], g);
+  const altLen = () => { const lo = Math.max(1, S.altMin | 0), hi = Math.max(lo, S.altMax | 0); return lo + Math.floor(Math.random() * (hi - lo + 1)); };
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+
+  /* ---------- audio ---------- */
+  let ctx = null, master = null, tbus = null, noise = null;
+  function audio() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain();
+      const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -2; lim.knee.value = 2; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05;
+      master.connect(lim); lim.connect(ctx.destination);
+      tbus = ctx.createGain(); tbus.gain.value = 1.2; tbus.connect(lim);   // triplet layer: its own volumes, not the main one
+      const n = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate), d = n.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      noise = n;
+    }
+    master.gain.value = S.vol * S.vol * 1.2;
+    if (ctx.state !== 'running') ctx.resume();
+    return ctx;
+  }
+  function click(t, kind) {   // kind: acc | beat | sub
+    const lvl = kind === 'acc' ? 1 : kind === 'beat' ? 0.6 : 0.28;
+    const g = ctx.createGain(); g.connect(master);
+    if (S.sound === 'click') {
+      const src = ctx.createBufferSource(); src.buffer = noise;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+      f.frequency.value = kind === 'acc' ? 3600 : kind === 'beat' ? 2500 : 1800;
+      src.connect(f); f.connect(g);
+      g.gain.setValueAtTime(lvl * 1.6, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+      src.start(t); src.stop(t + 0.05);
+    } else if (S.sound === 'block') {
+      // the same woodblock voice as the accent layer, pitched by beat role
+      const o = ctx.createOscillator(); o.connect(g); o.type = 'sine';
+      const up = kind === 'acc' ? 1.19 : kind === 'beat' ? 1 : 0.8;
+      o.frequency.setValueAtTime(1750 * up, t); o.frequency.exponentialRampToValueAtTime(1150 * up, t + 0.03);
+      g.gain.setValueAtTime(lvl * 0.9, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      o.start(t); o.stop(t + 0.06);
+    } else {
+      const o = ctx.createOscillator(); o.connect(g);
+      const base = kind === 'acc' ? 1320 : kind === 'beat' ? 880 : 660;
+      if (S.sound === 'wood') {
+        o.type = 'sine'; o.frequency.setValueAtTime(base * 1.25, t); o.frequency.exponentialRampToValueAtTime(base * 0.8, t + 0.04);
+        g.gain.setValueAtTime(lvl, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+        o.start(t); o.stop(t + 0.09);
+      } else {
+        o.type = 'sine'; o.frequency.value = base;
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(lvl * 0.7, t + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+        o.start(t); o.stop(t + 0.11);
+      }
+    }
+  }
+
+  function tripClick(t, lvl, acc) {   // a separate voice so it never blurs into the main click
+    const g = ctx.createGain(); g.connect(tbus);
+    const v = acc ? S.tripAccVol * S.tripAccVol * 2.7 : lvl * S.tripVol * S.tripVol * 1.4;
+    const up = acc ? 1.19 : 1;   // accents also sit a little higher so they cut through
+    if (S.tripSound === 'shaker') {
+      const src = ctx.createBufferSource(); src.buffer = noise;
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = acc ? 4500 : 6500;
+      src.connect(f); f.connect(g);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 1.8, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+      src.start(t); src.stop(t + 0.05);
+    } else if (S.tripSound === 'bell') {
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator();
+      o.type = 'triangle'; o.frequency.value = 2093 * up; o2.type = 'sine'; o2.frequency.value = 2093 * up * 2.76;
+      const g2 = ctx.createGain(); g2.gain.value = 0.25; o2.connect(g2); g2.connect(g); o.connect(g);
+      g.gain.setValueAtTime(v * 0.6, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.start(t); o2.start(t); o.stop(t + 0.13); o2.stop(t + 0.13);
+    } else {
+      const o = ctx.createOscillator(); o.connect(g); o.type = 'sine';
+      o.frequency.setValueAtTime(1750 * up, t); o.frequency.exponentialRampToValueAtTime(1150 * up, t + 0.03);
+      g.gain.setValueAtTime(v * 0.9, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      o.start(t); o.stop(t + 0.06);
+    }
+  }
+  function tripActive(bar) {
+    if (S.trip === 'off') return false;
+    if (S.trip === 'always') return true;
+    const pos = bar % (S.tripOnBars + S.tripOffBars);
+    return S.tripStart === 'on' ? pos < S.tripOnBars : pos >= S.tripOffBars;
+  }
+  function tripBarsLeft(bar) {   // bars left in the current on/off stretch, including this one
+    const cyc = S.tripOnBars + S.tripOffBars, pos = bar % cyc;
+    const first = S.tripStart === 'on' ? S.tripOnBars : S.tripOffBars;
+    return pos < first ? first - pos : cyc - pos;
+  }
+
+  /* ---------- engine: a look-ahead scheduler, so timing stays tight ---------- */
+  let R = null, timer = null, raf = null, wake = null, lastAltShown = null;
+  const fwd = () => (S.rampDir === 'up' ? 1 : -1);
+  const rampValid = () => fwd() * (S.rampLimit - S.bpm) > 0;
+
+  function start() {
+    audio();
+    R = { next: ctx.currentTime + 0.1, beat: 0, bar: 0, bpm: S.bpm, step: 0, dir: fwd(), barSilent: false, tripOn: false, tn: 0, hist: [], q: [], tq: [], cur: null, altG: 't', altLeft: altLen(), altCur: altNew() };
+    lastAltShown = null;
+    timer = setInterval(schedule, 25); schedule();
+    raf = requestAnimationFrame(frame);
+    $('#play').textContent = 'Stop'; $('#play').classList.add('on');
+    try { navigator.wakeLock && navigator.wakeLock.request('screen').then(w => { wake = w; }).catch(() => {}); } catch (e) {}
+    drawGraph(); showLive();
+  }
+  function stop() {
+    clearInterval(timer); cancelAnimationFrame(raf); timer = raf = null; R = null;
+    $('#play').textContent = 'Start'; $('#play').classList.remove('on');
+    $$('.beat').forEach(b => b.classList.remove('hit', 'cur'));
+    $('#status').textContent = ''; $('#tstrip').classList.remove('on'); showLive();
+    try { wake && wake.release(); } catch (e) {} wake = null;
+  }
+  const toggle = () => (R ? stop() : start());
+
+  function schedule() {
+    if (!R) return;
+    while (R.next < ctx.currentTime + 0.12) tick();
+  }
+  function newBar() {
+    const b = R.bar;
+    if (S.mode === 'ramp' && b > 0 && b % S.rampEvery === 0) rampStep();
+    if (S.mode === 'band' && b % S.driftEvery === 0) {
+      let lo = -S.driftRange, hi = S.driftRange;
+      if (S.driftWay === 'rush') lo = 0; if (S.driftWay === 'drag') hi = 0;
+      let target = S.bpm + lo + Math.random() * (hi - lo);
+      // a real change, not a twitch: move at least a third of the range when we can
+      if (Math.abs(target - R.bpm) < S.driftRange / 3 && S.driftWay === 'both') target = S.bpm + (R.bpm > S.bpm ? -1 : 1) * (S.driftRange * (0.4 + Math.random() * 0.6));
+      R.step = (clamp(target, 20, 400) - R.bpm) / (S.driftEvery * S.beats);
+    }
+    if (S.mode === 'steady') { R.bpm = S.bpm; R.step = 0; }
+    if (S.silent === 'pattern') R.barSilent = (b % (S.playBars + S.muteBars)) >= S.playBars;
+    else if (S.silent === 'random') R.barSilent = b >= S.firstBars && Math.random() * 100 < S.randPct;
+    else R.barSilent = false;
+    const was = R.tripOn;
+    R.tripOn = tripActive(b);
+    if (R.tripOn && !was) R.tn = 0;   // a running pattern starts fresh each time the triplets come back in
+    if (S.tripAlt && S.trip !== 'off') {   // alternating grids: swap after a random stretch of bars
+      if (R.altLeft <= 0) { R.altG = R.altG === 't' ? 'e' : 't'; R.altCur[R.altG] = pickAlt(R.altG, R.altCur[R.altG]); R.altLeft = altLen(); R.tn = 0; }
+      R.altLeft--;
+    }
+  }
+  function rampStep() {
+    if (!rampValid()) return;
+    const f = fwd(), L = S.rampLimit, B = S.bpm, by = Math.max(1, S.rampBy);
+    const toward = (from, to) => (to > from ? Math.min(to, from + by) : Math.max(to, from - by));
+    if (R.dir === f) {
+      if (Math.abs(R.bpm - L) > 1e-6) { R.bpm = toward(R.bpm, L); return; }
+      if (S.rampThen === 'hold') return;
+      if (S.rampThen === 'restart') { R.bpm = B; return; }
+      R.dir = -f;
+    }
+    if (Math.abs(R.bpm - B) < 1e-6) { R.dir = f; R.bpm = toward(B, L); return; }
+    R.bpm = toward(R.bpm, B);
+  }
+  function tick() {
+    if (R.beat >= S.beats) { R.beat = 0; R.bar++; }
+    if (R.beat === 0) newBar();
+    if (S.mode === 'band') R.bpm = clamp(R.bpm + R.step, 20, 400);
+    const t = R.next, dur = 60 / R.bpm, mutedBeat = !!S.muted[R.beat];
+    if (!R.barSilent && !mutedBeat) {
+      click(t, R.beat === 0 && S.accent ? 'acc' : 'beat');
+      for (let k = 1; k < S.sub; k++) click(t + (k * dur) / S.sub, 'sub');
+    }
+    // accent layer: find the grid notes that fall inside this beat (integer maths, no drift).
+    // In silent bars the pattern keeps counting without sound, so it comes back in the right place.
+    if (R.tripOn) {
+      const mute = R.barSilent && S.tripFollowSilent;
+      const alt = altOn(), P = alt ? altPat(R.altG) : null;
+      const [num, den] = TRIP[alt ? P.type : S.tripType] || TRIP.t8, i = R.beat;
+      const pat = alt ? patLevels(P) : tripPat(), len = pat.length;
+      const run = alt ? P.restart === 'run' : S.tripRestart === 'run';
+      for (let n = Math.ceil((i * den) / num); n * num < (i + 1) * den; n++) {
+        const idx = run ? R.tn++ : n;
+        if (mute) continue;
+        const step = idx % len, lvl = pat[step], at = t + ((n * num - i * den) / den) * dur;
+        if (lvl > 0) tripClick(at, TLEV[lvl], lvl === 3);
+        R.tq.push({ t: at, step });
+      }
+    }
+    R.q.push({ t, beat: R.beat, bar: R.bar, silent: R.barSilent, bpm: R.bpm, trip: R.tripOn, altG: R.altG, altLeft: R.altLeft });
+    R.next += dur; R.beat++;
+  }
+
+  /* ---------- what you see ---------- */
+  function frame() {
+    if (!R) return;
+    const now = ctx.currentTime;
+    while (R.q.length && R.q[0].t <= now) show(R.q.shift());
+    while (R.tq.length && R.tq[0].t <= now) {
+      const e = R.tq.shift(), el = $$('.tlamp')[e.step];
+      if (el && !(R.cur && R.cur.silent && S.hideLights)) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 70); }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function show(e) {
+    R.cur = e;
+    const els = $$('.beat');
+    els.forEach(b => b.classList.remove('hit', 'cur'));
+    const el = els[e.beat];
+    if (el && !(e.silent && S.hideLights)) { void el.offsetWidth; el.classList.add('hit', 'cur'); setTimeout(() => el.classList.remove('hit'), 110); }
+    let tri = '';
+    if (altOn()) {
+      if (e.altG !== lastAltShown) { lastAltShown = e.altG; buildTrip(); }
+      const gl = tname(altPat(e.altG).type), sw = e.altLeft + 1;
+      tri = ` &nbsp;<span class="tri${e.trip ? '' : ' off'}">${gl}${e.trip ? ` · swaps in ${sw} bar${sw > 1 ? 's' : ''}` : ''}</span>`;
+      if (S.trip === 'cycle') { const left = tripBarsLeft(e.bar); tri += ` &nbsp;<span class="tri${e.trip ? '' : ' off'}">layer ${e.trip ? 'on' : 'off'} · ${left} bar${left > 1 ? 's' : ''} left</span>`; }
+    }
+    else if (S.trip === 'cycle') { const left = tripBarsLeft(e.bar); tri = ` &nbsp;<span class="tri${e.trip ? '' : ' off'}">${tname(S.tripType)} ${e.trip ? 'on' : 'off'} · ${left} bar${left > 1 ? 's' : ''} left</span>`; }
+    $('#status').innerHTML = `Bar ${e.bar + 1}` + tri + (e.silent ? ` &nbsp;<span class="sil">Silent bar · keep going</span>` : '');
+    $('#tstrip').classList.toggle('on', !!e.trip);
+    if (e.beat === 0) { R.hist.push(e.bpm); if (R.hist.length > 96) R.hist.shift(); drawGraph(); }
+    showLive();
+  }
+  function showLive() {
+    const el = $('#live');
+    if (S.mode === 'steady') { el.textContent = ''; return; }
+    if (!R || !R.cur) { el.innerHTML = S.mode === 'ramp' ? (rampValid() ? `Ramps to <b>${S.rampLimit}</b> BPM` : '') : `Drifts within ±${S.driftRange} BPM`; return; }
+    if (!S.showLive) { el.textContent = 'Live tempo hidden: feel it'; return; }
+    const now = Math.round(R.cur.bpm), d = now - S.bpm;
+    el.innerHTML = `Now <b>${now}</b> ` + (d ? `<span class="${d > 0 ? 'up' : 'dn'}">(${d > 0 ? '+' : ''}${d})</span>` : '');
+  }
+  function drawGraph() {
+    const cv = $('#graph'); if (!cv || cv.offsetParent === null) return;
+    const w = cv.clientWidth, h = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+    cv.width = w * dpr; cv.height = h * dpr;
+    const g = cv.getContext('2d'); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+    const hist = R ? R.hist : [];
+    const hide = R && !S.showLive;
+    let lo = S.bpm, hi = S.bpm;
+    if (S.mode === 'ramp' && rampValid()) { lo = Math.min(lo, S.rampLimit); hi = Math.max(hi, S.rampLimit); }
+    if (S.mode === 'band') { lo -= S.driftRange; hi += S.driftRange; }
+    if (!hide) hist.forEach(v => { lo = Math.min(lo, v); hi = Math.max(hi, v); });
+    lo -= 2; hi += 2;
+    const y = v => h - 6 - ((v - lo) / (hi - lo)) * (h - 12);
+    $('#graphRange').textContent = `${Math.round(lo + 2)}–${Math.round(hi - 2)} BPM`;
+    g.setLineDash([4, 4]); g.strokeStyle = '#4a3f35'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, y(S.bpm)); g.lineTo(w, y(S.bpm)); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#6d635a'; g.font = '11px Inter,system-ui,sans-serif'; g.fillText(S.bpm, 4, y(S.bpm) - 4);
+    if (hide) { g.fillText('hidden until you stop', w - 120, h / 2); return; }
+    if (hist.length < 2) return;
+    const n = 96, dx = w / (n - 1), x0 = w - (hist.length - 1) * dx;
+    g.strokeStyle = '#e9b96e'; g.lineWidth = 2; g.beginPath();
+    hist.forEach((v, i) => { const x = x0 + i * dx; i ? g.lineTo(x, y(v)) : g.moveTo(x, y(v)); });
+    g.stroke();
+  }
+
+  /* ---------- beat circles ---------- */
+  function buildBeats() {
+    S.muted = Array.from({ length: S.beats }, (_, i) => !!S.muted[i]);
+    $('#beats').innerHTML = S.muted.map((m, i) =>
+      `<button class="beat${i === 0 ? ' first' : ''}${m ? ' muted' : ''}" data-i="${i}" aria-pressed="${m}" aria-label="Beat ${i + 1}${m ? ', silent' : ''}">${i + 1}</button>`).join('');
+    $$('.beat').forEach(b => b.onclick = () => {
+      const i = +b.dataset.i; S.muted[i] = !S.muted[i]; save();
+      b.classList.toggle('muted', S.muted[i]); b.setAttribute('aria-pressed', S.muted[i]);
+      b.setAttribute('aria-label', `Beat ${i + 1}${S.muted[i] ? ', silent' : ''}`);
+    });
+  }
+
+  /* ---------- triplet accents ---------- */
+  function fixTrip() {
+    if (!Array.isArray(S.tripAcc) || !S.tripAcc.length) S.tripAcc = [3, 2, 2];
+    S.tripAcc = S.tripAcc.slice(0, 16).map(v => clamp(+v | 0, 0, 3));
+    S.tripLen = S.tripAcc.length;
+    if (!Array.isArray(S.tripGroups) || !S.tripGroups.length) S.tripGroups = [1, 2, 3];
+    S.tripGroups = S.tripGroups.slice(0, 16).map(v => clamp(+v | 0, 0, 3));
+    S.tripGroupLen = S.tripGroups.length;
+  }
+  function buildTrip() {
+    fixTrip();
+    $('#tdots').innerHTML = S.tripAcc.map((l, i) =>
+      `<button class="tdot" data-i="${i}" data-l="${l}" aria-label="Triplet step ${i + 1}: ${TNAME[l]}"><i></i>${TNAME[l]}</button>`).join('');
+    $$('.tdot').forEach(b => b.onclick = () => {
+      const i = +b.dataset.i; S.tripAcc[i] = (S.tripAcc[i] + 3) % 4; save(); buildTrip();
+    });
+    $('#tgroups').innerHTML = S.tripGroups.map((a, i) =>
+      { a = gVal(a); return `<button class="tgrp${a ? '' : ' none'}" data-i="${i}" aria-label="Group ${i + 1}: accent ${a ? 'on ' + gLabel(a) : 'none'}"><b>${gLabel(a)}</b><span>${Array.from({ length: G() }, (_, k) => `<i class="${k + 1 === a ? 'a' : ''}"></i>`).join('')}</span></button>`; }).join('');
+    $('#grpHelp').textContent = S.tripType === 's16'
+      ? 'Each box is one beat (four 16ths: 1 e & a). Tap it to pick which 16th gets the accent, or – for none. For two accents in one beat, use Note by note.'
+      : straight()
+      ? 'Each box is one beat (two 8ths). Tap it to choose the accent: 1 (on the beat), & (the offbeat) or – (none).'
+      : 'Each box is one triplet. Tap it to choose which note gets the accent: 1, 2, 3 or – (none).';
+    $$('.tgrp').forEach(b => b.onclick = () => {
+      const i = +b.dataset.i; S.tripGroups[i] = (gVal(S.tripGroups[i]) + 1) % (G() + 1); save(); buildTrip();
+    });
+    const strip = $('#tstrip');
+    strip.hidden = S.trip === 'off';
+    if (altOn()) {   // show the pattern of the grid that's sounding right now
+      const g = R ? R.altG : 't', P = altPat(g);
+      strip.innerHTML = `<span class="tl">${tname(P.type)}</span>` + patLevels(P).map(l => `<span class="tlamp" data-l="${l}"></span>`).join('');
+    } else {
+      const pat = tripPat();
+      const lamps = pat.map(l => `<span class="tlamp" data-l="${l}"></span>`);
+      strip.innerHTML = `<span class="tl">${tname(S.tripType)}</span>` + (S.tripEdit === 'groups'
+        ? S.tripGroups.map((_, g) => `<span class="tg">${lamps.slice(g * G(), g * G() + G()).join('')}</span>`).join('')
+        : lamps.join(''));
+    }
+    buildPresets();
+  }
+  /* saved patterns (kept in this browser with the other settings) */
+  function applyPattern(kind, data, restart, other, type) {
+    if (type) S.tripType = type;
+    if (kind === 'g') { S.tripEdit = 'groups'; S.tripGroups = data.slice(); }
+    else { S.tripEdit = 'steps'; S.tripAcc = data.slice(); }
+    if (restart) S.tripRestart = restart;
+    if (other) S.tripOther = other;
+    if (R) R.tn = 0;
+    fixTrip(); save(); render();
+  }
+  const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  /* pattern chips: two built-ins plus your own, grouped by grid. Saved in this browser. */
+  let adding = null, addBackup = null;
+  const grOf = type => (type === 'e8' || type === 's16' ? 'e' : 't');
+  const snap = () => ({ type: S.tripType, kind: S.tripEdit === 'groups' ? 'g' : 's',
+    data: S.tripEdit === 'groups' ? S.tripGroups.map(gVal) : S.tripAcc.slice(), restart: S.tripRestart, other: S.tripOther });
+  const same = (a, b) => (!a.type || !b.type || a.type === b.type) && a.kind === b.kind && a.data.join() === b.data.join() &&
+    a.restart === b.restart && (a.other == null || b.other == null || +a.other === +b.other);
+  const autoName = p => p.kind === 'g'
+    ? p.data.map(a => (!a ? '–' : p.type === 's16' ? ['', '1', 'e', '&', 'a'][a] : p.type === 'e8' ? ['', '1', '&'][a] : String(a))).join(' ')
+    : p.data.map(l => ['·', 'g', 'n', 'A'][l]).join('');
+  function fixSaved() {
+    if (!Array.isArray(S.tripSaved)) S.tripSaved = [];
+    S.tripSaved.forEach((p, i) => { if (!p.id) p.id = 'u' + Date.now().toString(36) + i; });
+  }
+  ['t', 'e'].forEach(gr => {
+    const box = $(gr === 't' ? '#addT' : '#addE');
+    box.innerHTML = `<p>Set up the accents above (per beat or note by note), then name it and save.</p>
+      <div class="saverow"><input type="text" maxlength="40" placeholder="Name (optional)" aria-label="New pattern name">
+      <button class="chip save">Save</button><button class="chip">Cancel</button></div>`;
+    const [inp, sv, cancel] = [box.querySelector('input'), ...box.querySelectorAll('button')];
+    const doSave = () => {
+      const p = snap(); p.name = inp.value.trim() || autoName(p); p.id = 'u' + Date.now().toString(36);
+      S.tripSaved.push(p); S.tripActive = { u: p.id }; adding = null; inp.value = ''; save(); render();
+    };
+    sv.onclick = doSave;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSave(); if (e.key === 'Escape') cancel.click(); });
+    cancel.onclick = () => {
+      adding = null; inp.value = '';
+      if (addBackup) { S.tripActive = addBackup.active; applyPattern(addBackup.kind, addBackup.data, addBackup.restart, addBackup.other, addBackup.type); }
+      render();
+    };
+  });
+  function startAdd(gr) {
+    addBackup = { ...snap(), active: S.tripActive };
+    if (grOf(S.tripType) !== gr) {   // switching grid: start from a plain accent on each beat
+      S.tripType = gr === 'e' ? 'e8' : 't8'; S.tripEdit = 'groups'; S.tripGroups = [1, 1, 1, 1]; fixTrip();
+    }
+    S.tripActive = null; adding = gr; if (R) R.tn = 0; save(); render();
+    setTimeout(() => $(gr === 't' ? '#addT input' : '#addE input').focus(), 0);
+  }
+  function buildPresets() {
+    fixSaved();
+    const alt = altOn();
+    const act = S.tripActive || {}, cur = snap();
+    ['t', 'e'].forEach(gr => {
+      const box = $(gr === 't' ? '#presetsT' : '#presetsE');
+      // in alternate mode the chips pick the two patterns the layer swaps between, one per group
+      const chosen = alt ? selOf(gr) : [];
+      const isOn = ref => alt ? chosen.some(r => refEq(r, ref)) : (ref.u ? act.u === ref.u : act.p === ref.p);
+      const built = PRESETS.map((p, i) => p[1] === gr ? `<button class="chip${isOn({ p: i }) ? ' on' : ''}" data-p="${i}">${p[0]}</button>` : '');
+      const mine = S.tripSaved.map(p => grOf(p.type) === gr ? `<button class="chip mine2${isOn({ u: p.id }) ? ' on' : ''}" data-u="${p.id}">${esc(p.name)}</button>` : '');
+      box.innerHTML = built.join('') + mine.join('') + (alt ? '' : `<button class="chip add${adding === gr ? ' on' : ''}" data-add="${gr}">+ Add</button>`);
+      const pick = ref => {   // tap to add or remove; at least one stays chosen
+        const cur = selOf(gr).slice(), i = cur.findIndex(r => refEq(r, ref));
+        if (i >= 0) { if (cur.length > 1) cur.splice(i, 1); } else cur.push(ref);
+        if (gr === 't') { S.altSelT = cur; S.altPatT = cur[0]; } else { S.altSelE = cur; S.altPatE = cur[0]; }
+        if (R) { R.altCur = R.altCur || altNew(); if (!cur.some(r => refEq(r, R.altCur[gr]))) R.altCur[gr] = cur[0]; R.tn = 0; }
+        save(); render(); };
+      box.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+        const i = +b.dataset.p;
+        if (alt) return pick({ p: i });
+        const [, grid, kind, data, restart, ptype] = PRESETS[i];
+        adding = null; S.tripActive = { p: i };
+        applyPattern(kind, data, restart, null, ptype || (grid === 'e' ? 'e8' : (straight() ? 't8' : S.tripType)));
+      });
+      box.querySelectorAll('[data-u]').forEach(b => b.onclick = () => {
+        const p = S.tripSaved.find(x => x.id === b.dataset.u); if (!p) return;
+        if (alt) return pick({ u: p.id });
+        adding = null; S.tripActive = { u: p.id };
+        applyPattern(p.kind, p.data, p.restart, p.other, p.type || (straight() ? 't8' : S.tripType));
+      });
+      const addBtn = box.querySelector('[data-add]');
+      if (addBtn) addBtn.onclick = () => (adding === gr ? null : startAdd(gr));
+      $(gr === 't' ? '#addT' : '#addE').hidden = alt || adding !== gr;
+
+      // actions for a selected pattern of your own
+      const actBox = $(gr === 't' ? '#actT' : '#actE'), p = S.tripSaved.find(x => x.id === act.u);
+      if (alt || !p || grOf(p.type) !== gr || adding) { actBox.innerHTML = ''; return; }
+      const edited = !same(cur, p);
+      actBox.innerHTML = `<span>“${esc(p.name)}”${edited ? ' · edited' : ''}</span>` +
+        (edited ? `<button class="chip save" data-a="upd">Save changes</button>` : '') +
+        `<button class="chip danger" data-a="del">Delete</button>`;
+      const upd = actBox.querySelector('[data-a=upd]');
+      if (upd) upd.onclick = () => { Object.assign(p, snap()); save(); render(); };
+      const del = actBox.querySelector('[data-a=del]');
+      del.onclick = () => {
+        if (!del.classList.contains('sure')) {
+          del.classList.add('sure'); del.textContent = 'Tap again to delete';
+          setTimeout(() => { if (del.isConnected) { del.classList.remove('sure'); del.textContent = 'Delete'; } }, 3000);
+          return;
+        }
+        S.tripSaved = S.tripSaved.filter(x => x.id !== p.id); S.tripActive = null; save(); render();
+      };
+    });
+  }
+
+  /* ---------- tempo ---------- */
+  function setBpm(v) {
+    v = clamp(Math.round(v), 30, 300);
+    const d = v - S.bpm; if (!d) return;
+    S.bpm = v; save();
+    if (R) R.bpm = S.mode === 'steady' ? v : clamp(R.bpm + d, 20, 400);
+    syncTempo(); render();
+  }
+  function syncTempo() { $('#bpm').textContent = S.bpm; $('#bpmRange').value = S.bpm; }
+  $$('.step').forEach(b => b.onclick = () => setBpm(S.bpm + +b.dataset.d));
+  $('#bpmRange').oninput = e => setBpm(+e.target.value);
+  let taps = [];
+  function tap() {
+    const t = performance.now();
+    if (taps.length && t - taps[taps.length - 1] > 2000) taps = [];
+    taps.push(t); if (taps.length > 5) taps.shift();
+    if (taps.length >= 2) { const avg = (taps[taps.length - 1] - taps[0]) / (taps.length - 1); setBpm(60000 / avg); }
+  }
+  $('#tap').onclick = tap;
+  $('#play').onclick = toggle;
+
+  /* ---------- settings controls ---------- */
+  function set(k, v) {
+    if (NUM_KEYS.includes(k)) {
+      const inp = document.querySelector(`input[data-k="${k}"]`);
+      v = +v; if (isNaN(v)) return;
+      if (inp && inp.type === 'number') v = clamp(Math.round(v), +inp.min, +inp.max);
+    }
+    const was = S[k]; S[k] = v;
+    if (k === 'rampDir' && !rampValid()) S.rampLimit = clamp(S.bpm + fwd() * 40, 30, 300);
+    if (k === 'beats') buildBeats();
+    if (k === 'tripLen') {
+      const a = S.tripAcc.slice(0, v);
+      while (a.length < v) a.push(a.length ? 2 : 3);
+      S.tripAcc = a;
+    }
+    if (k === 'tripGroupLen') {
+      const a = S.tripGroups.slice(0, v);
+      while (a.length < v) a.push(1);
+      S.tripGroups = a;
+    }
+    if (R && (k === 'tripEdit' || k === 'tripRestart' || k === 'tripType')) R.tn = 0;
+    if (k === 'altMin' && S.altMax < v) S.altMax = v;
+    if (k === 'altMax' && S.altMin > v) S.altMin = v;
+    if (R && k === 'tripAlt') { R.tn = 0; R.altG = 't'; R.altLeft = altLen(); R.altCur = altNew(); lastAltShown = null; }
+    if (R && ['trip', 'tripStart', 'tripOnBars', 'tripOffBars'].includes(k)) R.tripOn = tripActive(R.bar);
+    if (k === 'vol' && master) master.gain.value = S.vol * S.vol * 1.2;
+    if (R && (k === 'mode' || k === 'rampDir') && was !== v) { R.bpm = S.bpm; R.step = 0; R.dir = fwd(); R.hist = []; }
+    save(); render();
+  }
+  $$('.seg[data-k]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const k = seg.dataset.k; set(k, NUM_KEYS.includes(k) ? +b.dataset.v : b.dataset.v);
+  }));
+  $$('.sw[data-k]').forEach(b => b.onclick = () => set(b.dataset.k, !S[b.dataset.k]));
+  $$('input[data-k]').forEach(i => { i.onchange = () => set(i.dataset.k, i.value); if (i.type === 'range') i.oninput = i.onchange; });
+  $$('[data-inc]').forEach(b => b.onclick = () => set(b.dataset.inc, S[b.dataset.inc] + +b.dataset.by));
+  $$('.tab[data-card]').forEach(b => b.onclick = () => { S.openCard = S.openCard === b.dataset.card ? null : b.dataset.card; save(); render(); });
+
+  function render() {
+    $$('.seg[data-k]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v) === String(S[seg.dataset.k]))));
+    $$('.sw[data-k]').forEach(b => b.setAttribute('aria-checked', !!S[b.dataset.k]));
+    $$('input[data-k]').forEach(i => { if (document.activeElement !== i) i.value = S[i.dataset.k]; });
+    $$('[data-show]').forEach(el => {
+      const m = el.dataset.show.match(/^(\w+)(!?=)(\w+)$/), val = String(S[m[1]]);
+      el.hidden = m[2] === '=' ? val !== m[3] : val === m[3];
+    });
+    const on = { accent: S.trip !== 'off', tempo: S.mode !== 'steady', silent: S.silent !== 'off' };
+    $$('.tab[data-card]').forEach(b => {
+      const id = b.dataset.card;
+      b.setAttribute('aria-expanded', String(S.openCard === id));
+      b.classList.toggle('live', !!on[id]);
+    });
+    $$('section[data-sec]').forEach(sec => { sec.hidden = sec.dataset.sec !== S.openCard; });
+    const w = $('#rampWarn');
+    w.hidden = S.mode !== 'ramp' || rampValid();
+    w.textContent = S.rampDir === 'up' ? `"Stop at" needs to be above your tempo (${S.bpm}) to speed up.` : `"Stop at" needs to be below your tempo (${S.bpm}) to slow down.`;
+    buildTrip(); showLive(); drawGraph();
+  }
+
+  /* ---------- keys ---------- */
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === ' ' || e.code === 'Space') { if (tag === 'BUTTON') return; e.preventDefault(); toggle(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setBpm(S.bpm + (e.shiftKey ? 5 : 1)); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setBpm(S.bpm - (e.shiftKey ? 5 : 1)); }
+    else if (e.key === 't' || e.key === 'T') tap();
+  });
+  window.addEventListener('resize', drawGraph);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && R && ctx.state !== 'running') ctx.resume(); });
+
+  buildBeats(); syncTempo(); render();
+})();
+</script>
+<script src="lab.js"></script>
+</body>
+</html>

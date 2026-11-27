@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Favorite licks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#14110f; --panel:#1d1916; --line:#2e2824; --ink:#f3ece4; --mute:#a3978b; --dim:#6d635a; --home:#e9b96e; --dep:#e0715a; --blue:#6fa8ff; --ret:#8fc4a4; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  button,select,input{font:inherit;color:inherit}
+  .wrap{max-width:640px;margin:0 auto;padding:22px 16px 80px}
+  h1{font-family:Fraunces,serif;font-weight:700;font-size:28px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--mute);font-size:14px;margin:6px 0 18px;line-height:1.45}
+  .bar{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px;margin-bottom:14px}
+  .row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:13.5px;color:var(--mute)}
+  .row label{display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+  input[type=range]{width:110px;accent-color:var(--home)}
+  input[type=checkbox]{accent-color:var(--home);width:15px;height:15px}
+  select{background:#181512;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px}
+  .tnum{font-variant-numeric:tabular-nums;color:var(--ink);min-width:2.2em;display:inline-block}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer}
+  .chip[aria-pressed="true"]{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .chip small{opacity:.75;margin-left:4px}
+  .play{width:100%;height:52px;border-radius:14px;border:0;background:var(--home);color:#14110f;font-size:16px;font-weight:600;cursor:pointer}
+  .play.stop{background:#3a322c;color:var(--ink)}
+  .play:disabled{opacity:.35;cursor:default}
+  .list{display:grid;gap:8px}
+  .fav{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+  .fav.now{border-color:var(--home);box-shadow:0 0 0 1px var(--home)}
+  .dg{font-family:Fraunces,serif;font-size:18px;line-height:1.5;overflow-wrap:anywhere}
+  .dg span{display:inline-block;padding:0 3px;border-radius:5px;transition:background .08s}
+  .dg .dec{color:var(--dep)} .dg .blue{color:var(--blue)} .dg .tone{color:var(--home)}
+  .dg span.on{background:var(--home);color:#14110f}
+  .meta{grid-column:1/-1;font-size:12.5px;color:var(--mute);line-height:1.45}
+  .meta b{color:var(--ink);font-weight:600}
+  .tag{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-right:6px;color:var(--dim)}
+  .btns{display:flex;gap:6px}
+  .btns button{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:#14110f;color:var(--ink);font-size:15px;cursor:pointer}
+  .btns button.rm{color:var(--dim)}
+  .btns button.on{border-color:var(--home);color:var(--home)}
+  .empty{color:var(--mute);font-size:14px;line-height:1.6;background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:18px}
+  .empty a{color:var(--home)}
+  .hint{font-size:12.5px;color:var(--dim);line-height:1.5;margin:4px 2px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Favorite licks</h1>
+  <p class="sub">Every lick you saved with ☆ in Triad Home Base, Blues Vocab and Triads by Chord, all in one key, over a low root note. Tap ▶ to hear one, or play the whole list.</p>
+
+  <div class="bar">
+    <div class="chips" id="appChips"></div>
+    <div class="row">
+      <label>Key <select id="key"></select></label>
+      <label>Tempo <input type="range" id="tempo" min="40" max="220" value="100"> <span class="tnum" id="tempoN">100</span></label>
+      <label><input type="checkbox" id="swing" checked> Swing 8ths</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="rootOn" checked> Root note</label>
+      <label><input type="checkbox" id="compOn" checked> Chords</label>
+      <label><input type="checkbox" id="loop"> Loop</label>
+      <label><input type="checkbox" id="twice"> Each lick twice</label>
+    </div>
+    <button class="play" id="playAll">▶ Play all</button>
+  </div>
+
+  <div class="list" id="list"></div>
+  <p class="hint" id="hint"></p>
+</div>
+
+<script src="piano.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const md = (a, n) => ((a % n) + n) % n;
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const KT = ['1', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
+const KEYS = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+const APPN = { home: 'Triad Home Base', blues: 'Blues Vocab', chord: 'Triads by Chord', glow: 'Home Glow' };
+// Triads by Chord: degrees over the lick's own chord, and that chord built on the key you pick
+const CDEG = ['1', '♭9', '9', '♯9', '3', '11', '♯11', '5', '♭13', '13', '♭7', '7'];
+const CQ = { major: 'maj7', minor: 'min', dominant: 'dom' };
+
+/* ---------- settings ---------- */
+$('key').innerHTML = KEYS.map((k, i) => `<option value="${i}">${k}</option>`).join('');
+$('key').value = store.get('fav.key', 0);
+$('tempo').value = store.get('fav.tempo', 100); $('tempoN').textContent = $('tempo').value;
+['swing', 'rootOn', 'compOn', 'loop', 'twice'].forEach(id => { const v = store.get('fav.' + id, null); if (v !== null) $(id).checked = v; $(id).onchange = () => store.set('fav.' + id, $(id).checked); });
+$('tempo').oninput = e => { $('tempoN').textContent = e.target.value; store.set('fav.tempo', +e.target.value); };
+$('key').onchange = () => { store.set('fav.key', +$('key').value); stopAll(); render(); };
+let filter = store.get('fav.filter', 'all');
+
+/* ---------- a favorite as notes in the chosen key ---------- */
+const K = () => +$('key').value;
+function phrase(f) {
+  const key = K();
+  if (f.app === 'home') {
+    const base = (key <= 6 ? 60 : 48) + key, rels = f.notes.map(n => n.midi - f.r);
+    const mean = rels.reduce((a, b) => a + b, 0) / rels.length, off = 12 * Math.round((5 - mean) / 12);
+    return { notes: f.notes.map((n, i) => ({ t: n.t, d: n.d, midi: base + rels[i] + off, lab: KT[md(rels[i], 12)], cls: n.tone ? '' : 'dec' })), chords: [], asPlayed: false };
+  }
+  if (f.app === 'chord' || f.app === 'glow') {
+    const mean = f.notes.reduce((a, n) => a + n.rel, 0) / f.notes.length;
+    let off = 60 + key; off += 12 * Math.round((67 - (off + mean)) / 12);
+    return {
+      notes: f.notes.map(n => ({ t: n.t, d: n.d, midi: off + n.rel, lab: f.fam === 'minor' && md(n.rel, 12) === 3 ? '♭3' : CDEG[md(n.rel, 12)], cls: n.tri ? 'tone' : '' })),
+      chords: [{ t: 0, pc: key, q: CQ[f.fam] || 'dom' }], asPlayed: !!f.asPlayed,
+    };
+  }
+  const it = f.item; let d = md(key - it.K, 12); if (d > 6) d -= 12;
+  const avg = it.n.reduce((a, x) => a + x[2] + d, 0) / it.n.length; if (avg > 80) d -= 12; if (avg < 54) d += 12;
+  const hl = new Set(it.hl || []);
+  return {
+    notes: it.n.map((x, j) => { const m = x[2] + d, r = md(m - key, 12); return { t: x[0], d: x[1], midi: m, lab: KT[r], cls: hl.has(j) ? 'tone' : [3, 6, 10].includes(r) ? 'blue' : '' }; }),
+    chords: (it.ch || []).map(c => ({ t: c.t, pc: md(c.r + d, 12), q: c.q })), asPlayed: !!f.asPlayed,
+  };
+}
+
+/* ---------- list ---------- */
+// where a Blues lick sits in its 12-bar chorus: "bars 5–6 of chorus 2", with the chorus taken out of the source line
+function whereOf(f) {
+  let src = f.src || '', chorus = '';
+  const m = src.match(/ · chorus (\d+)$/); if (m) { chorus = m[1]; src = src.slice(0, m.index); }
+  const b = f.app === 'blues' && f.item && f.item.bars; if (!b) return { bars: '', src };
+  const bars = b[0] === b[1] ? `bar ${b[0]}` : `bars ${b[0]}${b[0] === 12 && b[1] === 1 ? '→1' : '–' + b[1]}`;
+  return { bars: `${bars} of ${chorus ? 'chorus ' + chorus : 'the chorus'}`, src };
+}
+let FAVS = [], nowId = null;
+const shown = () => FAVS.filter(f => filter === 'all' || f.app === filter);
+function render() {
+  const cnt = a => FAVS.filter(f => a === 'all' || f.app === a).length;
+  if (filter !== 'all' && !cnt(filter)) filter = 'all';
+  $('appChips').innerHTML = ['all', 'home', 'blues', 'chord', 'glow'].filter(a => (a !== 'chord' && a !== 'glow') || cnt(a)).map(a => `<button class="chip" data-a="${a}" aria-pressed="${a === filter}">${a === 'all' ? 'All' : APPN[a]} <small>${cnt(a)}</small></button>`).join('');
+  const L = shown();
+  $('playAll').disabled = !L.length;
+  $('list').innerHTML = L.length ? L.map(f => {
+    const ph = phrase(f), w = whereOf(f);
+    return `<div class="fav${f.id === nowId ? ' now' : ''}" data-id="${f.id}">
+      <div class="dg">${ph.notes.map((n, j) => `<span class="${n.cls}" data-j="${j}">${n.lab}</span>`).join('')}</div>
+      <div class="btns"><button class="pl" aria-label="Play this lick">▶</button><button class="rm" aria-label="Remove from favorites">✕</button></div>
+      <div class="meta"><span class="tag">${APPN[f.app] || f.app}</span><b>${esc(f.title || (f.ideas || []).join(', '))}</b>${w.bars ? ` · <b>${w.bars}</b>` : ''} · ${esc(w.src)}</div></div>`;
+  }).join('') : `<div class="empty">No favorites yet. Save licks with ☆ in <a href="home-base.html">Triad Home Base</a> (while a lick plays) in <a href="blues.html">Blues Vocab</a> (on any example) or in <a href="triads-by-chord.html">Triads by Chord</a> (on any lick), and they show up here.</div>`;
+  $('hint').textContent = L.length ? 'Red: the added note (Home Base). Gold: the triad or target notes, blue: blue notes (Blues Vocab). Triads by Chord licks show degrees of their chord, played over that chord on the key you pick. Numbers are in the key you pick above.' : '';
+}
+$('appChips').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; filter = b.dataset.a; store.set('fav.filter', filter); stopAll(); render(); };
+$('list').onclick = e => {
+  const row = e.target.closest('.fav'); if (!row) return;
+  const f = FAVS.find(x => x.id === row.dataset.id); if (!f) return;
+  if (e.target.closest('.rm')) { if (nowId === f.id) stopAll(); MusicLab.favs.remove(f.id); return; }
+  if (e.target.closest('.pl')) { if (playing && nowId === f.id && queueMode === 'one') { stopAll(); return; } playList([f], 'one'); }
+};
+function pull() { FAVS = window.MusicLab && MusicLab.favs ? MusicLab.favs.list() : []; render(); }
+window.addEventListener('load', () => { if (window.MusicLab && MusicLab.favs) { MusicLab.favs.onChange(pull); MusicLab.favs.ready(); } pull(); });
+
+/* ---------- audio ---------- */
+let ctx, master, melBus, live = [], timers = [], token = 0, playing = false, queueMode = null;
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number).sort((a, b) => a - b), buffers = {};
+let loadP = null;
+const b64 = url => { const bin = atob(url.slice(url.indexOf(',') + 1)), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return u8.buffer; };
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = .003; comp.release.value = .25;
+    master = ctx.createGain(); master.gain.value = .9; master.connect(comp); comp.connect(ctx.destination);
+    melBus = ctx.createGain(); melBus.gain.value = .85; melBus.connect(master);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  if (!loadP) loadP = Promise.all(Object.entries(PIANO).map(([m, url]) => new Promise(res => ctx.decodeAudioData(b64(url), b => { buffers[m] = b; res(); }, () => res()))));
+  return loadP;
+}
+function piano(m, t, dur, vel = 1) {
+  const s = SAMPLE_KEYS.reduce((b, k) => Math.abs(k - m) < Math.abs(b - m) ? k : b, SAMPLE_KEYS[0]), buf = buffers[s]; if (!buf) return;
+  const src = ctx.createBufferSource(); src.buffer = buf; const rate = Math.pow(2, (m - s) / 12); src.playbackRate.value = rate;
+  const g = ctx.createGain(), end = Math.min(t + dur * 1.1 + .1, t + buf.duration / rate);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + .004);
+  g.gain.setValueAtTime(vel, Math.max(t + .01, end - .15)); g.gain.linearRampToValueAtTime(.0001, end);
+  src.connect(g); g.connect(melBus); src.start(t); src.stop(end + .02);
+  live.push({ src, g }); src.onended = () => { live = live.filter(x => x.src !== src); };
+}
+const bassOf = pc => { let m = 36 + md(pc, 12); if (m < 40) m += 12; return m; };
+function shell(pc, q) { const iv = { dom: [4, 10], maj: [4, 9], maj7: [4, 11], min: [3, 10], hd: [3, 6, 10], dim: [3, 6, 9] }[q] || [4, 10]; return iv.map(x => 52 + md(pc + x - 52, 12)); }
+const at = (time, fn) => { const id = setTimeout(() => { timers = timers.filter(x => x !== id); fn(); }, Math.max(0, (time - ctx.currentTime) * 1000)); timers.push(id); };
+function stopAll() {
+  token++; timers.forEach(clearTimeout); timers = [];
+  if (ctx) { const now = ctx.currentTime; live.forEach(({ src, g }) => { try { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0, now + .03); src.stop(now + .04); } catch (e) {} }); live = []; }
+  playing = false; queueMode = null; nowId = null;
+  document.querySelectorAll('.fav.now').forEach(e => e.classList.remove('now'));
+  document.querySelectorAll('.dg span.on, .btns .on').forEach(e => e.classList.remove('on'));
+  $('playAll').textContent = '▶ Play all'; $('playAll').classList.remove('stop');
+}
+// one lick at t0; returns when it ends
+function scheduleFav(f, t0, my) {
+  const ph = phrase(f), b = 60 / +$('tempo').value;
+  const sw = q => { if (ph.asPlayed || !$('swing').checked) return q; const n = Math.floor(q + 1e-9), fr = q - n; return n + (fr <= .5 ? fr * 1.34 : .67 + (fr - .5) * .66); };
+  const T = q => t0 + sw(q) * b;
+  const len = Math.max(...ph.notes.map(n => n.t + n.d));
+  // the root: the key's 1 under a Home Base lick, each chord's root under a Blues lick
+  if ($('rootOn').checked && !ph.chords.length) piano(bassOf(K()), T(0), T(Math.max(len, 1)) - T(0) + .1, .5);
+  ph.chords.forEach((c, i) => {
+    const s = T(c.t), e = T(i + 1 < ph.chords.length ? ph.chords[i + 1].t : Math.ceil(len)); if (e - s < .05) return;
+    if ($('rootOn').checked) piano(bassOf(c.pc), s, e - s, .5);
+    if ($('compOn').checked) shell(c.pc, c.q).forEach(m => piano(m, s + .01, Math.min(e - s, b * 2.2), .3));
+  });
+  ph.notes.forEach((n, j) => {
+    const a = T(n.t), z = T(n.t + n.d); piano(n.midi, a, Math.max(.08, z - a), n.cls === 'dec' ? .95 : .85);
+    const el = () => document.querySelector(`.fav[data-id="${f.id}"] .dg span[data-j="${j}"]`);
+    at(a, () => { if (my === token) { const e = el(); if (e) e.classList.add('on'); } });
+    at(Math.max(a + .06, z - .02), () => { const e = el(); if (e) e.classList.remove('on'); });
+  });
+  return T(len);
+}
+async function playList(list, mode) {
+  stopAll(); if (!list.length) return;
+  await audio(); const my = token; playing = true; queueMode = mode;
+  if (mode === 'all') { $('playAll').textContent = '■ Stop'; $('playAll').classList.add('stop'); }
+  const b = () => 60 / +$('tempo').value;
+  let t = ctx.currentTime + .15, i = 0;
+  const reps = $('twice').checked ? 2 : 1;
+  const step = () => {
+    if (my !== token) return;
+    if (i >= list.length * reps) { if ($('loop').checked) i = 0; else { at(t, () => { if (my === token) stopAll(); }); return; } }
+    const f = list[Math.floor(i / reps) % list.length]; i++;
+    const start = t;
+    at(start, () => {
+      if (my !== token) return; nowId = f.id;
+      document.querySelectorAll('.fav').forEach(e => { const on = e.dataset.id === f.id; e.classList.toggle('now', on); const p = e.querySelector('.pl'); if (p) p.classList.toggle('on', on); });
+      const row = document.querySelector(`.fav[data-id="${f.id}"]`); if (row && mode === 'all') row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    t = scheduleFav(f, t, my) + b() * 1.5;   // a breath between licks
+    at(Math.max(ctx.currentTime, t - 1.5), step);
+  };
+  step();
+}
+$('playAll').onclick = () => { if (playing && queueMode === 'all') stopAll(); else playList(shown(), 'all'); };
+document.addEventListener('keydown', e => { if (e.key === ' ' && !['INPUT', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); $('playAll').click(); } });
+render();
+</script>
+<script src="lab.js"></script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triads by Chord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#14110f; --panel:#1d1916; --line:#2e2824; --ink:#f3ece4; --mute:#a3978b; --dim:#6d635a; --home:#e9b96e; --dep:#e0715a; --blue:#6fa8ff; --ret:#8fc4a4; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  button,select,input{font:inherit;color:inherit}
+  .wrap{max-width:680px;margin:0 auto;padding:22px 16px 90px}
+  h1{font-family:Fraunces,serif;font-weight:700;font-size:28px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--mute);font-size:14px;margin:6px 0 18px;line-height:1.45}
+  .bar{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px;margin-bottom:14px}
+  .row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:13.5px;color:var(--mute)}
+  .row label{display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+  input[type=range]{width:110px;accent-color:var(--home)}
+  input[type=checkbox]{accent-color:var(--home);width:15px;height:15px}
+  select{background:#181512;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px}
+  .tnum{font-variant-numeric:tabular-nums;color:var(--ink);min-width:2.2em;display:inline-block}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .tab{border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:12px;padding:10px 6px;font-size:14.5px;font-weight:600;cursor:pointer}
+  .tab small{display:block;font-weight:400;font-size:12px;color:var(--dim);margin-top:2px}
+  .tab[aria-pressed="true"]{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1px solid var(--line);background:#181512;color:var(--mute);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .chip[aria-pressed="true"]{background:#3a2f22;border-color:var(--home);color:var(--home)}
+  .chip small{opacity:.75;margin-left:4px}
+  .status{font-size:13px;color:var(--mute);margin:2px 2px 10px;line-height:1.5}
+  .status b{color:var(--ink);font-weight:600}
+  .list{display:grid;gap:8px}
+  .tri{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .tri.open{border-color:#5a4a36}
+  .head{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:11px 12px;cursor:pointer}
+  .rank{font-family:Fraunces,serif;font-size:15px;color:var(--dim);text-align:center}
+  .nm{font-family:Fraunces,serif;font-size:21px;line-height:1.15}
+  .nm .q{font-size:15px;color:var(--mute);margin-left:4px;font-family:Inter,sans-serif}
+  .deg{font-size:13px;color:var(--home);margin-top:3px;letter-spacing:.02em}
+  .deg .exn{color:var(--mute);margin-left:6px}
+  .meter{grid-column:2/3;height:6px;background:#2a2420;border-radius:3px;overflow:hidden;margin-top:6px}
+  .meter i{display:block;height:100%;background:var(--home);border-radius:3px}
+  .pct{grid-column:2/4;font-size:12.5px;color:var(--mute);font-variant-numeric:tabular-nums}
+  .pct b{color:var(--ink);font-weight:600}
+  .hb{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:#14110f;color:var(--ink);font-size:13px;cursor:pointer;grid-row:1/3;grid-column:3}
+  .hb.on{border-color:var(--home);color:var(--home)}
+  .body{border-top:1px solid var(--line);padding:10px 12px 12px;display:grid;gap:8px;background:#191512}
+  .what{font-size:13px;color:var(--mute);line-height:1.5}
+  .what b{color:var(--ink);font-weight:600}
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{border:1px solid var(--line);background:#14110f;color:var(--ink);border-radius:10px;padding:8px 12px;font-size:13.5px;cursor:pointer}
+  .btn.main{background:var(--home);border-color:var(--home);color:#14110f;font-weight:600}
+  .btn.on{background:#3a322c;border-color:#3a322c;color:var(--ink)}
+  .ex{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+  .ex.now{border-color:var(--home);box-shadow:0 0 0 1px var(--home)}
+  .dg{font-family:Fraunces,serif;font-size:17px;line-height:1.55;overflow-wrap:anywhere}
+  .dg span{display:inline-block;padding:0 3px;border-radius:5px;color:var(--dim);transition:background .08s}
+  .dg span.t{color:var(--home)}
+  .dg span.on{background:var(--home);color:#14110f}
+  .src{grid-column:1/-1;font-size:12px;color:var(--mute);line-height:1.4}
+  .src b{color:var(--ink);font-weight:500}
+  .ex .pl{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#14110f;color:var(--ink);cursor:pointer}
+  .ex .pl.on{border-color:var(--home);color:var(--home)}
+  .ex .btns{display:flex;gap:6px}
+  .ex .fv{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#14110f;color:var(--dim);font-size:17px;cursor:pointer}
+  .ex .fv.on{border-color:var(--home);color:var(--home)}
+  .more{justify-self:start}
+  .empty,.loading{color:var(--mute);font-size:14px;line-height:1.6;background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:18px}
+  .hint{font-size:12.5px;color:var(--dim);line-height:1.55;margin:14px 2px 0}
+  .showall{margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Triads by Chord</h1>
+  <p class="sub">Which triads the players in your library use over major, minor and dominant chords. Numbers are counted from the <b>chord root</b>, not the key. Tap a triad to hear it and play real licks, all moved onto one chord root. Tap ☆ on a lick to save it to your ★ Favorite licks.</p>
+
+  <div class="bar">
+    <div class="tabs" id="tabs"></div>
+    <div class="chips" id="groups"></div>
+    <div class="row">
+      <label>Chord root <select id="root"></select></label>
+      <label>Tempo <input type="range" id="tempo" min="40" max="240" value="120"> <span class="tnum" id="tempoN">120</span></label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="swing" checked> Swing 8ths</label>
+      <label><input type="checkbox" id="bassOn" checked> Root note</label>
+      <label><input type="checkbox" id="compOn" checked> Chord</label>
+      <label><input type="checkbox" id="loop"> Loop</label>
+    </div>
+  </div>
+
+  <p class="status" id="status"></p>
+  <div class="list" id="list"><div class="loading">Reading every solo in the library…</div></div>
+  <p class="hint">How it counts: three notes in a row inside one phrase, all over the same chord, that make a major, minor, diminished or augmented triad within an octave. Going up and down the same triad counts once. Sus, half-diminished and diminished chords are left out. Gold numbers are the triad, grey numbers are the notes around it, all as degrees of the chord. Weimar solos play with their recorded rhythm, so swing is only added to the others.</p>
+</div>
+
+<script src="piano.js"></script>
+<script src="processor.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const md = (a, n = 12) => ((a % n) + n) % n;
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+
+const KEYS = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+const NUM = ['1', '♭2', '2', '♭3', '3', '4', '♯4', '5', '♭6', '6', '♭7', '7'];
+// degrees as they sound over each chord type
+const DEG = {
+  major:    ['1', '♭9', '9', '♯9', '3', '11', '♯11', '5', '♭13', '13', '♭7', '7'],
+  minor:    ['1', '♭9', '9', '♭3', '3', '11', '♯11', '5', '♭13', '13', '♭7', '7'],
+  dominant: ['1', '♭9', '9', '♯9', '3', '11', '♯11', '5', '♭13', '13', '♭7', '7'],
+};
+const FAM = { maj: 'major', maj6: 'major', min: 'minor', min6: 'minor', dom: 'dominant' };
+const FAMS = [['major', 'Major', '△7 · 6'], ['minor', 'Minor', '–7 · –6'], ['dominant', 'Dominant', '7 · 9 · 13']];
+const CHSYM = { major: '△7', minor: '–7', dominant: '7' };
+const TQ = { maj: { word: 'major', sym: '', sh: [0, 4, 7] }, min: { word: 'minor', sym: 'm', sh: [0, 3, 7] }, dim: { word: 'dim', sym: '°', sh: [0, 3, 6] }, aug: { word: 'aug', sym: '+', sh: [0, 4, 8] } };
+const SHAPES = Object.entries(TQ).map(([k, v]) => [k, v.sh]);
+const GROUPS = [['all', 'All solos'], ['mine', 'Built-in & yours'], ['omni', 'Omnibook'], ['test', 'Weimar (testing)']];
+
+/* ---------- what each triad is, in words ---------- */
+// short notes on the common ones so the numbers mean something when you hear them
+const ABOUT = {
+  'major|maj|0': 'The chord’s own triad: home base.',
+  'major|min|4': 'The 3‑5‑7 of the chord: the △7 sound without the root.',
+  'major|min|9': 'The 13‑1‑3 (6‑1‑3): the major‑6 sound.',
+  'major|maj|7': 'The 5‑7‑9: a bright, open upper structure.',
+  'major|min|2': 'The 9‑11‑13: all tensions, floats over the chord.',
+  'major|maj|5': 'The IV triad: 11‑13‑1, a plagal, hymn‑like colour.',
+  'major|maj|2': 'The 9‑♯11‑13: the lydian sound.',
+  'major|min|11': 'The 7‑9‑♯11: lydian from the 7th.',
+  'minor|min|0': 'The chord’s own triad: home base.',
+  'minor|maj|3': 'The ♭3‑5‑♭7: the –7 sound without the root.',
+  'minor|min|7': 'The 5‑♭7‑9: adds the 9th on top.',
+  'minor|dim|9': 'The 13‑1‑♭3 (6‑1‑♭3): the dorian / minor‑6 colour.',
+  'minor|maj|10': 'The ♭7‑9‑11: the upper structure of the –7.',
+  'minor|maj|8': 'The ♭6‑1‑♭3: the aeolian / minor‑key sound.',
+  'minor|aug|3': 'The ♭3‑5‑7: the minor‑major (melodic / harmonic minor) sound.',
+  'minor|maj|5': 'The 4‑6‑1: the dorian IV, bluesy and bright.',
+  'minor|maj|7': 'The 5‑7‑9: the V chord’s triad, pulling toward the minor home.',
+  'dominant|maj|0': 'The chord’s own triad: home base.',
+  'dominant|dim|4': 'The 3‑5‑♭7: the core of the dominant (tritone inside).',
+  'dominant|min|7': 'The 5‑♭7‑9: the ii chord’s sound over the V.',
+  'dominant|dim|7': 'The 5‑♭7‑♭9: the ♭9 sound, from the diminished scale.',
+  'dominant|maj|10': 'The ♭7‑9‑11: suspended, unresolved colour.',
+  'dominant|min|9': 'The 13‑1‑3: the 13th sound.',
+  'dominant|min|2': 'The 9‑11‑13: all upper tensions.',
+  'dominant|maj|5': 'The 11‑13‑1: the IV triad, sus / blues colour.',
+  'dominant|min|0': 'The ♯9 side: the blue minor 3rd over the dominant.',
+  'dominant|dim|10': 'The ♭7‑♭9‑3: another piece of the ♭9 diminished sound.',
+  'dominant|maj|7': 'The 5‑7‑9: the natural 7 passing over the dominant.',
+  'dominant|aug|0': 'The 1‑3‑♯5: the augmented dominant.',
+  'dominant|maj|3': 'The ♯9‑5‑♭7: the blue ♭3 major triad, a ♯9 colour.',
+  'dominant|min|4': 'The 3‑5‑7: major 7 sound passing over the dominant.',
+  'dominant|maj|6': 'The ♯11‑♭7‑♭9: the tritone sub’s triad.',
+  'dominant|maj|8': 'The ♭13‑1‑♯9: an altered colour.',
+  'dominant|dim|1': 'The ♭9‑3‑5: another piece of the ♭9 diminished sound.',
+};
+
+/* ---------- finding triads ---------- */
+function findTriad(w) {
+  const pcs = new Set(w.map(z => md(z.p)));
+  if (pcs.size !== 3) return null;
+  const ps = w.map(z => z.p).sort((a, b) => a - b);
+  if (ps[2] - ps[0] > 12) return null;
+  const hits = [];
+  for (let rt = 0; rt < 12; rt++) {
+    const st = new Set([...pcs].map(x => md(x - rt)));
+    for (const [tq, sh] of SHAPES) if (sh.every(v => st.has(v))) hits.push([tq, rt]);
+  }
+  return hits.length ? hits : null;
+}
+function analyzeSolo(s) {
+  const P = window.SoloProcessor;
+  const { notes } = P.parse(s.xml);
+  const out = [];
+  for (const ph of P._ex.phrases(notes)) {
+    let last = null;
+    for (let i = 0; i + 2 < ph.length; i++) {
+      const w = ph.slice(i, i + 3), c = w[0].chord;
+      if (!c || w.some(z => z.chord !== c)) continue;
+      const fam = FAM[c.q]; if (!fam) continue;
+      const hits = findTriad(w); if (!hits) continue;
+      const rels = hits.map(([tq, rt]) => [tq, md(rt - c.root)]).sort((a, b) => a[1] - b[1]);
+      const pick = rels[0][0] === 'aug' ? (rels.find(h => h[1] === 0) || rels[0]) : rels[0];
+      const key = fam + '|' + pick[0] + '|' + pick[1];
+      if (last && last.key === key && last.end >= i) { last.end = i + 2; continue; }
+      last = { key, fam, tq: pick[0], r: pick[1], ph, i, end: i + 2, chord: c, solo: s };
+      out.push(last);
+    }
+  }
+  return out;
+}
+
+/* ---------- state ---------- */
+let SOLOS = [], EVENTS = [], fam = store.get('tbc.fam', 'dominant'), grp = store.get('tbc.grp', 'all');
+let openKey = null, shownN = {}, showAll = false;
+const groupOf = s => s.test ? 'test' : s.omni ? 'omni' : 'mine';
+const inGroup = e => grp === 'all' || groupOf(e.solo) === grp;
+
+$('root').innerHTML = KEYS.map((k, i) => `<option value="${i}">${k}</option>`).join('');
+$('root').value = store.get('tbc.root', 0);
+$('tempo').value = store.get('tbc.tempo', 120); $('tempoN').textContent = $('tempo').value;
+['swing', 'bassOn', 'compOn', 'loop'].forEach(id => { const v = store.get('tbc.' + id, null); if (v !== null) $(id).checked = v; $(id).onchange = () => store.set('tbc.' + id, $(id).checked); });
+$('tempo').oninput = e => { $('tempoN').textContent = e.target.value; store.set('tbc.tempo', +e.target.value); };
+$('root').onchange = () => { store.set('tbc.root', +$('root').value); stopAll(); render(); };
+const R = () => +$('root').value;
+
+/* ---------- names ---------- */
+const triadName = (tq, r) => KEYS[md(R() + r)] + TQ[tq].sym;
+const chordName = f => KEYS[R()] + CHSYM[f];
+const degs = (f, tq, r) => TQ[tq].sh.map(v => DEG[f][md(r + v)]);
+
+/* ---------- render ---------- */
+function stats() {
+  const ev = EVENTS.filter(inGroup), by = {};
+  for (const e of ev) { if (e.fam !== fam) continue; (by[e.key] = by[e.key] || { key: e.key, tq: e.tq, r: e.r, n: 0, solos: new Set(), ex: [] }); by[e.key].n++; by[e.key].solos.add(e.solo.id); by[e.key].ex.push(e); }
+  const rows = Object.values(by).sort((a, b) => b.n - a.n), total = rows.reduce((a, x) => a + x.n, 0);
+  const famTotals = {}; ev.forEach(e => famTotals[e.fam] = (famTotals[e.fam] || 0) + 1);
+  return { rows, total, famTotals, nSolos: new Set(SOLOS.filter(s => grp === 'all' || groupOf(s) === grp).map(s => s.id)).size };
+}
+// examples: your own and built-in solos first, then Omnibook, then Weimar; spread across solos
+function orderEx(ex) {
+  const rank = { mine: 0, omni: 1, test: 2 }, seen = {};
+  return ex.map((e, k) => { const n = seen[e.solo.id] = (seen[e.solo.id] || 0) + 1; return { e, k, n }; })
+    .sort((a, b) => (a.n - b.n) || (rank[groupOf(a.e.solo)] - rank[groupOf(b.e.solo)]) || (a.k - b.k)).map(x => x.e);
+}
+// the lick around a triad: the notes under the same chord, up to 4 before and 4 after
+function frag(e) {
+  const ph = e.ph; let a = e.i, z = e.end;
+  while (a > 0 && e.i - a < 4 && ph[a - 1].chord === e.chord) a--;
+  while (z + 1 < ph.length && z - e.end < 4 && ph[z + 1].chord === e.chord) z++;
+  const ns = ph.slice(a, z + 1), t0 = ns[0].t;
+  return { notes: ns.map((n, j) => ({ t: n.t - t0, d: n.dur, rel: n.p - e.chord.root, deg: DEG[e.fam][md(n.p - e.chord.root)], tri: a + j >= e.i && a + j <= e.end })), bar: ns[0].bar };
+}
+/* ---------- favorites: saved into Music Lab's shared list (★ Favorite licks) ---------- */
+// a lick as a favorite: its notes as distances from the chord root, so it plays in any key
+function favOf(e) {
+  const f = frag(e), first = e.ph[e.i];
+  const raw = `${e.solo.id}|${e.key}|${f.bar}|${first ? first.t : e.i}|${first ? first.p : ''}`;
+  return {
+    id: (window.MusicLab && MusicLab.hashId) ? MusicLab.hashId('tbc', raw) : 'tbc' + raw,
+    app: 'chord', fam: e.fam, tq: e.tq, r: e.r,
+    title: `${NUM[e.r]} ${TQ[e.tq].word} triad over ${e.fam} · ${degs(e.fam, e.tq, e.r).join('‑')}`,
+    src: `${e.solo.name} · bar ${f.bar} · over ${e.chord.name || ''}${e.solo.test ? ' · Weimar' : e.solo.omni ? ' · Omnibook' : ''}`,
+    asPlayed: !!e.solo.test,
+    notes: f.notes.map(n => ({ t: +n.t.toFixed(4), d: +n.d.toFixed(4), rel: n.rel, tri: n.tri })),
+  };
+}
+const isFav = f => !!(window.MusicLab && MusicLab.favs && MusicLab.favs.has(f.id));
+// only touch the stars, so a lick that's playing keeps its highlight
+function paintStars() {
+  if (!openKey) return;
+  const x = stats().rows.find(r => r.key === openKey); if (!x) return;
+  const ex = orderEx(x.ex);
+  document.querySelectorAll(`.tri[data-k="${openKey}"] .ex`).forEach(row => {
+    const e = ex[+row.dataset.j], b = row.querySelector('.fv'); if (!e || !b) return;
+    const on = isFav(favOf(e)); b.classList.toggle('on', on); b.textContent = on ? '★' : '☆'; b.setAttribute('aria-pressed', on);
+  });
+}
+
+function render() {
+  if (!EVENTS.length && !SOLOS.length) return;
+  const st = stats();
+  $('tabs').innerHTML = FAMS.map(([f, n, s]) => `<button class="tab" data-f="${f}" aria-pressed="${f === fam}">${n}<small>${s} · ${(st.famTotals[f] || 0).toLocaleString()}</small></button>`).join('');
+  const gc = g => g === 'all' ? SOLOS.length : SOLOS.filter(s => groupOf(s) === g).length;
+  $('groups').innerHTML = GROUPS.filter(([g]) => g === 'all' || gc(g)).map(([g, n]) => `<button class="chip" data-g="${g}" aria-pressed="${g === grp}">${n} <small>${gc(g)}</small></button>`).join('');
+  $('status').innerHTML = `<b>${st.total.toLocaleString()}</b> triads over ${fam} chords in <b>${st.nSolos}</b> solos. Shown over <b>${chordName(fam)}</b>.`;
+  if (!st.rows.length) { $('list').innerHTML = `<div class="empty">No triads over ${fam} chords in this group yet.</div>`; return; }
+  const top = showAll ? st.rows : st.rows.filter(x => x.n / st.total >= 0.01).slice(0, 16);
+  $('list').innerHTML = top.map((x, k) => {
+    const p = 100 * x.n / st.total, mx = 100 * st.rows[0].n / st.total, open = openKey === x.key;
+    let body = '';
+    if (open) {
+      const ex = orderEx(x.ex), n = shownN[x.key] || 8;
+      body = `<div class="body">
+        <div class="what">${ABOUT[x.key] ? `<b>${esc(ABOUT[x.key])}</b> ` : ''}Over ${chordName(fam)} that’s <b>${triadName(x.tq, x.r)}</b>: ${degs(fam, x.tq, x.r).join(' · ')}.</div>
+        <div class="acts"><button class="btn main" data-act="hear">▶ Hear it over the chord</button><button class="btn" data-act="all">▶ Play ${Math.min(n, ex.length)} licks in a row</button></div>
+        ${ex.slice(0, n).map((e, j) => { const f = frag(e); return `<div class="ex" data-j="${j}">
+          <div class="dg">${f.notes.map((m, q) => `<span class="${m.tri ? 't' : ''}" data-q="${q}">${m.deg}</span>`).join('')}</div>
+          <div class="btns"><button class="fv${isFav(favOf(e)) ? ' on' : ''}" aria-label="Save to favorite licks" aria-pressed="${isFav(favOf(e))}">${isFav(favOf(e)) ? '★' : '☆'}</button><button class="pl" aria-label="Play this lick">▶</button></div>
+          <div class="src"><b>${esc(e.solo.name)}</b> · bar ${f.bar} · over ${esc(e.chord.name || '')}${e.solo.test ? ' · Weimar' : e.solo.omni ? ' · Omnibook' : ''}</div></div>`; }).join('')}
+        ${ex.length > n ? `<button class="btn more" data-act="more">Show more (${ex.length - n} left)</button>` : ''}
+      </div>`;
+    }
+    return `<div class="tri${open ? ' open' : ''}" data-k="${x.key}">
+      <div class="head">
+        <div class="rank">${k + 1}</div>
+        <div><div class="nm">${NUM[x.r]}<span class="q">${TQ[x.tq].word}</span></div>
+          <div class="deg">${degs(fam, x.tq, x.r).join(' · ')}<span class="exn">${triadName(x.tq, x.r)} over ${chordName(fam)}</span></div>
+          <div class="meter"><i style="width:${(100 * p / mx).toFixed(1)}%"></i></div></div>
+        <button class="hb" data-act="hear" aria-label="Hear this triad">▶</button>
+        <div class="pct"><b>${p.toFixed(1)}%</b> · ${x.n} times · in ${x.solos.size} solo${x.solos.size === 1 ? '' : 's'}</div>
+      </div>${body}</div>`;
+  }).join('') + (st.rows.length > top.length || showAll ? `<button class="btn showall" data-act="showall">${showAll ? 'Show only the main ones' : `Show all ${st.rows.length} triads`}</button>` : '');
+}
+$('tabs').onclick = e => { const b = e.target.closest('.tab'); if (!b) return; fam = b.dataset.f; store.set('tbc.fam', fam); openKey = null; showAll = false; stopAll(); render(); };
+$('groups').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; grp = b.dataset.g; store.set('tbc.grp', grp); stopAll(); render(); };
+$('list').onclick = e => {
+  if (e.target.closest('[data-act="showall"]')) { showAll = !showAll; render(); return; }
+  const card = e.target.closest('.tri'); if (!card) return;
+  const key = card.dataset.k, st = stats(), x = st.rows.find(r => r.key === key); if (!x) return;
+  const act = e.target.closest('[data-act]'), act2 = act && act.dataset.act;
+  if (act2 === 'hear') { playTriad(x, card); return; }
+  if (act2 === 'more') { shownN[key] = (shownN[key] || 8) + 12; render(); return; }
+  const ex = orderEx(x.ex);
+  if (act2 === 'all') { if (playing && mode === 'all' && nowKey === key) { stopAll(); return; } playLicks(ex.slice(0, shownN[key] || 8), key, 'all'); return; }
+  const fv = e.target.closest('.fv');
+  if (fv) { const ex1 = ex[+fv.closest('.ex').dataset.j]; if (ex1 && window.MusicLab && MusicLab.favs) { MusicLab.favs.toggle(favOf(ex1)); paintStars(); } return; }
+  const pl = e.target.closest('.pl');
+  if (pl) { const j = +pl.closest('.ex').dataset.j; if (playing && mode === 'one' && nowJ === j && nowKey === key) { stopAll(); return; } playLicks([ex[j]], key, 'one', j); return; }
+  if (e.target.closest('.head')) { stopAll(); openKey = openKey === key ? null : key; render(); }
+};
+
+/* ---------- audio (same piano as the other Music Lab apps) ---------- */
+let ctx, master, melBus, live = [], timers = [], token = 0, playing = false, mode = null, nowKey = null, nowJ = null;
+const SAMPLE_KEYS = Object.keys(PIANO).map(Number).sort((a, b) => a - b), buffers = {};
+let loadP = null;
+const b64 = url => { const bin = atob(url.slice(url.indexOf(',') + 1)), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return u8.buffer; };
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = .003; comp.release.value = .25;
+    master = ctx.createGain(); master.gain.value = .9; master.connect(comp); comp.connect(ctx.destination);
+    melBus = ctx.createGain(); melBus.gain.value = .85; melBus.connect(master);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  if (!loadP) loadP = Promise.all(Object.entries(PIANO).map(([m, url]) => new Promise(res => ctx.decodeAudioData(b64(url), b => { buffers[m] = b; res(); }, () => res()))));
+  return loadP;
+}
+function piano(m, t, dur, vel = 1) {
+  const s = SAMPLE_KEYS.reduce((b, k) => Math.abs(k - m) < Math.abs(b - m) ? k : b, SAMPLE_KEYS[0]), buf = buffers[s]; if (!buf) return;
+  const src = ctx.createBufferSource(); src.buffer = buf; const rate = Math.pow(2, (m - s) / 12); src.playbackRate.value = rate;
+  const g = ctx.createGain(), end = Math.min(t + dur * 1.1 + .1, t + buf.duration / rate);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + .004);
+  g.gain.setValueAtTime(vel, Math.max(t + .01, end - .15)); g.gain.linearRampToValueAtTime(.0001, end);
+  src.connect(g); g.connect(melBus); src.start(t); src.stop(end + .02);
+  live.push({ src, g }); src.onended = () => { live = live.filter(x => x.src !== src); };
+}
+const bassOf = pc => { let m = 36 + md(pc); if (m < 40) m += 12; return m; };
+const VOICE = { major: [4, 11], minor: [3, 10], dominant: [4, 10] };
+function chordUnder(t, dur) {
+  if ($('bassOn').checked) piano(bassOf(R()), t, dur, .5);
+  if ($('compOn').checked) VOICE[fam].forEach(x => piano(52 + md(R() + x - 52), t + .01, dur, .28));
+}
+const at = (time, fn) => { const id = setTimeout(() => { timers = timers.filter(x => x !== id); fn(); }, Math.max(0, (time - ctx.currentTime) * 1000)); timers.push(id); };
+function stopAll() {
+  token++; timers.forEach(clearTimeout); timers = [];
+  if (ctx) { const now = ctx.currentTime; live.forEach(({ src, g }) => { try { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0, now + .03); src.stop(now + .04); } catch (e) {} }); live = []; }
+  playing = false; mode = null; nowKey = null; nowJ = null;
+  document.querySelectorAll('.ex.now').forEach(e => e.classList.remove('now'));
+  document.querySelectorAll('.dg span.on, .pl.on, .hb.on').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('[data-act="all"].on').forEach(b => { b.classList.remove('on'); b.textContent = b.dataset.lbl || b.textContent; });
+}
+// the triad on its own: chord, then the triad up and down over it, then the chord's root to land
+async function playTriad(x, card) {
+  stopAll(); await audio(); const my = token; playing = true; mode = 'triad';
+  const b = 60 / +$('tempo').value * 1.15, t0 = ctx.currentTime + .12;
+  const btn = card.querySelector('.hb'); if (btn) btn.classList.add('on');
+  let base = 60 + md(R() + x.r); if (base > 66) base -= 12;
+  const sh = TQ[x.tq].sh, seq = [0, 1, 2, 3, 2, 1, 0].map(i => i === 3 ? base + 12 : base + sh[i]);
+  chordUnder(t0, b * 10);
+  seq.forEach((m, i) => piano(m, t0 + b * (1 + i), b * .95, .85));
+  [0, 1, 2].forEach(i => piano(base + sh[i], t0 + b * 8.2, b * 1.6, .55));
+  at(t0 + b * 10.5, () => { if (my === token) stopAll(); });
+}
+function swingQ(q) { const n = Math.floor(q + 1e-9), fr = q - n; return n + (fr <= .5 ? fr * 1.34 : .67 + (fr - .5) * .66); }
+function scheduleLick(e, j, key, t0, my) {
+  const f = frag(e), b = 60 / +$('tempo').value, asPlayed = !!e.solo.test || !$('swing').checked;
+  const T = q => t0 + (asPlayed ? q : swingQ(q)) * b;
+  const rels = f.notes.map(n => n.rel), mean = rels.reduce((a, c) => a + c, 0) / rels.length;
+  let off = 60 + R(); off += 12 * Math.round((67 - (off + mean)) / 12);
+  const len = Math.max(...f.notes.map(n => n.t + n.d));
+  chordUnder(T(0), T(Math.max(len, 2)) - T(0) + .1);
+  f.notes.forEach((n, q) => {
+    const a = T(n.t), z = T(n.t + n.d); piano(off + n.rel, a, Math.max(.08, z - a), n.tri ? .9 : .78);
+    const el = () => document.querySelector(`.tri[data-k="${key}"] .ex[data-j="${j}"] .dg span[data-q="${q}"]`);
+    at(a, () => { if (my === token) { const x = el(); if (x) x.classList.add('on'); } });
+    at(Math.max(a + .06, z - .02), () => { const x = el(); if (x) x.classList.remove('on'); });
+  });
+  return T(Math.max(len, 1));
+}
+async function playLicks(list, key, m, j0 = 0) {
+  stopAll(); if (!list.length) return;
+  await audio(); const my = token; playing = true; mode = m; nowKey = key;
+  if (m === 'all') { const bt = document.querySelector(`.tri[data-k="${key}"] [data-act="all"]`); if (bt) { bt.dataset.lbl = bt.textContent; bt.textContent = '■ Stop'; bt.classList.add('on'); } }
+  const b = () => 60 / +$('tempo').value;
+  let t = ctx.currentTime + .15, i = 0;
+  const step = () => {
+    if (my !== token) return;
+    if (i >= list.length) { if ($('loop').checked) i = 0; else { at(t, () => { if (my === token) stopAll(); }); return; } }
+    const j = m === 'one' ? j0 : i, e = list[i]; i++;
+    at(t, () => {
+      if (my !== token) return; nowJ = j;
+      document.querySelectorAll(`.tri[data-k="${key}"] .ex`).forEach(x => { const on = +x.dataset.j === j; x.classList.toggle('now', on); const p = x.querySelector('.pl'); if (p) p.classList.toggle('on', on); });
+      const row = document.querySelector(`.tri[data-k="${key}"] .ex[data-j="${j}"]`); if (row && m === 'all') row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    t = scheduleLick(e, j, key, t, my) + b() * 2;
+    at(Math.max(ctx.currentTime, t - 1.5), step);
+  };
+  step();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') stopAll(); });
+
+/* ---------- load the shared library and analyse it ---------- */
+async function load() {
+  if (!window.MusicLab || !window.SoloProcessor) { setTimeout(load, 150); return; }
+  try {
+    SOLOS = await MusicLab.solos();
+    const ev = [];
+    for (let k = 0; k < SOLOS.length; k++) {
+      try { ev.push(...analyzeSolo(SOLOS[k])); } catch (err) {}
+      if (k % 20 === 19) { $('list').innerHTML = `<div class="loading">Reading every solo in the library… ${k + 1} of ${SOLOS.length}</div>`; await new Promise(r => setTimeout(r, 0)); }
+    }
+    EVENTS = ev;
+  } catch (err) { $('list').innerHTML = `<div class="empty">Couldn’t read the solo library: ${esc(err.message || err)}</div>`; return; }
+  render();
+}
+window.addEventListener('load', () => { load(); if (window.MusicLab) { MusicLab.onChange(() => { stopAll(); load(); }); if (MusicLab.favs) { MusicLab.favs.onChange(paintStars); MusicLab.favs.ready(); } } });
+</script>
+<script src="lab.js"></script>
+</body>
+</html>

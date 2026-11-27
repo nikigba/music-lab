@@ -1,0 +1,625 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>2–5 Triad Pairs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: title → controls → two facing columns (triads over Dm7 left, triads over G7 right)
+   → status line → short key. Columns stay side by side even on phones. */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #f2f2f2;
+  --muted: #a3a3a8;
+  --dim: #6e6e73;
+  --line: #2c2c2e;
+  --card-line: #3a3a3c;
+  --strip-ink: #1c1c1e;
+  --panel: #111113;
+  --gold: #EED27A;
+  --focus: hsl(205 60% 70%);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: clamp(26px, 4.4vw, 36px); font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.sub { margin: -10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 72ch; }
+
+/* Controls */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px;
+}
+.btn {
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--fg);
+  background: #1e1e20; border: 1px solid var(--card-line); border-radius: 999px;
+  padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover { background: #26262a; }
+.btn[aria-pressed="true"] { background: var(--gold); color: var(--strip-ink); border-color: var(--gold); }
+.btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.btn[aria-pressed="true"] .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .2; } }
+.ctl { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctl input[type=range] { width: 96px; accent-color: var(--gold); }
+.ctl output { color: var(--fg); font-variant-numeric: tabular-nums; min-width: 3ch; }
+.seg { display: inline-flex; border: 1px solid var(--card-line); border-radius: 999px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; color: var(--muted); background: transparent; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: #2c2c2f; color: var(--fg); }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { accent-color: var(--gold); width: 15px; height: 15px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Two columns */
+.frame { }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1.55fr); gap: 0 clamp(2px, 1vw, 10px); align-items: stretch; }
+.col {
+  border: 1.5px solid var(--line); border-radius: 28px; padding: clamp(12px, 2vw, 22px);
+  display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: clamp(6px, 1vw, 12px); min-width: 0;
+}
+.col > .card { flex: 0 1 clamp(96px, 9vw, 112px); }
+.colhead { width: 100%; }
+.colhead { display: flex; align-items: baseline; gap: 8px; padding: 0 2px 4px; }
+.colhead b { font-size: clamp(18px, 2.6vw, 22px); font-weight: 600; }
+.colhead span { font-size: 12.5px; color: var(--muted); }
+.mid { display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 22px; }
+
+.card {
+  font: inherit; color: inherit; text-align: left; padding: 0; cursor: pointer;
+  background: #000; border: 1.5px solid var(--card-line); border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; min-width: 0;
+  transition: transform .12s ease, border-color .15s ease, box-shadow .45s ease, opacity .3s ease;
+  touch-action: manipulation; position: relative;
+}
+.card:hover { border-color: #5a5a5e; }
+.card:active { transform: scale(.98); }
+.strip { height: clamp(48px, 5.4vw, 64px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; text-align: center; color: var(--strip-ink); font-size: clamp(14px, 1.5vw, 18px); font-weight: 600; padding-inline: 4px; }
+.body { padding: clamp(7px, 0.9vw, 11px); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.deg { font-size: clamp(11px, 1.1vw, 13px); color: var(--muted); line-height: 1.35; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.strip em { font-style: normal; font-weight: 600; opacity: .5; font-size: .8em; }
+.strip small { font-size: 10.5px; font-weight: 600; opacity: .5; line-height: 1.1; }
+.deg .n { transition: color .08s; }
+.tones { font-size: 16px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.tones .n { display: inline-block; min-width: 1.2em; text-align: center; transition: color .08s; }
+.tones .n.on, .deg .n.on { color: #fff; font-weight: 700; text-shadow: 0 0 10px var(--c); }
+.sn { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.info { font-size: 11px; color: var(--muted); min-height: 2.6em; line-height: 1.3; overflow-wrap: anywhere; }
+.sus { white-space: nowrap; display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; color: var(--muted); border: 1px solid var(--card-line); border-radius: 999px; padding: 0 6px; margin-left: 4px; vertical-align: 1px; }
+
+/* left selection + right leads */
+.card.selected { border-color: #fff; box-shadow: 0 0 0 2px var(--c); }
+.card.t-strong { border-color: var(--c); box-shadow: 0 0 0 2px var(--c), 0 0 26px -2px var(--c); }
+.card.t-faint  { box-shadow: 0 0 0 2px var(--cf); }
+.card.t-same   { opacity: .4; }
+.card.playing  { border-color: #fff; box-shadow: 0 0 0 3px #fff, 0 0 24px -2px var(--c); opacity: 1 !important; }
+.core .x, .noalt .alt { display: none; }
+.divider { width: 100%; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; }
+.divider span { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+
+.keyhint { font-size: 12.5px; color: var(--dim); margin-bottom: -12px; }
+.keyhint b { color: var(--fg); }
+.keyhint span { color: var(--dim); }
+.status { font-size: 13.5px; color: var(--muted); min-height: 2.8em; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.status b { color: var(--fg); font-weight: 600; }
+
+/* Key */
+.key { display: flex; flex-direction: column; gap: 10px; }
+.key h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.key p { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin: 0; max-width: 74ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 22px; height: 14px; border-radius: 4px; border: 1.5px solid var(--card-line); }
+.sw.s { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 10px var(--gold); }
+.sw.f { box-shadow: 0 0 0 2px rgb(238 210 122 / .45); }
+.sw.d { opacity: .4; background: var(--muted); }
+
+@media (max-width: 560px) {
+  .cols { grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr); }
+  .col > .card { flex: 0 1 calc(50% - 4px); }
+  .mid { font-size: 14px; }
+  .col { padding: 10px; border-radius: 22px; }
+  .col > .card { flex: 0 1 calc(50% - 4px); }
+  .strip { height: 42px; font-size: 15px; }
+  .body { padding: 6px 7px 7px; }
+  .tones { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <h1>2–5 triad pairs in C</h1>
+  <p class="sub">Pick a triad over Dm7 on the left. The triads over G7 it voice-leads to light up on the right. Every card plays just its own triad, so you can go back and forth. Numbers are measured from C, the tonic.</p>
+
+  <div class="controls">
+    <button class="btn" id="droneBtn" aria-pressed="false"><span class="dot"></span><span id="droneLbl">C drone</span></button>
+    <label class="ctl">Drone vol <input type="range" id="droneVol" min="0" max="100" value="10"></label>
+    <label class="ctl">Piano vol <input type="range" id="keysVol" min="0" max="100" value="70"></label>
+    <label class="ctl">Tempo <input type="range" id="tempo" min="40" max="200" value="108"><output id="tempoOut">108</output></label>
+    <div class="seg" role="group" aria-label="How to play each triad">
+      <button id="mUp" aria-pressed="true">Up</button>
+      <button id="mUpDown" aria-pressed="false">Up &amp; down</button>
+      <button id="mChord" aria-pressed="false">Chord</button>
+    </div>
+    <label class="check"><input type="checkbox" id="bass" checked> Bass D → G</label>
+    <label class="check"><input type="checkbox" id="vlead" checked> Voice-lead from last note</label>
+    <label class="check"><input type="checkbox" id="resolve"> Resolve to C</label>
+    <label class="check"><input type="checkbox" id="coreOnly"> Core stacks only</label>
+    <label class="check"><input type="checkbox" id="showAlt" checked> Altered triads</label>
+    <label class="check"><input type="checkbox" id="autoDrone"> Drone on with taps</label>
+  </div>
+
+  <div class="frame" id="frame">
+    <div class="cols">
+      <div class="col left" id="left"><div class="colhead"><b>Dm7</b><span id="dm7tones" class="tones"></span></div></div>
+      <div class="mid" aria-hidden="true">→</div>
+      <div class="col right" id="right"><div class="colhead"><b>G7</b><span id="g7tones" class="tones"></span></div></div>
+    </div>
+  </div>
+
+  <div class="keyhint" id="keyHint"></div>
+  <div class="status" id="status">Start on the left. Tap Dm to see where it goes.</div>
+
+  <section class="key">
+    <h2>Reading the glow</h2>
+    <div class="legend">
+      <span><i class="sw s"></i>Strong: moves 1–2 semitones onto a note that pulls home</span>
+      <span><i class="sw f"></i>Soft: smooth but sus, or a step longer</span>
+      <span><i class="sw d"></i>Same notes, only the bass moves</span>
+    </div>
+    <p>B and F are the guide tones of G7 (its 3rd and 7th). The classic 2–5 sound is C, the 7th of Dm7, falling a half step to B, while F holds. Triads marked <b>sus</b> contain C, the 11th of G7, so they float instead of pulling home.</p>
+    <p>With “Voice-lead from last note” on, Dm7 triads always play the same way, root up (so F always ends on 1). Each G7 triad then starts on its note closest to that last note, and the other two follow in random order; the number that's sounding lights up on the card. So after F ends on 1, B♭ starts on 2. Press Esc to start fresh from root position.</p>
+    <p>Keyboard: press a number to play the triad that starts on it (the first number on each card). The first press picks from Dm7, the next from G7, and so on. On the G7 side press − before the number for a flat root (−2 D♭, −3 E♭, −6 A♭m, −7 B♭) or + for the major version (+3 E, +6 A). Esc starts over on the Dm7 side. With keys, the G7 triad always starts on the number you pressed (no voice-leading); the other two notes still come in random order.</p>
+    <p>The altered triads borrow notes from outside C major. Each one names its tensions over G7: D♭ is the tritone sub (♯11, ♭7, ♭9), A♭m and E♭ come from the altered scale, E and B♭ from the half-whole diminished scale, A from lydian dominant. Their flat and sharp notes (D♭, E♭, G♭, A♭) sit a half step from C, E or G, so they pull home too. Turn on “Resolve to C” to hear where each one lands.</p>
+    <p>The diatonic triads on both sides are the same seven C-major triads. Only the bass changes what they mean: Am is the 5–7–9 of Dm7 but the 9–11–13 of G7. “Core stacks only” keeps 1–3–5, 3–5–7 and 5–7–9 on each side.</p>
+  </section>
+</div>
+
+<script src="piano.js"></script>
+<script src="drone.js"></script>
+<script>
+// Drone: user-supplied Indian drone in C (myNoise), crossfaded into a seamless 24.25s loop
+const DRONE_LOOP = 24.2548125;
+// Acoustic piano samples (MIT, github.com/Leethring/piano-sound-samples), mono, keyed by MIDI note
+
+/* ---------- Diatonic triads in C ---------- */
+const LETTERS = ['C','D','E','F','G','A','B'];
+const SCALE   = [0,2,4,5,7,9,11];
+const STACK_LABELS = ['1–3–5','3–5–7','5–7–9','7–9–11','9–11–13','11–13–1','13–1–3'];
+
+const RAMP = {
+  sharp: ['#EED27A','#F1B56C','#EA937A','#CB8DB1','#958FD2','#6F86C8'],
+  flat:  ['#EED27A','#D2D879','#A2CC8C','#7DC0AF','#7DA7D0','#6F86C8'],
+};
+const MAXD = 7;
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+function rampRGB(side, d) {
+  const stops = RAMP[side], x = Math.min(d, MAXD) / MAXD * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2), f = x - i;
+  const [a, b] = [hex(stops[i]), hex(stops[i+1])];
+  return a.map((v, j) => v + (b[j] - v) * f);
+}
+const HOME = { C:[0,'sharp'], G:[1,'sharp'], F:[1,'flat'], Am:[0.5,'sharp'], Em:[1.5,'sharp'], Dm:[1.5,'flat'], 'B°':[1,'sharp'] };
+
+const TRIADS = LETTERS.map((L, d) => {
+  const deg = [d, (d+2)%7, (d+4)%7];
+  const pcs = deg.map(x => SCALE[x]);
+  const third = (pcs[1] - pcs[0] + 12) % 12, fifth = (pcs[2] - pcs[0] + 12) % 12;
+  const q = third === 4 ? 'maj' : fifth === 7 ? 'min' : 'dim';
+  const name = L + ({ maj:'', min:'m', dim:'°' })[q];
+  const [dist, side] = HOME[name];
+  let rgb = rampRGB(side, dist);
+  if (q === 'dim') rgb = rgb.map(v => v * 0.45 + 165 * 0.55);
+  const root = 55 + ((SCALE[d] - 7 + 12) % 12);
+  const midi = [0,1,2].map(i => { let m = 55 + ((pcs[i] - 7 + 12) % 12); while (m < root) m += 12; return m; });
+  const rgbS = rgb.map(Math.round).join(' ');
+  return { d, q, name, pcs, midi, tonic: deg.map(x => String(x + 1)), notes: deg.map(x => LETTERS[x]), color: `rgb(${rgbS})`, faint: `rgb(${rgbS} / .5)` };
+});
+const II = 1, V = 4;
+const stackOn = (r, s) => TRIADS[(r + 2 * s) % 7];
+
+/* Altered triads over G7: upper structures from outside C major */
+function makeAlt(rootPc, q, name, notes, tonic, g7, kind, dist, side) {
+  const ints = q === 'maj' ? [0,4,7] : [0,3,7];
+  const pcs = ints.map(i => (rootPc + i) % 12);
+  const root = 55 + ((rootPc - 7 + 12) % 12);
+  const rgbS = rampRGB(side, dist).map(Math.round).join(' ');
+  return { t: { name, pcs, notes, tonic, midi: ints.map(i => root + i), color: `rgb(${rgbS})`, faint: `rgb(${rgbS} / .5)` },
+           lab: `${g7} of G7`, kind, sus: false, alt: true };
+}
+const RIGHT = [
+  ...STACK_LABELS.map((lab, s) => ({ t: stackOn(V, s), lab: `${lab} of G7`, sus: s >= 3 && s <= 5, core: s <= 2 })),
+  makeAlt(1,  'maj', 'D♭',  ['D♭','F','A♭'],  ['♭2','4','♭6'], '♯11–♭7–♭9', 'tritone sub', 5,   'flat'),
+  makeAlt(8,  'min', 'A♭m', ['A♭','C♭','E♭'], ['♭6','7','♭3'], '♭9–3–♭13', 'altered',     5.5, 'sharp'),
+  makeAlt(3,  'maj', 'E♭',  ['E♭','G','B♭'],  ['♭3','5','♭7'], '♭13–1–♯9', 'altered',     3,   'flat'),
+  makeAlt(10, 'maj', 'B♭',  ['B♭','D','F'],   ['♭7','2','4'],  '♯9–5–♭7',   'diminished',  2,   'flat'),
+  makeAlt(4,  'maj', 'E',   ['E','G♯','B'],   ['3','♯5','7'],  '13–♭9–3',  'diminished',  4,   'sharp'),
+  makeAlt(9,  'maj', 'A',   ['A','C♯','E'],   ['6','♯1','3'],  '9–♯11–13', 'lydian ♭7',   3,   'sharp'),
+];
+
+/* ---------- Voice leading ---------- */
+function perms(xs) { return xs.length < 2 ? [xs] : xs.flatMap((x, i) => perms(xs.filter((_, j) => j !== i)).map(p => [x, ...p])); }
+const semi = (x, y) => Math.min((x - y + 12) % 12, (y - x + 12) % 12);
+const movement = (A, B) => Math.min(...perms(B.pcs).map(p => A.pcs.reduce((n, x, i) => n + semi(x, p[i]), 0)));
+// notes a half step from C, E or G: these are what make a dominant pull home (B, F, plus the altered D♭, E♭, G♭, A♭)
+const PULL = [11, 5, 1, 3, 6, 8];
+const guides = B => PULL.filter(pc => B.pcs.includes(pc)).map(pc => B.notes[B.pcs.indexOf(pc)]);
+const shared = (A, B) => A.pcs.filter(p => B.pcs.includes(p)).map(pc => A.notes[A.pcs.indexOf(pc)]);
+const nm = pc => LETTERS[SCALE.indexOf(pc)];
+function leadClass(a, b) {
+  const A = stackOn(II, a), B = RIGHT[b].t, m = movement(A, B), g = guides(B).length, sus = RIGHT[b].sus;
+  if (m === 0) return 'same';
+  if (m <= 2 && g && !sus) return 'strong';
+  if ((m <= 2 && sus) || (m === 3 && g && !sus)) return 'faint';
+  return null;
+}
+
+/* ---------- Render ---------- */
+// which tone of its chord the triad's root sits on
+const TONE_M = ['1','♭9','9','♭3','3','11','♭5','5','♭13','13','♭7','7'];   // over Dm7
+const TONE_D = ['1','♭9','9','♯9','3','11','♯11','5','♭13','13','♭7','7'];  // over G7
+const rootTone = (t, chordRootPc, map) => map[(t.pcs[0] - chordRootPc + 12) % 12];
+function makeCard(t, lab, sus, cls, kind = '', tone = '') {
+  const el = document.createElement('button');
+  el.className = 'card ' + cls;
+  el.style.setProperty('--c', t.color); el.style.setProperty('--cf', t.faint);
+  el.setAttribute('aria-label', `${t.name}, ${lab}`);
+  el.innerHTML = `
+    <div class="strip" style="background:${t.color}"><span>${t.name}${tone ? ` <em>(${tone})</em>` : ''}</span>${kind ? `<small>${kind}</small>` : ''}</div>
+    <div class="body">
+      <div class="deg"><span style="white-space:nowrap">${t.tonic.map((d, i) => `<span class="n" data-pc="${t.pcs[i]}">${d}</span>`).join('–')}</span>${sus ? '<span class="sus">SUS</span>' : ''}</div>
+      <div class="sn">${lab}</div>
+      <div class="info"></div>
+    </div>`;
+  return el;
+}
+const leftEl = document.getElementById('left'), rightEl = document.getElementById('right'), frame = document.getElementById('frame');
+const L = [], R = [];
+const on = (el, fn) => {
+  el.addEventListener('pointerdown', e => { if (e.button === 0) fn(); });
+  el.addEventListener('click', e => { if (e.detail === 0) fn(); });
+};
+STACK_LABELS.forEach((lab, s) => {
+  const l = makeCard(stackOn(II, s), `${lab} of Dm7`, false, s > 2 ? 'x' : '', '', rootTone(stackOn(II, s), 2, TONE_M));
+  leftEl.appendChild(l); L.push(l); on(l, () => tapLeft(s));
+});
+RIGHT.forEach((r, b) => {
+  const el = makeCard(r.t, r.lab, r.sus, r.alt ? 'alt' : r.core ? '' : 'x', r.kind, rootTone(r.t, 7, TONE_D));
+  rightEl.appendChild(el); R.push(el); on(el, () => tapRight(b));
+});
+
+/* ---------- Audio ---------- */
+let live = [];
+let ctx, master;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    // gentle safety limiter so overlapping notes never clip
+    comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+    master.connect(comp); comp.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  loadPiano(); loadDrone();
+  return ctx;
+}
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+/* Drone: looped tanpura-style recording in C */
+let drone = null;
+const droneVol = document.getElementById('droneVol');
+const droneLevel = () => (droneVol.value / 100) * 0.9;
+let droneBuf = null, droneStart = 0, droneLoad = null;
+function loadDrone() {
+  if (droneLoad) return droneLoad;
+  droneLoad = new Promise(res => ctx.decodeAudioData(b64ToBuf(DRONE_URL), b => {
+    droneBuf = b;
+    // skip MP3 encoder padding so the loop points land on real audio
+    const d = b.getChannelData(0); let i = 0;
+    while (i < d.length && Math.abs(d[i]) < 0.002) i++;
+    droneStart = i / b.sampleRate; res();
+  }, () => res()));
+  return droneLoad;
+}
+async function startDrone() {
+  if (drone) return;
+  audio();
+  const g = ctx.createGain(); g.gain.setValueAtTime(0, ctx.currentTime);
+  drone = { g, oscs: [] };
+  setDroneUI(true);
+  await loadDrone();
+  if (!drone || drone.g !== g || !droneBuf) return;
+  const src = ctx.createBufferSource(); src.buffer = droneBuf;
+  src.loop = true; src.loopStart = droneStart; src.loopEnd = droneStart + DRONE_LOOP;
+  src.connect(g); g.connect(master);
+  src.start(ctx.currentTime, droneStart);
+  g.gain.linearRampToValueAtTime(droneLevel(), ctx.currentTime + 1.2);
+  drone.oscs.push(src);
+}
+function stopDrone() {
+  if (!drone) return;
+  const { g, oscs } = drone; const t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.4);
+  oscs.forEach(o => o.stop(t + 0.45));
+  drone = null; setDroneUI(false);
+}
+droneVol.addEventListener('input', () => { if (drone) drone.g.gain.setTargetAtTime(droneLevel(), ctx.currentTime, 0.05); });
+const droneBtn = document.getElementById('droneBtn');
+function setDroneUI(on) {
+  droneBtn.setAttribute('aria-pressed', on);
+  document.getElementById('droneLbl').textContent = on ? 'C drone on' : 'C drone';
+}
+droneBtn.addEventListener('click', () => drone ? stopDrone() : startDrone());
+
+/* Sampled piano; synth tone only as a fallback while samples decode */
+const buffers = {}; let pianoLoad = null;
+function b64ToBuf(url) {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+function loadPiano() {
+  if (pianoLoad) return pianoLoad;
+  pianoLoad = Promise.all(Object.entries(PIANO).map(([m, url]) =>
+    new Promise(res => ctx.decodeAudioData(b64ToBuf(url), b => { buffers[m] = b; res(); }, () => res()))
+  ));
+  return pianoLoad;
+}
+function piano(m, t, dur, scale = 1) {
+  const buf = buffers[m];
+  if (!buf) return synth(m, t, dur);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const g = ctx.createGain();
+  const end = Math.min(t + dur, t + buf.duration);
+  const v = keysLevel() * scale;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.004);
+  g.gain.setValueAtTime(v, end - 0.25);
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  src.connect(g); g.connect(master);
+  src.start(t); src.stop(end + 0.02);
+  live.push({ srcs: [src], g });
+}
+const keysVol = document.getElementById('keysVol');
+const keysLevel = () => (keysVol.value / 100) * 1.0;
+/* Synth fallback */
+function synth(m, t, dur) {
+  const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+  o1.type = 'triangle'; o2.type = 'sine';
+  o1.frequency.value = hz(m); o2.frequency.value = hz(m) * 2; o2.detune.value = 3;
+  const g2 = ctx.createGain(); g2.gain.value = 0.18;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(1100, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.14, t + 0.18);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(master);
+  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+  live.push({ srcs: [o1, o2], g });
+}
+
+
+
+
+
+
+
+/* ---------- Playback ---------- */
+const tempo = document.getElementById('tempo'), tempoOut = document.getElementById('tempoOut');
+tempo.addEventListener('input', () => tempoOut.textContent = tempo.value);
+let mode = 'up';
+const modeBtns = { up: document.getElementById('mUp'), updown: document.getElementById('mUpDown'), chord: document.getElementById('mChord') };
+Object.entries(modeBtns).forEach(([m, b]) => b.addEventListener('click', () => {
+  mode = m; Object.entries(modeBtns).forEach(([n, bb]) => bb.setAttribute('aria-pressed', n === m));
+}));
+const autoDrone = document.getElementById('autoDrone'), bassBox = document.getElementById('bass'), resolveBox = document.getElementById('resolve');
+const coreBox = document.getElementById('coreOnly');
+coreBox.addEventListener('change', () => frame.classList.toggle('core', coreBox.checked));
+const altBox = document.getElementById('showAlt');
+altBox.addEventListener('change', () => frame.classList.toggle('noalt', !altBox.checked));
+const status = document.getElementById('status');
+
+let timers = [];
+function stopPlayback() {
+  timers.forEach(clearTimeout); timers = [];
+  if (ctx) {
+    const now = ctx.currentTime;
+    live.forEach(({ srcs, g }) => {
+      try {
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.03);
+        srcs.forEach(o => o.stop(now + 0.04));
+      } catch (e) {}
+    });
+  }
+  live = [];
+  document.querySelectorAll('.card.playing').forEach(c => c.classList.remove('playing'));
+  document.querySelectorAll('.n.on').forEach(n => n.classList.remove('on'));
+}
+/* ---------- Voice-leading between taps ----------
+   The next triad starts on its note closest to the last note you heard (ties go up),
+   the other two follow in random order, kept close to that first note. */
+let lastNote = null, lastLead = null;
+const vlBox = document.getElementById('vlead');
+const LO = 52, HI = 84;   // range covered by the piano samples
+function nearest(pc, target) {
+  let best = null;
+  for (let m = LO; m <= HI; m++) if (m % 12 === pc) {
+    if (best === null || Math.abs(m - target) < Math.abs(best - target) || (Math.abs(m - target) === Math.abs(best - target) && m > best)) best = m;
+  }
+  return best;
+}
+const labelOf = (t, m) => t.tonic[t.pcs.indexOf(m % 12)];
+let rootFirst = false;   // set by the number keys: the G7 triad starts on the number you pressed (its root)
+function voiced(t, fixed) {
+  if (rootFirst && !fixed) {
+    rootFirst = false;
+    const first = nearest(t.pcs[0], lastNote ? lastNote.m : t.midi[0]);
+    const rest = [1, 2]; if (Math.random() < 0.5) rest.reverse();
+    const seq = [first, ...rest.map(i => nearest(t.pcs[i], first))];
+    return { seq, lead: lastNote ? { from: lastNote, to: { m: first, label: t.tonic[0] } } : null };
+  }
+  if (fixed || !vlBox.checked || lastNote === null) {
+    const seq = t.midi.slice();
+    return { seq, lead: lastNote ? { from: lastNote, to: { m: seq[0], label: t.tonic[0] } } : null };
+  }
+  const c = t.pcs.map((pc, i) => ({ i, m: nearest(pc, lastNote.m) }))
+    .sort((x, y) => Math.abs(x.m - lastNote.m) - Math.abs(y.m - lastNote.m) || y.m - x.m);
+  const first = c[0], rest = c.slice(1).map(x => x.i);
+  if (Math.random() < 0.5) rest.reverse();
+  const seq = [first.m, ...rest.map(i => nearest(t.pcs[i], first.m))];
+  return { seq, lead: { from: lastNote, to: { m: first.m, label: t.tonic[first.i] } } };
+}
+function segment(t, bassM, at, step, el = null, fixed = false) {
+  const len = mode === 'chord' ? 4 : mode === 'updown' ? 5 : 3;
+  if (bassBox.checked && bassM) piano(bassM, at, step * (len + 0.6) + 0.3, 0.85);
+  const { seq: base, lead } = voiced(t, fixed);
+  const hdr = !el ? [] : R.includes(el) ? ['g7tones'] : L.includes(el) ? ['dm7tones', 'g7tones'] : [];
+  const spans = () => [...(el ? el.querySelectorAll('.n') : []), ...hdr.flatMap(id => [...document.getElementById(id).querySelectorAll('.n')])];
+  const mark = (m, when) => { if (!el) return; timers.push(setTimeout(() => {
+    spans().forEach(n => n.classList.toggle('on', +n.dataset.pc === m % 12));
+  }, Math.max(0, (when - ctx.currentTime) * 1000))); };
+  if (lastLead === null) lastLead = lead;
+  if (mode === 'chord') {
+    base.forEach(m => piano(m, at, step * 4, 0.7));
+    const top = Math.max(...base); lastNote = { m: top, label: labelOf(t, top) };
+    return at + step * 4;
+  }
+  const seq = mode === 'updown' ? base.concat(base.slice(0, -1).reverse()) : base;
+  seq.forEach(m => { piano(m, at, step * 2.4 + 0.4); mark(m, at); at += step; });
+  if (el) timers.push(setTimeout(() => spans().forEach(n => n.classList.remove('on')), (at - ctx.currentTime + step * 0.6) * 1000));
+  const end = seq[seq.length - 1]; lastNote = { m: end, label: labelOf(t, end) };
+  return at;
+}
+const leadLine = () => lastLead ? `<br>Last note → first note: ${lastLead.from.label} → <b>${lastLead.to.label}</b>` +
+  (lastLead.from.m === lastLead.to.m ? ' (common tone)' : ` (${Math.abs(lastLead.to.m - lastLead.from.m)} semitone${Math.abs(lastLead.to.m - lastLead.from.m) === 1 ? '' : 's'} ${lastLead.to.m > lastLead.from.m ? 'up' : 'down'})`) : '';
+async function begin() {
+  audio(); stopPlayback();
+  if (Object.keys(buffers).length < Object.keys(PIANO).length) await loadPiano();
+  if (autoDrone.checked) startDrone();
+  return 60 / tempo.value;
+}
+function lightFor(el, from, to) {
+  timers.push(setTimeout(() => el.classList.add('playing'), Math.max(0, (from - ctx.currentTime) * 1000)));
+  timers.push(setTimeout(() => el.classList.remove('playing'), (to - ctx.currentTime) * 1000));
+}
+
+/* ---------- Interaction ---------- */
+let sel = null;
+function clearLeads() {
+  R.forEach(el => { el.classList.remove('t-strong', 't-faint', 't-same'); el.querySelector('.info').textContent = ''; });
+}
+function select(a) {
+  sel = a;
+  L.forEach((el, i) => el.classList.toggle('selected', i === a));
+  frame.classList.add('picking');
+  clearLeads();
+  const A = stackOn(II, a);
+  R.forEach((el, b) => {
+    const k = leadClass(a, b), B = RIGHT[b].t;
+    if (k) el.classList.add('t-' + k);
+    const m = movement(A, B), keep = guides(B);
+    el.querySelector('.info').textContent = m === 0 ? 'same notes' : `moves ${m}${keep.length ? ' · has ' + keep.join(' + ') : ''}`;
+  });
+}
+function showTones(id, t, rootPc, map) {
+  const h = document.getElementById(id);
+  h.style.setProperty('--c', t.color);
+  h.innerHTML = t.pcs.map(pc => `<span class="n" data-pc="${pc}">${map[(pc - rootPc + 12) % 12]}</span>`).join('–');
+}
+async function tapLeft(a) {
+  keySide = 'R'; showKeySide();
+  select(a);
+  const A = stackOn(II, a);
+  showTones('dm7tones', A, 2, TONE_M);
+  showTones('g7tones', A, 7, TONE_D);
+  const best = R.map((_, b) => b).filter(b => leadClass(a, b) === 'strong').map(b => `<b>${RIGHT[b].t.name}</b>`);
+  status.innerHTML = `<b>${A.name}</b> · ${A.tonic.join('–')} from C · the ${STACK_LABELS[a]} of Dm7<br>` +
+    (best.length ? `Leads best to ${best.join(' or ')}. Tap a glowing triad on the right.` : 'No strong move from here. The soft glows are your options.');
+  const step = await begin(), t0 = ctx.currentTime + 0.01;
+  lastLead = null;
+  lightFor(L[a], t0, segment(A, 50, t0, step, L[a], true) + step);
+  status.innerHTML += leadLine();
+}
+async function tapRight(b) {
+  keySide = 'L'; prefix = ''; showKeySide();
+  const B = RIGHT[b].t;
+  showTones('g7tones', B, 7, TONE_D);
+  let line = `<b>${B.name}</b>${RIGHT[b].kind ? ' (' + RIGHT[b].kind + ')' : ''} · ${B.tonic.join('–')} from C · ${RIGHT[b].lab}${RIGHT[b].sus ? ' (sus)' : ''}`;
+  if (sel !== null) {
+    const A = stackOn(II, sel), m = movement(A, B), sh = shared(A, B), k = leadClass(sel, b);
+    const verdict = { strong: 'a strong move', faint: 'a soft move', same: 'same notes, only the bass moves' }[k] || 'a longer jump';
+    line += `<br>From ${A.name}: moves ${m} semitone${m === 1 ? '' : 's'}${sh.length ? ' · keeps ' + sh.join(', ') : ''} · ${verdict}`;
+  }
+  status.innerHTML = line;
+  const step = await begin(), t0 = ctx.currentTime + 0.01;
+  lastLead = null;
+  const end = segment(B, 43, t0, step, R[b]);
+  lightFor(R[b], t0, end + step);
+  status.innerHTML += leadLine();
+  if (resolveBox.checked) segment(TRIADS[0], 48, end + step * 0.5, step);
+}
+
+['pointerdown','keydown'].forEach(ev => document.addEventListener(ev, () => { if (ctx && ctx.state === 'suspended') ctx.resume(); }, { capture: true }));
+/* ---------- Number keys ----------
+   A number picks the triad whose first number (from C) it is: 2 → Dm, 5 → G, 7 → B°.
+   Presses alternate: Dm7 side, then G7 side, then Dm7 again.
+   On the G7 side, press − first for a flat root (−2 → D♭, −3 → E♭, −6 → A♭m, −7 → B♭)
+   or + first for the major version (+3 → E, +6 → A). */
+let keySide = 'L', prefix = '', prefixTimer = null;
+const keyHint = document.getElementById('keyHint');
+function showKeySide() {
+  keyHint.innerHTML = keySide === 'L'
+    ? 'Keys: next number picks the <b>Dm7</b> triad'
+    : `Keys: next number picks the <b>G7</b> triad <span>(− flat, + major)</span>${prefix ? ` · <b>${prefix === '-' ? '♭' : '+'}</b>` : ''}`;
+}
+function rightIndexFor(d, pre) {
+  if (pre === '-') return RIGHT.findIndex(r => r.alt && r.t.tonic[0] === '♭' + d);
+  if (pre === '+') return RIGHT.findIndex(r => r.alt && r.t.tonic[0] === String(d));
+  return RIGHT.findIndex(r => !r.alt && r.t.tonic[0] === String(d));
+}
+function resetKeys() { keySide = 'L'; prefix = ''; showKeySide(); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    stopPlayback(); sel = null; lastNote = null; frame.classList.remove('picking'); clearLeads();
+    L.forEach(el => el.classList.remove('selected'));
+    resetKeys();
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === '-' || e.key === '+' || e.key === 'b') {
+    if (keySide !== 'R') return;
+    prefix = e.key === '+' ? '+' : '-';
+    clearTimeout(prefixTimer); prefixTimer = setTimeout(() => { prefix = ''; showKeySide(); }, 2000);
+    showKeySide(); e.preventDefault(); return;
+  }
+  if (!/^[1-7]$/.test(e.key)) return;
+  e.preventDefault();
+  if (e.target && e.target.blur && e.target.type === 'range') e.target.blur();
+  const d = +e.key;
+  if (keySide === 'L') {
+    const s = STACK_LABELS.findIndex((_, i) => stackOn(II, i).d === d - 1);
+    tapLeft(s);
+  } else {
+    const pre = prefix, b = rightIndexFor(d, pre);
+    prefix = ''; clearTimeout(prefixTimer);
+    if (b < 0) { status.innerHTML = `No G7 triad here starts on ${pre === '-' ? '♭' : pre}${d}. Try 1–7, −2, −3, −6, −7, +3 or +6.`; showKeySide(); return; }
+    rootFirst = true;
+    tapRight(b);
+  }
+  showKeySide();
+});
+showKeySide();
+try { audio(); } catch (e) {}
+</script>
+
+<script src="lab.js"></script>
+</body></html>
