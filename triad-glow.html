@@ -554,17 +554,42 @@ const y = m => { const lo = warp(51), hi = warp(77); return H-30*S-(Math.max(lo-
 let chordLab = '', singPass = true, phrStarted = false;
 const DGT = ['1','b2','2','b3','3','4','#4','5','b6','6','b7','7'];
 function chordWord(cr, cq, l, t){ let dom = 0; if (l.ch) l.ch.forEach(c => { if (c[0] <= t + 1e-6) dom = c[3]; }); return DGT[cr] + (cq === 'm' ? 'm' : '') + (dom ? '⁷' : ''); }
+/* Another triad inside the line (e.g. 2 4 6 over a 1m chord): when three notes close together spell a triad
+   that isn't home's own, those circles linger a little and its name shows faintly on the left. */
+let recent = [], triLab = '', triQ = '', triUntil = 0, triFrame = '';
+const TQ = [['major',[0,4,7]],['minor',[0,3,7]]];   // dim and aug left out: in bebop lines they're mostly passing chromatics
+function findTriad(){
+  const homePc = new Set(HOME.map(h => ((h%12)+12)%12)), byPc = new Map();
+  recent.forEach(r => byPc.set(r.pc, r));                       // latest note of each pitch class
+  const pcs = [...byPc.keys()], last = recent[recent.length-1].pc;
+  for (const [q, iv] of TQ) for (const root of pcs) {
+    const tri = iv.map(x => (root + x) % 12);
+    if (!tri.includes(last) || !tri.every(p => byPc.has(p)) || tri.every(p => homePc.has(p))) continue;
+    return {q, tri, notes: tri.map(p => byPc.get(p))};
+  }
+  return null;
+}
+function noteTriad(pc, a, k){
+  const now = performance.now(), win = Math.max(900, curSpb()*3000), frame = phraseIdx != null ? chordLab + mode : mode;
+  if (frame !== triFrame) { recent = []; triFrame = frame; }
+  recent = recent.filter(r => now - r.t < win); recent.push({t: now, pc, a, k}); if (recent.length > 6) recent.shift();
+  const f = findTriad(); if (!f) return;
+  const lab = f.tri.map(p => DEG[p]).join(' ');
+  if (lab !== triLab || now > triUntil) { triLab = lab; triQ = f.q; }
+  triUntil = now + Math.max(1800, curSpb()*4000);
+  f.notes.forEach(r => { if (r.a) r.a.hold = Math.max(r.a.hold || 0, 1.1); else if (r.k != null) homeMem[r.k] = Math.min(1, homeMem[r.k] + .3); });
+}
 function hit(m, d){
   const pc = ((m%12)+12)%12, [ten,col] = infoFor(pc, mode), lab = DEG[pc];
   if (ten===0){
     const hi = HOME.indexOf(m), k = hi>=0 ? hi : HOME.reduce((b,h,i)=>Math.abs(h-m)<Math.abs(HOME[b]-m)?i:b,0);
-    homeB[k] = 1; homeMem[k] = Math.min(1, homeMem[k]+.35);
+    homeB[k] = 1; homeMem[k] = Math.min(1, homeMem[k]+.35); noteTriad(pc, null, k);
     if (lastAway && lastAway.life>0) threads.push({x1:lastAway.x,y1:lastAway.y,x2:cx(),y2:y(HOME[k]),a:1,c:lastAway.c});
     awayLevel = Math.max(0, awayLevel-.5); lastAway = null;
   } else {
     const near = HOME.reduce((b,h)=>Math.abs(h-m)<Math.abs(b-m)?h:b, HOME[0]), side = near>m?-1:1;
     const a = {x:cx()+side*(28+ten*4)*S, y:y(m), c:col, dk:DK[col], lab, ten, life:1, dur:d, t:0, seed:Math.random()*10};
-    aways.push(a); lastAway = a; awayLevel = Math.min(1, awayLevel+.08*ten);
+    aways.push(a); noteTriad(pc, a, null); lastAway = a; awayLevel = Math.min(1, awayLevel+.08*ten);
   }
 }
 const rgba = (h,a) => { const n = parseInt(h.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`; };
@@ -603,7 +628,12 @@ function frame(now){
     const a = Math.min(1, .28+(mem?homeMem[i]*.4:0)+homeB[i]*.7), r = (15+homeB[i]*6+(mem?homeMem[i]*2:0))*S;
     voice(cx(), y(m), r, '#FAC775', a, .05+homeB[i]*.12, 1.2+homeB[i]*6, i*2.3, DEG[m%12], '#633806', .18+homeB[i]*.4);
   });
-  aways = aways.filter(a => { a.t += dt; if (a.t>a.dur) a.life -= dt*5; if (a.life<=0) return false; voice(a.x,a.y,13*S,a.c,a.life,.07+a.ten*.045,4+a.ten*4,a.seed,a.lab,a.dk,a.life*.6); return true; });
+  aways = aways.filter(a => { a.t += dt; if (a.hold > 0) a.hold -= dt; else if (a.t>a.dur) a.life -= dt*5; if (a.life<=0) return false; voice(a.x,a.y,13*S,a.c,a.life,.07+a.ten*.045,4+a.ten*4,a.seed,a.lab,a.dk,a.life*.6); return true; });
+  { const left = triUntil - performance.now();
+    if (triLab && left > 0) { const fa = Math.min(1, left/600);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.font = `500 ${Math.round(16*Math.sqrt(S))}px Inter, system-ui, sans-serif`; ctx.fillStyle = `rgba(243,236,228,${.38*fa})`; ctx.fillText(triLab, 18*S, H/2);
+      ctx.font = `${Math.round(11*Math.sqrt(S))}px Inter, system-ui, sans-serif`; ctx.fillStyle = `rgba(243,236,228,${.22*fa})`; ctx.fillText(triQ + ' triad', 18*S, H/2 + 18*Math.sqrt(S)); } }
   if (phraseIdx != null && chordLab) { ctx.fillStyle = 'rgba(250,199,117,.75)'; ctx.font = `600 ${Math.round(15*Math.sqrt(S))}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(chordLab, W/2, 10); }
   if (performance.now() < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(phraseIdx != null ? (phrStarted ? 'Tap: play / pause · ↑ ↓ speed · ⚙ settings · ✕ or Esc: back to Solo Ear' : '') : 'Tap: exit · ← → licks · ↑ ↓ speed · F full screen · S ☆ save', W/2, H-16); }
   if (performance.now() < flashUntil) { const a = Math.min(1, (flashUntil - performance.now())/400); ctx.fillStyle = `rgba(243,236,228,${.6*a})`; ctx.font = '15px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(flashTxt, W/2, phraseIdx != null ? 46*Math.sqrt(S) : 18); }
