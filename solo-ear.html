@@ -90,6 +90,7 @@ html.dragsel, html.dragsel body, html.dragsel .stage { overflow: hidden !importa
 .bars .bhit:hover { fill: rgb(255 255 255 / .04); }
 .bars .bhit.playing { fill: rgb(238 210 122 / .09); }
 .bars .rest { stroke: #3a3a3e; stroke-width: 3; stroke-linecap: round; }
+.bars .rhit { fill: transparent; pointer-events: all; cursor: pointer; }
 .bars .link { stroke: #3a3a3e; stroke-width: 2; fill: none; }
 .bars .link.half { stroke: var(--step); stroke-width: 2.5; }
 .bars .note { cursor: pointer; }
@@ -1430,8 +1431,9 @@ function drawRow(r, lo, hi) {
       const evs = ms.flatMap(({ m }) => m.events.filter(e => e.kind !== 'g'));
       const inR = evs.filter(e => e.q >= range.a - 1e-6 && e.q < range.b - 1e-6);
       const barStartX = q => { const k = ms.findIndex(({ m }) => Math.abs(m.q0 - q) < 1e-6); return k >= 0 ? barX[k] : null; };
-      let x0 = range.a <= rq0 + 1e-6 ? 0 : (barStartX(range.a) ?? (inR.length ? pos.get(inR[0]).x - pos.get(inR[0]).w / 2 : 0));
-      let x1 = range.b >= rq1 - 1e-6 ? barX[ms.length] : (barStartX(range.b) ?? (inR.length ? pos.get(inR[inR.length - 1]).x + pos.get(inR[inR.length - 1]).w / 2 : x0));
+      const inRest = q => { const e = evs.find(e => e.kind === 'r' && e.q < q - 1e-6 && e.q + e.dur > q + 1e-6); if (!e) return null; const p = pos.get(e); return p.x - p.w / 2 + (q - e.q) / e.dur * p.w; };
+      let x0 = range.a <= rq0 + 1e-6 ? 0 : (barStartX(range.a) ?? inRest(range.a) ?? (inR.length ? pos.get(inR[0]).x - pos.get(inR[0]).w / 2 : 0));
+      let x1 = range.b >= rq1 - 1e-6 ? barX[ms.length] : (barStartX(range.b) ?? inRest(range.b) ?? (inR.length ? pos.get(inR[inR.length - 1]).x + pos.get(inR[inR.length - 1]).w / 2 : x0));
       if (x1 > x0) mk('rect', { class: 'selband', x: x0 + 1, y: 34, width: x1 - x0 - 2, height: H - 36, rx: 8 }, svg);
     }
   }
@@ -1473,6 +1475,9 @@ function drawRow(r, lo, hi) {
   // rests: a short dim dash on the middle line
   ms.forEach(({ m }) => m.events.forEach(ev => {
     if (ev.kind !== 'r') return; const p = pos.get(ev);
+    const rh = mk('rect', { class: 'rhit', x: p.x - p.w / 2, y: 4, width: p.w, height: H - 8 }, svg);
+    rh.dataset.q = ev.q; rh.dataset.d = ev.dur;
+    rh.addEventListener('click', e2 => { e2.stopPropagation(); if (Date.now() - swallowClick < 500) return; pick(restSpan(rh, e2.clientX), e2); });
     mk('line', { class: 'rest', x1: p.x - Math.min(p.w * 0.25, 12), x2: p.x + Math.min(p.w * 0.25, 12), y1: mid, y2: mid }, svg);
   }));
   // links between neighbouring revealed notes
@@ -1762,8 +1767,15 @@ function showRange() { $('loopChip').hidden = !range; $('loopTxt').textContent =
    and letting go sets the loop. A quick swipe still scrolls; a quick tap still plays. */
 let drag = null, swallowClick = 0;
 const rowSpanQ = r => { const ms = rows[r].ms, l = ms[ms.length - 1].m; return [ms[0].m.q0, l.q0 + l.len]; };
+/* A rest can be picked too, one beat at a time: the beat of the rest under the finger. */
+function restSpan(rh, x) {
+  const rc = rh.getBoundingClientRect(), q = +rh.dataset.q, d = +rh.dataset.d;
+  const qq = q + Math.min(.999, Math.max(0, (x - rc.left) / Math.max(1, rc.width))) * d, b = Math.floor(qq + 1e-6);
+  return [Math.max(q, b), Math.min(q + d, b + 1)];
+}
 function spanAt(x, y) {
   const el = document.elementFromPoint(x, y);
+  const rh = el && el.closest && el.closest('.rhit'); if (rh) return restSpan(rh, x);
   const bh = el && el.closest && el.closest('.bhit, text.chord, text.bnum, text.blab'); if (bh) return barSpan(+bh.dataset.bar);
   const svg = el && el.closest && el.closest('svg.bars'); if (!svg) return null;
   const rc = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, lx = (x - rc.left) * vb.width / rc.width;
