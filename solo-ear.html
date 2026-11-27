@@ -3397,14 +3397,14 @@ function glowFromRange() {
   if (!range || !solo) return;
   const ids = solo.notes.map((e, i) => i).filter(i => solo.notes[i].kind === 'n' && solo.notes[i].q >= range.a - 1e-6 && solo.notes[i].q < range.b - 1e-6);
   if (!ids.length) { readout('There are no notes in that stretch.'); return; }
-  const tpc = tonicDisp ? mod(tonicDisp.midi, 12) : 0, q0 = solo.notes[ids[0]].q;
+  const tpc = tonicDisp ? mod(tonicDisp.midi, 12) : 0, q0 = Math.min(range.a, solo.notes[ids[0]].q);   // start where the selection starts, rests included
   // the chord under each note: root counted from the tonic, minor-ish or major-ish, with or without a b7
   const chordIdx = q => { let k = -1; for (let j = 0; j < solo.chords.length && solo.chords[j].q <= q + 1e-6; j++) k = j; return k; };
   const cInfo = k => { const d = dispChords[k]; if (!d) return [0, 'M', 0]; const sf = d.suffix || '';
     return [mod(d.root.midi - tpc, 12), /^(m(?!aj)|min|-)|ø|°|dim/.test(sf) ? 'm' : 'M', /7|9|11|13/.test(sf) && !/maj|Δ/.test(sf) ? 1 : 0]; };
   let n = ids.map(i => [+(solo.notes[i].q - q0).toFixed(3), +Math.max(0.05, solo.notes[i].dur).toFixed(3), disp[i].midi - tpc, ...cInfo(chordIdx(solo.notes[i].q)).slice(0, 2)]);
   const chordList = []; solo.chords.forEach((c, k) => { const nx = solo.chords[k + 1]; if (c.q < range.b - 1e-6 && (!nx || nx.q > q0 + 1e-6)) chordList.push([+Math.max(0, c.q - q0).toFixed(3), ...cInfo(k)]); });
-  const lenQ = +(Math.max(...ids.map(i => solo.notes[i].q + solo.notes[i].dur)) - q0).toFixed(3);
+  const lenQ = +(Math.max(range.b, ...ids.map(i => solo.notes[i].q + solo.notes[i].dur)) - q0).toFixed(3);
   const mean = n.reduce((a, x) => a + x[2], 0) / n.length, oct = 12 * Math.round((64 - mean) / 12);
   n = n.map(x => [x[0], x[1], x[2] + oct, x[3], x[4]]);
   const pcs = n.map(x => mod(x[2], 12)), minor = pcs.filter(p => p === 3).length > pcs.filter(p => p === 4).length;

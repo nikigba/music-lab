@@ -1,5 +1,5 @@
 // Music Lab offline: saves every file on first visit, then works without internet.
-const VERSION = 'lab-5e127c545a';
+const VERSION = 'lab-307403ab22';
 const FILES = ["baby-app.js", "baby-path.js", "baby-solfege.html", "baby-tunes.js", "baby.html", "blues-14.js", "blues-ear.js", "blues-moves.js", "blues-open.js", "blues-real.js", "blues-steps.js", "blues.html", "blues.js", "cell-library.js", "cell-licks.js", "color-map.html", "drone.js", "favorites.html", "home-away.html", "home-base.html", "icon-192.png", "icon-512.png", "ii-v-i.html", "iiv-trips.html", "index.html", "lab.js", "manifest.json", "melody-blocks.html", "metronome.html", "piano.js", "practice.html", "processor.js", "solo-ear.html", "solos-armstrong-ex.json", "solos-armstrong-standards.json", "solos-armstrong.json", "solos-builtin.json", "solos-monk-ex.json", "solos-monk.json", "solos-omnibook.json", "solos-wjd-ex.json", "solos-wjd.json", "stitt-licks.html", "sw-reg.js", "tj-builtin.json", "tj-index.json", "tj-omnibook.json", "tj-wjd.json", "triad-glow.html", "triad-pairs.html", "triad-palette.html", "triad-trainer.html", "triads-by-chord.html", "tune-journey.html"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(['./', ...FILES])).then(() => self.skipWaiting()));
