@@ -628,7 +628,7 @@ function frame(now){
     const a = Math.min(1, .28+(mem?homeMem[i]*.4:0)+homeB[i]*.7), r = (15+homeB[i]*6+(mem?homeMem[i]*2:0))*S;
     voice(cx(), y(m), r, '#FAC775', a, .05+homeB[i]*.12, 1.2+homeB[i]*6, i*2.3, DEG[m%12], '#633806', .18+homeB[i]*.4);
   });
-  aways = aways.filter(a => { a.t += dt; if (a.hold > 0) a.hold -= dt; else if (a.t>a.dur) a.life -= dt*(a.tri ? 1.1 : 5);   // triad notes fade slowly, about a second if (a.life<=0) return false; voice(a.x,a.y,13*S,a.c,a.life,.07+a.ten*.045,4+a.ten*4,a.seed,a.lab,a.dk,a.life*.6); return true; });
+  aways = aways.filter(a => { a.t += dt; if (a.hold > 0) a.hold -= dt; else if (a.t>a.dur) a.life -= dt*(a.tri ? 1.1 : 5); if (a.life<=0) return false; voice(a.x,a.y,13*S,a.c,a.life,.07+a.ten*.045,4+a.ten*4,a.seed,a.lab,a.dk,a.life*.6); return true; });
   { const left = triUntil - performance.now();
     if (triLab && left > 0) { const fa = Math.min(1, left/600);
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
