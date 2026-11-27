@@ -500,7 +500,14 @@ document.addEventListener('fullscreenchange', () => { if (!document.fullscreenEl
 let mode = 'M', HOME = [], homeB = [], homeMem = [], aways = [], threads = [], awayLevel = 0, lastAway = null, T = 0;
 function setHome(m){ if (m===mode && HOME.length) return; mode = m; HOME = m==='M'?[52,55,60,64,67,72,76]:[51,55,60,63,67,72,75]; homeB = HOME.map(()=>0); homeMem = HOME.map(()=>0); }
 // two octaves around middle C hold ~95% of the licks; the rare note beyond sits at the edge
-const y = m => H-30*S-(Math.max(49, Math.min(79, m))-50)/(78-50)*(H-60*S), cx = () => W/2;
+// 1, 3, 5 equally spaced in each octave; notes between them sit proportionally in their gap,
+// so a b6 still sits just above the 5 and a 7 just under the 1
+function warp(m){
+  const A = mode === 'm' ? [0,3,7,12] : [0,4,7,12], o = Math.floor(m/12), pc = m - o*12;
+  let i = 0; while (pc >= A[i+1]) i++;
+  return o*3 + i + (pc - A[i])/(A[i+1] - A[i]);
+}
+const y = m => { const lo = warp(50), hi = warp(78); return H-30*S-(Math.max(lo-.3, Math.min(hi+.3, warp(m)))-lo)/(hi-lo)*(H-60*S); }, cx = () => W/2;
 function hit(m, d){
   const pc = ((m%12)+12)%12, [ten,col] = infoFor(pc, mode), lab = DEG[pc];
   if (ten===0){
