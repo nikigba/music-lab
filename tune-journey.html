@@ -345,6 +345,7 @@ addEventListener('keydown', e => {
   else if (e.key === 'ArrowLeft') { e.preventDefault(); jump(-32); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); speed(5); }
   else if (e.key === 'ArrowDown') { e.preventDefault(); speed(-5); }
+  else if (e.key === 'f' || e.key === 'F') { setFocus(!inFocus()); }
   else if (e.key === 'l') { $('loop').click(); flash($('loop').checked ? 'Looping these 8 bars' : 'Loop off'); }
 });
 
@@ -437,7 +438,7 @@ function frame(now){
   }
   const pn = performance.now();
   if (pn < flashUntil) { const a = Math.min(1, (flashUntil - pn)/400); ctx.fillStyle = `rgba(243,236,228,${.6*a})`; ctx.font = '15px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(flashTxt, W/2, 30*Math.sqrt(S)); }
-  if (pn < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Tap: exit · ← → 8 bars · ↑ ↓ speed · space play · L loop · strip: jump', W/2, H-16); }
+  if (pn < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Tap: exit · ← → 8 bars · ↑ ↓ speed · space play · L loop · F full screen · strip: jump', W/2, H-16); }
   drawStrip(b);
   requestAnimationFrame(frame);
 }
