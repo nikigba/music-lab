@@ -453,7 +453,8 @@ svg.dl { display: block; overflow: visible; }
     <button class="btn primary" id="playAll">▶ Play</button>
     <button class="btn" id="selBtn" aria-pressed="false" title="Select a range to loop (or Shift-click on a computer)">Select</button>
     <span class="loopchip" id="loopChip" hidden><span id="loopTxt"></span><button id="loopClear" aria-label="Clear the loop">✕</button></span>
-    <button class="btn primary" id="intBtn" hidden>Internalise</button>
+    <button class="btn primary" id="glowBtn" hidden title="Hear the selected notes go round the 12 keys, with the Home Glow picture">All keys</button>
+    <button class="btn" id="intBtn" hidden>Internalise</button>
     <div class="readout" id="readout" aria-live="polite"></div>
   </div></div>
 </div>
@@ -1755,7 +1756,7 @@ function rangeText() {
   const beat = q => { const m = solo.measures[barAt(q)], b = q - m.q0; return `bar ${m.num} beat ${(Math.round(b * 4) / 4 + 1).toString().replace('.25', '¼').replace('.5', '½').replace('.75', '¾')}`; };
   return `${beat(range.a)} → ${beat(range.lastQ)}`;
 }
-function showRange() { $('loopChip').hidden = !range; $('loopTxt').textContent = range ? '⟲ ' + rangeText() : ''; if ($('intBtn')) $('intBtn').hidden = !range; }
+function showRange() { $('loopChip').hidden = !range; $('loopTxt').textContent = range ? '⟲ ' + rangeText() : ''; if ($('intBtn')) $('intBtn').hidden = !range; if ($('glowBtn')) $('glowBtn').hidden = !range; }
 /* ---------- Hold and slide to pick a loop ----------
    Hold a note or bar number for a moment, then slide over the rest: the band follows the finger,
    and letting go sets the loop. A quick swipe still scrolls; a quick tap still plays. */
@@ -3379,6 +3380,24 @@ function intWireList() {
 }
 
 $('intBtn').onclick = intFromRange;
+/* All keys: the selected notes go to Home Glow, moved so the tune's tonic is C, and play round the 12 keys */
+function glowFromRange() {
+  if (!range || !solo) return;
+  const ids = solo.notes.map((e, i) => i).filter(i => solo.notes[i].kind === 'n' && solo.notes[i].q >= range.a - 1e-6 && solo.notes[i].q < range.b - 1e-6);
+  if (!ids.length) { readout('There are no notes in that stretch.'); return; }
+  const tpc = tonicDisp ? mod(tonicDisp.midi, 12) : 0, q0 = solo.notes[ids[0]].q;
+  let n = ids.map(i => [+(solo.notes[i].q - q0).toFixed(3), +Math.max(0.05, solo.notes[i].dur).toFixed(3), disp[i].midi - tpc]);
+  const mean = n.reduce((a, x) => a + x[2], 0) / n.length, oct = 12 * Math.round((64 - mean) / 12);
+  n = n.map(x => [x[0], x[1], x[2] + oct]);
+  const pcs = n.map(x => mod(x[2], 12)), minor = pcs.filter(p => p === 3).length > pcs.filter(p => p === 4).length;
+  const DG = ['1','b2','2','b3','3','4','#4','5','b6','6','b7','7'];
+  const chs = [];
+  solo.chords.forEach((c, k) => { const nx = solo.chords[k + 1]; if (c.q < range.b - 1e-6 && (!nx || nx.q > range.a + 1e-6)) { const d = dispChords[k]; if (d) { const nm = DG[mod(d.root.midi - tpc, 12)] + (d.suffix || ''); if (chs[chs.length - 1] !== nm) chs.push(nm); } } });
+  const meas = solo.measures[barAt(q0)], [tune, player] = String(entry.name).split(' · ');
+  try { localStorage.setItem('glow:phrase', JSON.stringify({ h: minor ? 'm' : 'M', c: chs.join(' ') || '—', p: player || '', t: tune || entry.name, label: rangeText(), b: meas.num, n, ph: +(q0 - meas.q0).toFixed(3), ts: Date.now() })); } catch (e) { readout("Couldn't hand the phrase over (storage is full or blocked)."); return; }
+  stopAll(); location.href = 'triad-glow.html#phrase';
+}
+$('glowBtn').onclick = glowFromRange;
 $('phrBtn').onclick = intList;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && INT.open) intClose(); });
 intBadge();

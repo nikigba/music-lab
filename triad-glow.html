@@ -49,6 +49,11 @@
   <h1>Home Glow</h1>
   <div class="sub">Bebop licks from your library that live on one triad, moved to C. Home glows in the column; every outside note shows up beside it for as long as it sounds, then goes home.</div>
 
+  <div id="phr" style="display:none;background:#2a2219;border:1px solid var(--home);border-radius:16px;padding:14px;margin-bottom:14px">
+    <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--home);font-weight:600">From Solo Ear</div>
+    <div id="phrT" style="font-size:15px;margin:4px 0 10px;color:var(--ink)"></div>
+    <div class="row"><button class="btn primary" id="phrGo">▶ Play in all 12 keys</button><button class="btn" id="phrBack">← Back to Solo Ear</button><button class="btn" id="phrAll">Show all licks</button></div>
+  </div>
   <div class="bar">
     <div class="row">
       <button class="chip" data-h="all" aria-pressed="true">All</button>
@@ -139,12 +144,13 @@ function infoFor(pc, mode){
 }
 
 /* ---------- list + filters ---------- */
-let homeF = 'all', playerF = 'all', view = [];
+let homeF = 'all', playerF = 'all', view = [], phraseIdx = null, PHRASE = null;   // phraseIdx: a phrase sent from Solo Ear
 const players = [...new Set(LICKS.map(l => l.p))].sort();
 $('player').innerHTML = '<option value="all">All players</option>' + players.map(p => `<option>${p}</option>`).join('');
 function rebuild(){
   // only the solos ticked in the Solos list (none ticked = all solos)
   view = LICKS.map((l,i)=>i).filter(i => (homeF==='all'||LICKS[i].h===homeF) && (playerF==='all'||LICKS[i].p===playerF) && (!picked.size || picked.has(soloKey(LICKS[i]))));
+  if (phraseIdx != null) view = [phraseIdx];
   solosLabel();
   $('sel').innerHTML = view.map((i,k) => `<option value="${i}">${k+1}. ${LICKS[i].p} — ${LICKS[i].t}</option>`).join('');
   try { const s = localStorage.getItem('glow:sel'); if (s && view.includes(+s)) $('sel').value = s; } catch(e){}
@@ -587,6 +593,21 @@ function favToggle(){
 $('fav').onclick = favToggle;
 const _showMeta = showMeta; showMeta = function(){ _showMeta(); favMark(); };
 window.addEventListener('load', () => { favMark(); const F = favApi(); if (F && F.onChange) F.onChange(favMark); if (F && F.ready) F.ready().then(favMark).catch(() => {}); });
+// a phrase handed over from Solo Ear (its All keys button)
+if (/^#phrase/.test(location.hash)) {
+  try {
+    PHRASE = JSON.parse(localStorage.getItem('glow:phrase') || 'null');
+    if (PHRASE && PHRASE.n && PHRASE.n.length) {
+      LICKS.push({h: PHRASE.h, c: PHRASE.c, p: PHRASE.p, t: PHRASE.t + ' · ' + PHRASE.label, b: PHRASE.b, g: ['from Solo Ear'], n: PHRASE.n});
+      phraseIdx = LICKS.length - 1; PH[phraseIdx] = PHRASE.ph;
+      $('phr').style.display = 'block';
+      $('phrT').innerHTML = `<b>${esc(PHRASE.t)}</b> · ${esc(PHRASE.p)} · ${esc(PHRASE.label)} <span style="color:var(--mute)">· chords ${esc(PHRASE.c)} · moved so the tune's home is C</span>`;
+    }
+  } catch(e){}
+}
+$('phrGo').onclick = () => { $('allk').checked = true; $('allk').onchange(); };
+$('phrBack').onclick = () => { stopAll(); if (/solo-ear/.test(document.referrer) && history.length > 1) history.back(); else location.href = 'solo-ear.html#solo-ear'; };
+$('phrAll').onclick = () => { stopAll(); phraseIdx = null; $('phr').style.display = 'none'; history.replaceState(null, '', '#home-glow'); rebuild(); };
 rebuild();
 requestAnimationFrame(frame);
 </script>
