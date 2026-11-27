@@ -3404,6 +3404,12 @@ function glowFromRange() {
   stopAll(); location.href = 'triad-glow.html#phrase';
 }
 $('glowBtn').onclick = glowFromRange;
+// Enter with a selection opens it in the visualiser (unless typing, or a button / menu has focus, or Internalise is open)
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !range || (typeof INT !== 'undefined' && INT.open) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target; if (t && t.matches && t.matches('textarea, input, select, button, a')) return;
+  e.preventDefault(); e.stopPropagation(); glowFromRange();
+}, true);
 $('phrBtn').onclick = intList;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && INT.open) intClose(); });
 intBadge();

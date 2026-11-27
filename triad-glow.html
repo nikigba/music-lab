@@ -525,7 +525,7 @@ addEventListener('keydown', e => {
   // arrows work everywhere, except while typing in the search box or using a slider or menu
   const tg = e.target, busy = tg && (tg.tagName === 'SELECT' || tg.tagName === 'TEXTAREA' || (tg.tagName === 'INPUT' && tg.type !== 'checkbox'));
   if (busy || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.key === 'Escape') { if (inFocus()) setFocus(false); }
+  if (e.key === 'Escape') { if (phraseIdx != null) $('phrBack').onclick(); else if (inFocus()) setFocus(false); }
   else if (e.key === ' ' || e.code === 'Space') {
     // space = Play / Pause (and never clicks whatever button happens to have focus)
     e.preventDefault(); if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
@@ -538,7 +538,7 @@ addEventListener('keydown', e => {
   else if (e.key === 'ArrowUp') { e.preventDefault(); speed(5); }
   else if (e.key === 'ArrowDown') { e.preventDefault(); speed(-5); }
 });
-document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && inFocus()) setFocus(false); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && inFocus()) { if (phraseIdx != null) $('phrBack').onclick(); else setFocus(false); } });
 let mode = 'M', HOME = [], homeB = [], homeMem = [], aways = [], threads = [], awayLevel = 0, lastAway = null, T = 0;
 function setHome(m){ if (m===mode && HOME.length) return; mode = m; HOME = m==='M'?[52,55,60,64,67,72,76]:[51,55,60,63,67,72,75]; homeB = HOME.map(()=>0); homeMem = HOME.map(()=>0); }
 // two octaves around middle C hold ~95% of the licks; the rare note beyond sits at the edge
@@ -605,7 +605,7 @@ function frame(now){
   });
   aways = aways.filter(a => { a.t += dt; if (a.t>a.dur) a.life -= dt*5; if (a.life<=0) return false; voice(a.x,a.y,13*S,a.c,a.life,.07+a.ten*.045,4+a.ten*4,a.seed,a.lab,a.dk,a.life*.6); return true; });
   if (phraseIdx != null && chordLab) { ctx.fillStyle = 'rgba(250,199,117,.75)'; ctx.font = `600 ${Math.round(15*Math.sqrt(S))}px Inter, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(chordLab, W/2, 10); }
-  if (performance.now() < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(phraseIdx != null ? (phrStarted ? 'Tap: play / pause · ↑ ↓ speed · ⚙ settings · ✕ back to Solo Ear' : '') : 'Tap: exit · ← → licks · ↑ ↓ speed · F full screen · S ☆ save', W/2, H-16); }
+  if (performance.now() < hintUntil) { ctx.fillStyle = 'rgba(243,236,228,.35)'; ctx.font = '13px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(phraseIdx != null ? (phrStarted ? 'Tap: play / pause · ↑ ↓ speed · ⚙ settings · ✕ or Esc: back to Solo Ear' : '') : 'Tap: exit · ← → licks · ↑ ↓ speed · F full screen · S ☆ save', W/2, H-16); }
   if (performance.now() < flashUntil) { const a = Math.min(1, (flashUntil - performance.now())/400); ctx.fillStyle = `rgba(243,236,228,${.6*a})`; ctx.font = '15px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(flashTxt, W/2, phraseIdx != null ? 46*Math.sqrt(S) : 18); }
   if (inFocus() && phraseIdx != null) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
