@@ -49,6 +49,7 @@
   <h1>Home Glow</h1>
   <div class="sub">Bebop licks from your library that live on one triad, moved to C. Home glows in the column; every outside note shows up beside it for as long as it sounds, then goes home.</div>
 
+  <button id="phrX" aria-label="Close and go back to Solo Ear" title="Back to Solo Ear" style="display:none;position:fixed;top:12px;right:12px;z-index:1000;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#1d1916;color:var(--ink);font-size:20px;line-height:1;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.45)">✕</button>
   <div id="phr" style="display:none;background:#2a2219;border:1px solid var(--home);border-radius:16px;padding:14px;margin-bottom:14px">
     <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--home);font-weight:600">From Solo Ear</div>
     <div id="phrT" style="font-size:15px;margin:4px 0 10px;color:var(--ink)"></div>
@@ -630,7 +631,7 @@ if (/^#phrase/.test(location.hash)) {
     if (PHRASE && PHRASE.n && PHRASE.n.length) {
       LICKS.push({h: PHRASE.h, c: PHRASE.c, p: PHRASE.p, t: PHRASE.t + ' · ' + PHRASE.label, b: PHRASE.b, g: ['from Solo Ear'], n: PHRASE.n, ch: PHRASE.ch});
       phraseIdx = LICKS.length - 1; PH[phraseIdx] = PHRASE.ph;
-      $('phr').style.display = 'block';
+      $('phr').style.display = 'block'; $('phrX').style.display = 'block';
       $('phrT').innerHTML = `<b>${esc(PHRASE.t)}</b> · ${esc(PHRASE.p)} · ${esc(PHRASE.label)} <span style="color:var(--mute)">· chords ${esc(PHRASE.c)} · each note shown against the chord under it</span>`;
     }
   } catch(e){}
@@ -638,8 +639,9 @@ if (/^#phrase/.test(location.hash)) {
 try { if (localStorage.getItem('glow:sing') === '0') $('sing').checked = false; } catch(e){}
 $('sing').onchange = () => { singPass = true; try { localStorage.setItem('glow:sing', $('sing').checked ? '1' : '0'); } catch(e){} };
 $('phrGo').onclick = () => { singPass = true; $('allk').checked = true; $('allk').onchange(); };
-$('phrBack').onclick = () => { stopAll(); if (/solo-ear/.test(document.referrer) && history.length > 1) history.back(); else location.href = 'solo-ear.html#solo-ear'; };
-$('phrAll').onclick = () => { stopAll(); phraseIdx = null; $('phr').style.display = 'none'; history.replaceState(null, '', '#home-glow'); rebuild(); };
+$('phrBack').onclick = () => { stopAll(); try { droneOff(); grooveOff(); } catch(e){} if (/solo-ear/.test(document.referrer) && history.length > 1) history.back(); else location.href = 'solo-ear.html#solo-ear'; };
+$('phrX').onclick = () => $('phrBack').onclick();
+$('phrAll').onclick = () => { stopAll(); phraseIdx = null; $('phr').style.display = 'none'; $('phrX').style.display = 'none'; history.replaceState(null, '', '#home-glow'); rebuild(); };
 rebuild();
 requestAnimationFrame(frame);
 </script>
